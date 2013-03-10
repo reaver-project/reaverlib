@@ -134,7 +134,7 @@ namespace reaver
             class _stream_shptr_wrapper : public _stream_wrapper_impl
             {
             public:
-                _stream_shptr_wrapper(std::shared_ptr<std::fstream> stream) : _stream{stream}
+                _stream_shptr_wrapper(const std::shared_ptr<std::fstream> & stream) : _stream{stream}
                 {
                 }
 
@@ -152,7 +152,7 @@ namespace reaver
         {
         public:
             stream_wrapper(std::ostream &);
-            stream_wrapper(std::shared_ptr<std::fstream> &);
+            stream_wrapper(const std::shared_ptr<std::fstream> &);
 
             stream_wrapper(const stream_wrapper &) = default;
 

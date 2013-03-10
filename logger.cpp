@@ -110,7 +110,7 @@ reaver::logger::stream_wrapper::stream_wrapper(std::ostream & stream) : _impl{ne
 {
 }
 
-reaver::logger::stream_wrapper::stream_wrapper(std::shared_ptr<std::fstream> & stream) : _impl{new _detail::_stream_shptr_wrapper{stream}}
+reaver::logger::stream_wrapper::stream_wrapper(const std::shared_ptr<std::fstream> & stream) : _impl{new _detail::_stream_shptr_wrapper{stream}}
 {
 }
 
