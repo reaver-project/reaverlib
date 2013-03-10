@@ -57,15 +57,29 @@ namespace reaver
         static constexpr auto always = level::always;
 
         class logger;
+        extern logger log;
 
         class action
         {
         public:
-            action(logger & log, level lev) : _logger(log), _level(lev)
+            action(logger & log = reaver::logger::log, level lev = always) : _logger(log), _level(lev), _strings()
             {
+                _strings.push_back({{}, ""});
             }
 
             ~action();
+
+            action & operator<<(const char * str)
+            {
+                _strings.back().second.append(str);
+                return *this;
+            }
+
+            action & operator<<(const std::string & str)
+            {
+                _strings.back().second.append(str);
+                return *this;
+            }
 
             template<typename T>
             action & operator<<(const T & rhs)
@@ -74,7 +88,17 @@ namespace reaver
                 return *this;
             }
 
+            action & operator<<(const reaver::style::style & style)
+            {
+                _strings.push_back(std::make_pair(style, ""));
+                return *this;
+            }
+
+            friend class logger;
+
         private:
+            action(logger &, level, const std::vector<std::pair<reaver::style::style, std::string>> &);
+
             logger & _logger;
             level _level;
 
@@ -116,7 +140,7 @@ namespace reaver
 
                 virtual std::ostream & get()
                 {
-                    return *_stream.get();
+                    return *_stream;
                 }
 
             private:
@@ -134,9 +158,6 @@ namespace reaver
 
             ~stream_wrapper();
 
-            void lock();
-            void unlock();
-
             stream_wrapper & operator<<(const std::string &);
             stream_wrapper & operator<<(const style::style &);
 
@@ -148,13 +169,18 @@ namespace reaver
         {
         public:
             logger(level = info);
+            logger(std::ostream &, level = info);
             ~logger();
+
+            void add_stream(const stream_wrapper &);
 
             action operator()(level = always);
 
             friend class action;
 
         private:
+            void _async(std::function<void()>);
+
             bool _quit = false;
 
             level _level;

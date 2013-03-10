@@ -25,34 +25,61 @@
 
 #include "logger.h"
 
-reaver::logger::logger reaver::logger::log;
+reaver::logger::logger reaver::logger::log{std::cout};
 
-reaver::logger::logger::logger(reaver::logger::level level) : _level(level), _worker{[=]()
+reaver::logger::logger::logger(reaver::logger::level level) : _level{level}, _worker{[=]()
     {
+        while (_queue.empty())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
         while (!_quit)
         {
             std::function<void()> f;
 
             {
-                std::lock_guard<std::mutex> lock(_queue_mutex);
-                f = _queue.back();
+                std::lock_guard<std::mutex> lock{_queue_mutex};
+                f = _queue.front();
                 _queue.pop();
             }
 
             f();
+
+            while (_queue.empty() && !_quit)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
         }
-    }}, _streams{std::cout}
+    }}, _streams{}
 {
+}
+
+reaver::logger::logger::logger(std::ostream & stream, reaver::logger::level level) : logger{level}
+{
+    _streams.push_back({stream});
 }
 
 reaver::logger::logger::~logger()
 {
-    {
-        std::lock_guard<std::mutex> lock(_queue_mutex);
-        _queue.push([=](){ _quit = true; });
-    }
-
+    _async([=](){ _quit = true; });
     _worker.join();
+}
+
+void reaver::logger::logger::add_stream(const reaver::logger::stream_wrapper & stream)
+{
+    _streams.push_back(stream);
+}
+
+void reaver::logger::logger::_async(std::function<void()> f)
+{
+    std::lock_guard<std::mutex> lock{_queue_mutex};
+    _queue.push(f);
+}
+
+reaver::logger::action::action(logger & log, reaver::logger::level level, const std::vector<std::pair<reaver::style::style, std::string>> & init)
+    : _logger(log), _level(level), _strings(init)
+{
 }
 
 reaver::logger::action::~action()
@@ -62,15 +89,20 @@ reaver::logger::action::~action()
         return;
     }
 
+    std::vector<std::pair<reaver::style::style, std::string>> strings = _strings;
+
     for (auto & stream : _logger._streams)
     {
-        std::lock_guard<reaver::logger::stream_wrapper> _lock(stream);
-
-        for (auto & x : _strings)
+        _logger._async([=]() mutable
         {
-            stream << x.first;
-            stream << x.second;
-        }
+            for (auto x : strings)
+            {
+                stream << x.first;
+                stream << x.second;
+            }
+
+            stream << "\n";
+        });
     }
 }
 
@@ -80,4 +112,48 @@ reaver::logger::stream_wrapper::stream_wrapper(std::ostream & stream) : _impl{ne
 
 reaver::logger::stream_wrapper::stream_wrapper(std::shared_ptr<std::fstream> & stream) : _impl{new _detail::_stream_shptr_wrapper{stream}}
 {
+}
+
+reaver::logger::stream_wrapper::~stream_wrapper()
+{
+}
+
+reaver::logger::stream_wrapper & reaver::logger::stream_wrapper::operator<<(const std::string & str)
+{
+    _impl->get() << str;
+    return *this;
+}
+
+reaver::logger::stream_wrapper & reaver::logger::stream_wrapper::operator<<(const reaver::style::style & style)
+{
+    _impl->get() << style;
+    return *this;
+}
+
+reaver::logger::action reaver::logger::logger::operator()(reaver::logger::level level)
+{
+    using reaver::style::style;
+    using reaver::style::colors;
+    using reaver::style::styles;
+
+    switch (level)
+    {
+        case trace:
+            return action(*this, level, { std::make_pair(style(colors::bgray), "Trace: "), std::make_pair(style(), "") });
+        case debug:
+            return action(*this, level, { std::make_pair(style(colors::gray), "Debug: "), std::make_pair(style(), "") });
+        case info:
+            return action(*this, level, { std::make_pair(style(), "Info: ") });
+        case warning:
+            return action(*this, level, { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
+                std::make_pair(style(), "") });
+        case error:
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
+                std::make_pair(style(), "") });
+        case crash:
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Internal error: "),
+                std::make_pair(style(), "") });
+        case always:
+            return action(*this, level);
+    }
 }

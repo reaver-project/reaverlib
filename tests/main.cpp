@@ -1,8 +1,12 @@
-#include <reaver/style.h>
+#include <reaver/logger.h>
 
-using namespace reaver::style;
+using namespace reaver::logger;
 
 int main()
 {
-    std::cout << style(colors::bred, colors::def, styles::bold) << "This is bold red text!\n";
+    log(debug) << "Hello!";
+    log() << "Always printed.";
+    log(warning) << "Something is probably going wrong.";
+    log(error) << "Something bad happened.";
+    log(crash) << "Oh, seriously?";
 }
