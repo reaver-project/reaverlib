@@ -30,8 +30,10 @@
 #include <queue>
 #include <mutex>
 #include <fstream>
+#include <atomic>
 
 #include "style.h"
+#include "semaphore.h"
 
 namespace reaver
 {
@@ -181,13 +183,14 @@ namespace reaver
         private:
             void _async(std::function<void()>);
 
-            bool _quit = false;
+            std::atomic<bool> _quit;
 
             level _level;
 
             std::thread _worker;
             std::queue<std::function<void()>> _queue;
-            std::mutex _queue_mutex; // I don't like this
+            semaphore _semaphore;
+            std::mutex _lock;
 
             std::vector<stream_wrapper> _streams;
         } log;

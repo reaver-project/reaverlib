@@ -59,6 +59,7 @@ namespace reaver
             bmagenta,
             bcyan,
             bgray,
+            white = bgray,
             def = 9
         };
 

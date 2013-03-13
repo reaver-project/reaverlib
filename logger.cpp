@@ -29,26 +29,21 @@ reaver::logger::logger reaver::logger::log{std::cout};
 
 reaver::logger::logger::logger(reaver::logger::level level) : _level{level}, _worker{[=]()
     {
-        while (_queue.empty())
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
         while (!_quit)
         {
-            std::function<void()> f;
+            _semaphore.wait();
+
+            std::queue<std::function<void()>> q;
 
             {
-                std::lock_guard<std::mutex> lock{_queue_mutex};
-                f = _queue.front();
-                _queue.pop();
+                std::lock_guard<std::mutex> lock{_lock};
+                std::swap(q, _queue);
             }
 
-            f();
-
-            while (_queue.empty() && !_quit)
+            while (q.size())
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                q.front()();
+                q.pop();
             }
         }
     }}, _streams{}
@@ -73,8 +68,11 @@ void reaver::logger::logger::add_stream(const reaver::logger::stream_wrapper & s
 
 void reaver::logger::logger::_async(std::function<void()> f)
 {
-    std::lock_guard<std::mutex> lock{_queue_mutex};
+    std::lock_guard<std::mutex> lock{_lock};
+
     _queue.push(f);
+
+    _semaphore.notify();
 }
 
 reaver::logger::action::action(logger & log, reaver::logger::level level, const std::vector<std::pair<reaver::style::style, std::string>> & init)

@@ -19,7 +19,7 @@ library: $(OBJECTS)
 
 uninstall:
 	@rm -rf /usr/local/include/reaver
-	@rm -rf /usr/local/lib/libreaver.a
+	@rm -rf /usr/lib/libreaver.a
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) $< -o $@
