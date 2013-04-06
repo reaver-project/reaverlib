@@ -59,12 +59,12 @@ namespace reaver
         static constexpr auto always = level::always;
 
         class logger;
-        extern logger log;
+        extern logger dlog;
 
         class action
         {
         public:
-            action(logger & log = reaver::logger::log, level lev = always) : _logger(log), _level(lev), _strings()
+            action(logger & log = reaver::logger::dlog, level lev = always) : _logger(log), _level(lev), _strings()
             {
                 _strings.push_back({{}, ""});
             }
@@ -193,6 +193,6 @@ namespace reaver
             std::mutex _lock;
 
             std::vector<stream_wrapper> _streams;
-        } log;
+        } dlog;
     }
 }

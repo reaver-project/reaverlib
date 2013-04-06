@@ -12,7 +12,7 @@ all: library
 install: all
 	@cp libreaver.a /usr/local/lib/
 	@mkdir -p /usr/local/include/reaver
-	@cp ./*.h /usr/local/include/reaver/
+	@find -type f -name "*.h" -exec cp --parents {} /usr/local/include/reaver/ \;
 
 library: $(OBJECTS)
 	$(AR) crv libreaver.a $(OBJECTS)
@@ -27,3 +27,8 @@ uninstall:
 clean:
 	@rm -rf *.o
 	@rm -rf *.a
+	@rm -rf */*.o
+
+test: all
+	$(CC) $(CFLAGS) tests/main.cpp -o tests/main.o
+	$(CC) -stdlib=libc++ tests/main.o -o tests/output -lc++ -lc++abi -lreaver

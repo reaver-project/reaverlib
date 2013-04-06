@@ -25,7 +25,7 @@
 
 #include "logger.h"
 
-reaver::logger::logger reaver::logger::log{std::cout};
+reaver::logger::logger reaver::logger::dlog{std::cout};
 
 reaver::logger::logger::logger(reaver::logger::level level) : _level{level}, _worker{[=]()
     {
