@@ -7,10 +7,13 @@ int main()
     tokens_description desc;
 
     desc.add(1, "[a-zA-Z_][a-zA-Z0-9_]*")
-        (2, "[0-9]+", match_type<uint64_t>{})
+        (2, "0x[0-9a-fA-F]+", match_type<uint64_t>{}, [](const std::string & str)
+        {
+            uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
+        })
         (3, " ");
 
-    auto t = tokenize("identifier and then number 1000", desc);
+    auto t = tokenize("identifier and then number 0x1000", desc);
 
     for (auto elem : t)
     {

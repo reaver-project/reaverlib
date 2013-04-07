@@ -30,15 +30,20 @@
 #include <memory>
 #include <istream>
 #include <regex>
+#include <functional>
 
 #include <boost/lexical_cast.hpp>
-
-#include <reaver/logger.h>
 
 namespace reaver
 {
     namespace lexer
     {
+        template<typename Out, typename In>
+        Out convert(const In & in)
+        {
+            return boost::lexical_cast<Out>(in);
+        }
+
         namespace _detail
         {
             struct _token
@@ -107,11 +112,13 @@ namespace reaver
             class _token_description_impl : public _token_description
             {
             public:
-                _token_description_impl(uint64_t type, std::regex regex) : _type{ type }, _regex{ regex }
+                template<typename F>
+                _token_description_impl(uint64_t type, std::regex regex, F converter) : _type{ type }, _regex{ regex },
+                    _converter{ converter }
                 {
                 }
 
-                virtual token match(std::string::const_iterator & begin, std::string::const_iterator end) override
+                virtual token match(std::string::const_iterator & begin, std::string::const_iterator end)
                 {
                     std::smatch match;
 
@@ -120,7 +127,7 @@ namespace reaver
                         if (match[0].first - begin == 0)
                         {
                             begin += match[0].str().length();
-                            return token{ _type, boost::lexical_cast<T>(match[0].str()) };
+                            return token{ _type, _converter(match[0].str()) };
                         }
                     }
 
@@ -130,6 +137,7 @@ namespace reaver
             private:
                 uint64_t _type;
                 std::regex _regex;
+                std::function<T (const std::string &)> _converter;
             };
         }
 
@@ -142,13 +150,20 @@ namespace reaver
         {
         public:
             token_description(uint64_t type, std::string regex) : _desc{ new _detail::_token_description_impl<std::string>
-                { type, std::regex{ regex } } }
+                { type, std::regex{ regex }, [](const std::string & str) { return str; } } }
+            {
+            }
+
+            template<typename T, typename F>
+            token_description(uint64_t type, std::string regex, match_type<T>, F converter) : _desc
+                { new _detail::_token_description_impl<T>{ type, std::regex{ regex }, converter } }
             {
             }
 
             template<typename T>
-            token_description(uint64_t type, std::string regex, match_type<T>) : _desc{ new
-                _detail::_token_description_impl<T>{ type, std::regex{ regex } } }
+            token_description(uint64_t type, std::string regex, match_type<T>, T (*converter)(const std::string &))
+                : _desc{ new _detail::_token_description_impl<T>{ type, std::regex{ regex }, [](const std::string & str)
+                { return convert<T>(str); } } }
             {
             }
 
