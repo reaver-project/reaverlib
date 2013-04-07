@@ -154,16 +154,15 @@ namespace reaver
             {
             }
 
-            template<typename T, typename F>
-            token_description(uint64_t type, std::string regex, match_type<T>, F converter) : _desc
-                { new _detail::_token_description_impl<T>{ type, std::regex{ regex }, converter } }
+            template<typename T>
+            token_description(uint64_t type, std::string regex, match_type<T>) : _desc{ new _detail::_token_description_impl<T>
+                { type, std::regex{ regex }, [](const std::string & str) { return convert<T>(str); } } }
             {
             }
 
-            template<typename T>
-            token_description(uint64_t type, std::string regex, match_type<T>, T (*converter)(const std::string &))
-                : _desc{ new _detail::_token_description_impl<T>{ type, std::regex{ regex }, [](const std::string & str)
-                { return convert<T>(str); } } }
+            template<typename T, typename F>
+            token_description(uint64_t type, std::string regex, match_type<T>, F converter) : _desc
+                { new _detail::_token_description_impl<T>{ type, std::regex{ regex }, converter } }
             {
             }
 

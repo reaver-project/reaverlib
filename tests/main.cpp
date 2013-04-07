@@ -11,9 +11,10 @@ int main()
         {
             uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
         })
-        (3, " ");
+        (3, "[0-9]+", match_type<uint64_t>{})
+        (4, " ");
 
-    auto t = tokenize("identifier and then number 0x1000", desc);
+    auto t = tokenize("identifier and then hexnumber 0x1000 and then decnumber 1000", desc);
 
     for (auto elem : t)
     {
@@ -25,6 +26,8 @@ int main()
             case 2:
                 std::cout << "Type: `hex int`, value: " << elem.as<uint64_t>() << std::endl;
                 break;
+            case 3:
+                std::cout << "Type: `int`, value: " << elem.as<uint64_t>() << std::endl;
         }
     }
 }
