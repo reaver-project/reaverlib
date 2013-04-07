@@ -12,9 +12,10 @@ int main()
             uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
         })
         (3, "[0-9]+", match_type<uint64_t>{})
-        (4, " ");
+        (4, " ")
+        (5, "\n");
 
-    auto t = tokenize("identifier and then hexnumber 0x1000 and then decnumber 1000", desc);
+    auto t = tokenize("identifier and then hexnumber 0x1000 new line\n and then decnumber 1000", desc);
 
     for (auto elem : t)
     {
@@ -28,6 +29,12 @@ int main()
                 break;
             case 3:
                 std::cout << "Type: `int`, value: " << elem.as<uint64_t>() << std::endl;
+                break;
+            case 4:
+                std::cout << "Type: `space`" << std::endl;
+                break;
+            case 5:
+                std::cout << "Type: `new line`" << std::endl;
         }
     }
 }

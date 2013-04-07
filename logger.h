@@ -1,5 +1,5 @@
 /**
- * Reaver Library
+ * Reaver Library Licence
  *
  * Copyright (C) 2012-2013 Reaver Project Team:
  * 1. Michał "Griwes" Dominiak
