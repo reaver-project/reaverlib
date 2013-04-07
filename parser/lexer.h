@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 #include <istream>
 #include <regex>
@@ -106,6 +107,7 @@ namespace reaver
                 virtual ~_token_description() {}
 
                 virtual token match(std::string::const_iterator &, std::string::const_iterator) = 0;
+                virtual uint64_t type() = 0;
             };
 
             template<typename T>
@@ -132,6 +134,11 @@ namespace reaver
                     }
 
                     return token{ -1 };
+                }
+
+                virtual uint64_t type()
+                {
+                    return _type;
                 }
 
             private:
@@ -171,6 +178,11 @@ namespace reaver
                 return _desc->match(begin, end);
             }
 
+            uint64_t type() const
+            {
+                return _desc->type();
+            }
+
         private:
             std::shared_ptr<_detail::_token_description> _desc;
         };
@@ -188,14 +200,20 @@ namespace reaver
 
                 _inserter & operator()(const token_description & desc)
                 {
-                    _parent._descs.push_back(desc);
+                    _parent._descs.emplace(std::make_pair(desc.type(), desc));
                     return *this;
                 }
 
                 template<typename... Args>
                 _inserter & operator()(Args &&... args)
                 {
-                    _parent._descs.emplace_back(args...);
+                    (*this)({ std::forward<Args>(args)... });
+                    return *this;
+                }
+
+                _inserter & operator()(const std::string & alias, uint64_t type)
+                {
+                    _parent._aliases[alias] = type;
                     return *this;
                 }
 
@@ -207,29 +225,45 @@ namespace reaver
 
             _inserter add(const token_description & desc)
             {
-                _descs.push_back(desc);
+                _descs.emplace(std::make_pair(desc.type(), desc));
                 return { *this };
             }
 
             template<typename... Args>
             _inserter add(Args &&... args)
             {
-                _descs.emplace_back(args...);
+                add({ std::forward<Args>(args)... });
                 return { *this };
             }
 
-            std::vector<token_description>::const_iterator begin() const
+            _inserter add(const std::string & alias, uint64_t type)
+            {
+                _aliases[alias] = type;
+            }
+
+            std::map<uint64_t, token_description>::const_iterator begin() const
             {
                 return _descs.begin();
             }
 
-            std::vector<token_description>::const_iterator end() const
+            std::map<uint64_t, token_description>::const_iterator end() const
             {
                 return _descs.end();
             }
 
+            token_description operator[](uint64_t type)
+            {
+                return _descs.at(type);
+            }
+
+            token_description operator[](const std::string & alias)
+            {
+                return _descs.at(_aliases.at(alias));
+            }
+
         private:
-            std::vector<token_description> _descs;
+            std::map<uint64_t, token_description> _descs;
+            std::map<std::string, uint64_t> _aliases;
         };
 
         inline std::vector<token> tokenize(const std::string & str, const tokens_description & def)
@@ -244,7 +278,7 @@ namespace reaver
 
                 for (; b != e; ++b)
                 {
-                    token matched = b->match(begin, end);
+                    token matched = b->second.match(begin, end);
 
                     if (matched.type() != -1)
                     {
