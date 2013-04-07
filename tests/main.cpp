@@ -1,31 +1,27 @@
-#include <future>
-
-#include <reaver/logger.h>
 #include <reaver/parser/lexer.h>
 
-using namespace reaver::logger;
-using namespace reaver::style;
+using namespace reaver::lexer;
 
 int main()
 {
-    std::chrono::system_clock::now();
+    tokens_description desc;
 
-    dlog.add_stream(stream_wrapper(std::make_shared<std::fstream>("tests/test.out", std::ios::out)));
+    desc.add(1, "[a-zA-Z_][a-zA-Z0-9_]*")
+        (2, "[0-9]+", match_type<uint64_t>{})
+        (3, " ");
 
-    std::vector<std::future<void>> v;
+    auto t = tokenize("identifier and then number 1000", desc);
 
-    std::string{};
-
-    for (uint64_t i = 0; i < 10000; ++i)
+    for (auto elem : t)
     {
-        v.emplace_back(std::async([]()
+        switch (elem.type())
         {
-            dlog(debug) << "Hello!";
-            dlog() << "Always printed.";
-            dlog(warning) << "Something is probably going wrong.";
-            dlog(error) << "Something bad happened.";
-            dlog(crash) << "Oh, seriously?";
-            dlog() << style(colors::bgreen, colors::def, styles::bold) << "Success: " << style() << "This went good.";
-        }));
+            case 1:
+                std::cout << "Type: `identifier`, value: " << elem.as<std::string>() << std::endl;
+                break;
+            case 2:
+                std::cout << "Type: `hex int`, value: " << elem.as<uint64_t>() << std::endl;
+                break;
+        }
     }
 }
