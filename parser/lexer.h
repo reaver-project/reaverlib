@@ -148,6 +148,39 @@ namespace reaver
             };
         }
 
+        template<typename T = std::string>
+        class token_definition
+        {
+        public:
+            friend class token_description;
+
+            using value_type = T;
+
+            token_definition<>(uint64_t type, std::string regex) : _desc{ new _detail::_token_description_impl<std::string>
+            { type, std::regex{ regex }, [](const std::string & str) { return convert<T>(str); } } }
+            {
+            }
+
+            template<typename F>
+            token_definition(uint64_t type, std::string regex, F converter) : _desc
+            { new _detail::_token_description_impl<T>{ type, std::regex{ regex }, converter } }
+            {
+            }
+
+            token match(std::string::const_iterator & begin, std::string::const_iterator end) const
+            {
+                return _desc->match(begin, end);
+            }
+
+            uint64_t type() const
+            {
+                return _desc->type();
+            }
+
+        private:
+            std::shared_ptr<_detail::_token_description_impl<T>> _desc;
+        };
+
         template<typename T>
         struct match_type
         {
@@ -156,6 +189,11 @@ namespace reaver
         class token_description
         {
         public:
+            template<typename T>
+            token_description(const token_definition<T> & def) : _desc{ def._desc }
+            {
+            }
+
             token_description(uint64_t type, std::string regex) : _desc{ new _detail::_token_description_impl<std::string>
                 { type, std::regex{ regex }, [](const std::string & str) { return str; } } }
             {

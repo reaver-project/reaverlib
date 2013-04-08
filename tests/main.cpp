@@ -6,16 +6,18 @@ int main()
 {
     tokens_description desc;
 
-    desc.add(1, "[a-zA-Z_][a-zA-Z0-9_]*")
-        (2, "0x[0-9a-fA-F]+", match_type<uint64_t>{}, [](const std::string & str)
-        {
-            uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
-        })
-        (3, "[0-9]+", match_type<uint64_t>{})
-        (4, " ")
-        (5, "\n");
+    token_definition<uint64_t> def{ 2, "0x[0-9a-fA-F]+", [](const std::string & str)
+    {
+        uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
+    } };
 
-    auto t = tokenize("identifier and then hexnumber 0x1000 new line\n and then decnumber 1000", desc);
+    desc.add(1, "[a-zA-Z_][a-zA-Z0-9_]*")
+        (def)
+        (3, "[0-9]+", match_type<uint64_t>{})
+        (4, "\"([^\"\\\\]|\\\\.)*\"")
+        (5, "[ \n]");
+
+    auto t = tokenize("identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc);
 
     for (auto elem : t)
     {
@@ -31,10 +33,10 @@ int main()
                 std::cout << "Type: `int`, value: " << elem.as<uint64_t>() << std::endl;
                 break;
             case 4:
-                std::cout << "Type: `space`" << std::endl;
+                std::cout << "Type: `text`, value: " << elem.as<std::string>() << std::endl;
                 break;
             case 5:
-                std::cout << "Type: `new line`" << std::endl;
+                std::cout << "Type: `white space`" << std::endl;
         }
     }
 }
