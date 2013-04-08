@@ -23,6 +23,13 @@
  *
  **/
 
+/**
+ * Watch out, crazy template code ahead. All hope abandon ye who enter here.
+ *
+ * Lexer is full of run-time, er, somethings, this one is full of compile time
+ * ones.
+ */
+
 #pragma once
 
 #include <type_traits>
