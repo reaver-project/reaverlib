@@ -27,6 +27,9 @@
 
 #include <type_traits>
 
+#include <boost/optional.hpp>
+#include <boost/variant.hpp>
+
 #include <reaver/parser/lexer.h>
 
 namespace reaver
