@@ -1,6 +1,7 @@
-#include <reaver/parser/lexer.h>
+#include <reaver/parser/parser.h>
 
 using namespace reaver::lexer;
+using namespace reaver::parser;
 
 int main()
 {
