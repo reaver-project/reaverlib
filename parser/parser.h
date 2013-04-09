@@ -93,26 +93,72 @@ namespace reaver
         };
 
         template<typename T>
-        class basic_parser : public parser
+        class rule : public parser
         {
         public:
             using value_type = T;
 
+            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value &&
+                std::is_constructible<T, typename U::value_type>::value>::type>
+            rule(const U & parser)
+            {
+            }
+
             // directly use lexer token description as a parser
             // in this case, the type check is done at runtime - therefore, produces less helpful error messages
-            basic_parser(const lexer::token_description & desc)
+            rule(const lexer::token_description & desc)
             {
             }
 
             // directly use lexer token *definition* as a parser
             // in *this* case, the type check is done at compile time - error messages are compile time
-            basic_parser(const lexer::token_definition<T> & def)
+            rule(const lexer::token_definition<T> & def)
             {
+            }
+
+            template<typename U>
+            rule(const lexer::token_definition<U> &)
+            {
+                static_assert(false, "You cannot create a rule directly from token definition with another match type.");
+            }
+
+            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value &&
+                std::is_constructible<T, typename U::value_type>::value>::type>
+            rule & operator=(const U & parser)
+            {
+                return *this;
+            }
+
+            // directly use lexer token description as a parser
+            // in this case, the type check is done at runtime - therefore, produces less helpful error messages
+            rule & operator=(const lexer::token_description & desc)
+            {
+                return * this;
+            }
+
+            // directly use lexer token *definition* as a parser
+            // in *this* case, the type check is done at compile time - error messages are compile time
+            rule & operator=(const lexer::token_definition<T> & def)
+            {
+                return *this;
+            }
+
+            template<typename U>
+            rule & operator=(const lexer::token_definition<U> &)
+            {
+                static_assert(false, "You cannot create a rule directly from token definition with another match type.");
+                return *this;
             }
 
         private:
             uint64_t _expected_type;
         };
+
+        template<typename T>
+        rule<T> & token(const lexer::token_definition<T> & def)
+        {
+            return { def };
+        }
 
         template<typename T>
         class not_parser : public parser
