@@ -157,13 +157,13 @@ namespace reaver
             using value_type = T;
 
             token_definition<>(uint64_t type, std::string regex) : _desc{ new _detail::_token_description_impl<std::string>
-            { type, std::regex{ regex }, [](const std::string & str) { return convert<T>(str); } } }
+                { type, std::regex{ regex }, [](const std::string & str) { return convert<T>(str); } } }
             {
             }
 
             template<typename F>
             token_definition(uint64_t type, std::string regex, F converter) : _desc
-            { new _detail::_token_description_impl<T>{ type, std::regex{ regex }, converter } }
+                { new _detail::_token_description_impl<T>{ type, std::regex{ regex }, converter } }
             {
             }
 

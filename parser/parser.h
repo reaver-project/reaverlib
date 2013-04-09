@@ -38,56 +38,12 @@
 #include <boost/variant.hpp>
 
 #include <reaver/parser/lexer.h>
+#include <reaver/tmp.h>
 
 namespace reaver
 {
     namespace parser
     {
-        // TMP classes
-        template<typename T>
-        struct is_vector : public std::false_type
-        {
-        };
-
-        template<typename T, typename A>
-        struct is_vector<std::vector<T, A>> : public std::true_type
-        {
-        };
-
-        template<typename T>
-        struct is_tuple : public std::false_type
-        {
-        };
-
-        template<typename... Ts>
-        struct is_tuple<std::tuple<Ts...>> : public std::true_type
-        {
-        };
-
-        template<typename T, typename U>
-        struct make_tuple_type
-        {
-            using type = std::tuple<T, U>;
-        };
-
-        template<typename T, typename... Ts>
-        struct make_tuple_type<T, std::tuple<Ts...>>
-        {
-            using type = std::tuple<T, Ts...>;
-        };
-
-        template<typename... Ts, typename T>
-        struct make_tuple_type<std::tuple<Ts...>, T>
-        {
-            using type = std::tuple<Ts..., T>;
-        };
-
-        template<typename... T1s, typename... T2s>
-        struct make_tuple_type<std::tuple<T1s...>, std::tuple<T2s...>>
-        {
-            using type = std::tuple<T1s..., T2s...>;
-        };
-
         class parser
         {
         };
@@ -229,8 +185,6 @@ namespace reaver
                 >::type
             >::type; // this is not even my final form! ...and probably some bugs on the way
         };
-
-        // TODO: finish and check this crazy template wankery
 
         template<typename T, typename U>
         class difference_parser : public parser
