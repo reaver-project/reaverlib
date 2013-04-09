@@ -72,4 +72,20 @@ namespace reaver
     {
         using type = std::tuple<T1s..., T2s...>;
     };
+
+    template<int...>
+    struct sequence
+    {
+    };
+
+    template<int N, int ...S>
+    struct generator : generator<N-1, N-1, S...>
+    {
+    };
+
+    template<int ...S>
+    struct generator<0, S...>
+    {
+        using type = sequence<S...>;
+    };
 }

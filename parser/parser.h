@@ -44,6 +44,67 @@ namespace reaver
 {
     namespace parser
     {
+        namespace _detail
+        {
+            template<typename Ret, typename... Args>
+            struct _constructor
+            {
+                static Ret construct(Args &&... args)
+                {
+                    return Ret{ std::forward<Args>(args)... };
+                }
+            };
+
+            template<typename...>
+            struct _unpacker;
+
+            template<typename Ret, int... Seq>
+            struct _unpacker<Ret, sequence<Seq...>>
+            {
+                template<typename T>
+                static Ret _unpack(T && tuple)
+                {
+                    return Ret{ std::get<Seq>(tuple)... };
+                }
+            };
+
+            template<typename Ret, typename T>
+            struct _constructor<Ret, T>
+            {
+                // construct an object from a tuple
+                template<typename = typename std::enable_if<is_tuple<T>::value>::type>
+                static Ret construct(T && tuple)
+                {
+                    return _unpacker<Ret, generator<std::tuple_size<T>::value>>::unpack(std::forward<T>(tuple));
+                }
+
+                // construct vector of objects from a vector of values
+                template<typename Arg = typename std::enable_if<is_vector<Ret>::value && is_vector<T>::value, T>::type>
+                static Ret construct(Arg && vec)
+                {
+                    T ret(vec.size());
+
+                    for (auto it = vec.begin(); it != vec.end(); ++it)
+                    {
+                        ret.emplace_back(_constructor<typename T::value_type>::construct(*it));
+                    }
+
+                    return ret;
+                }
+            };
+
+            template<typename Ret, typename T1, typename T2>
+            struct _constructor<Ret, T1, T2>
+            {
+                template<typename = typename std::enable_if<is_tuple<T1>::value && is_tuple<T2>::value>::type>
+                static Ret construct(T1 && tuple1, T2 && tuple2)
+                {
+                    return _unpacker<Ret, generator<std::tuple_size<T1>::value>, generator<std::tuple_size<T2>::value>>
+                        ::unpack(std::forward<T1>(tuple1), std::forward<T2>(tuple2));
+                }
+            };
+        }
+
         class parser
         {
         };
