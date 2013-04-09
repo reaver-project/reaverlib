@@ -119,7 +119,7 @@ namespace reaver
             template<typename U>
             rule(const lexer::token_definition<U> &)
             {
-                static_assert(false, "You cannot create a rule directly from token definition with another match type.");
+                static_assert(std::is_same<T, U>::value, "You cannot create a rule directly from token definition with another match type.");
             }
 
             template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value &&
@@ -146,7 +146,7 @@ namespace reaver
             template<typename U>
             rule & operator=(const lexer::token_definition<U> &)
             {
-                static_assert(false, "You cannot create a rule directly from token definition with another match type.");
+                static_assert(std::is_same<T, U>::value, "You cannot create a rule directly from token definition with another match type.");
                 return *this;
             }
 
@@ -241,13 +241,26 @@ namespace reaver
         template<typename T, typename U>
         class seqor_parser : public parser
         {
-            using value_type = std::tuple<boost::optional<typename T::value_type>, boost::optional<typename U::value_type>>;
+            using value_type = typename std::conditional<
+                std::is_same<typename T::value_type, void>::value,
+                typename std::conditional<
+                    std::is_same<typename U::value_type, void>::value,
+                    void,
+                    boost::optional<typename U::value_type>
+                >::type,
+                typename std::conditional<
+                    std::is_same<typename U::value_type, void>::value,
+                    boost::optional<typename T::value_type>,
+                    std::tuple<boost::optional<typename T::value_type>, boost::optional<typename U::value_type>>
+                >::type
+            >::type;
         };
 
         template<typename T, typename U>
         class list_parser : public parser
         {
-            using value_type = std::vector<typename T::value_type>;
+            using value_type = std::vector<typename T::value_type>; // no void, sorry - you can hardly have a list of voids
+            // and it hardly makes any sense
         };
 
         template<typename T, typename U>
