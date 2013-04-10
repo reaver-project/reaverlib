@@ -385,19 +385,54 @@ namespace reaver
             T _plus;
         };
 
-        template<typename T, typename U, typename = typename std::enable_if<is_optional<typename T::value_type>::value ||
-            is_optional<typename U::value_type>::value>::type>
+        namespace _detail
+        {
+            template<typename>
+            struct _is_variant_parser : public std::false_type
+            {
+            };
+
+            template<typename T>
+            struct _is_variant_parser<typename std::enable_if<is_variant<typename T::value_type::value_type>::value, T>::type>
+                : public std::true_type
+            {
+            };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<(is_optional<typename T::value_type>::value
+            || _detail::_is_variant_parser<T>::value) && (is_optional<typename U::value_type>::value
+            || _detail::_is_variant_parser<U>::value)>::type>
         class variant_parser : public parser
         {
-            using value_type = typename std::conditional<
-                std::is_same<typename T::value_type, void>::value,
-                typename std::conditional<
-                    std::is_same<typename U::value_type, void>::value,
-                    void,
-                    boost::optional<typename U::value_type>
-                >::type,
-                boost::variant<typename T::value_type, typename U::value_type>
-            >::type;
+        public:
+            using value_type = boost::optional<typename make_variant_type<typename T::value_type, typename U::value_type>::type>;
+
+            variant_parser(const T & first, const U & second) : _first{ first }, _second{ second }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            {
+                typename T::value_type f = _first.match(begin, end);
+
+                if (f)
+                {
+                    return { _detail::_constructor<value_type, typename T::value_type>::construct(f) };
+                }
+
+                typename T::value_type s = _second.match(begin, end);
+
+                if (s)
+                {
+                    return { _detail::_constructor<value_type, typename U::value_type>::construct(s) };
+                }
+
+                return {};
+            }
+
+        private:
+            T _first;
+            U _second;
         };
 
         template<typename T, typename U>

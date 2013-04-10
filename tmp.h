@@ -28,6 +28,7 @@
 #include <tuple>
 
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
 namespace reaver
 {
@@ -61,6 +62,16 @@ namespace reaver
     {
     };
 
+    template<typename...>
+    struct is_variant : public std::false_type
+    {
+    };
+
+    template<typename... Ts>
+    struct is_variant<boost::variant<Ts...>> : public std::true_type
+    {
+    };
+
     template<typename T, typename U>
     struct make_tuple_type
     {
@@ -85,13 +96,49 @@ namespace reaver
         using type = std::tuple<T1s..., T2s...>;
     };
 
+    template<typename T>
+    struct remove_optional
+    {
+        using type = T;
+    };
+
+    template<typename T>
+    struct remove_optional<boost::optional<T>>
+    {
+        using type = typename remove_optional<T>::type;
+    };
+
+    template<typename T, typename U>
+    struct make_variant_type
+    {
+        using type = boost::variant<typename remove_optional<T>::type, typename remove_optional<U>::type>;
+    };
+
+    template<typename T, typename... Ts>
+    struct make_variant_type<T, boost::variant<Ts...>>
+    {
+        using type = boost::variant<typename remove_optional<T>::type, typename remove_optional<Ts>::type...>;
+    };
+
+    template<typename... Ts, typename T>
+    struct make_variant_type<boost::variant<Ts...>, T>
+    {
+        using type = boost::variant<typename remove_optional<Ts>::type..., typename remove_optional<T>::type>;
+    };
+
+    template<typename... T1s, typename... T2s>
+    struct make_variant_type<boost::variant<T1s...>, boost::variant<T2s...>>
+    {
+        using type = boost::variant<typename remove_optional<T1s>::type..., typename remove_optional<T2s>::type...>;
+    };
+
     template<int...>
     struct sequence
     {
     };
 
     template<int N, int ...S>
-    struct generator : generator<N-1, N-1, S...>
+    struct generator : generator<N - 1, N - 1, S...>
     {
     };
 
