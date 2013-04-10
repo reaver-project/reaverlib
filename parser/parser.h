@@ -46,6 +46,8 @@ namespace reaver
     {
         namespace _detail
         {
+            // TODO: deep removal of optionals when constructing variants
+
             template<typename Ret, typename... Args>
             struct _constructor
             {
@@ -413,14 +415,14 @@ namespace reaver
 
             value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
             {
-                typename T::value_type f = _first.match(begin, end);
+                auto f = _first.match(begin, end);
 
                 if (f)
                 {
                     return { _detail::_constructor<value_type, typename T::value_type>::construct(f) };
                 }
 
-                typename T::value_type s = _second.match(begin, end);
+                auto s = _second.match(begin, end);
 
                 if (s)
                 {
@@ -461,7 +463,32 @@ namespace reaver
         template<typename T, typename U>
         class difference_parser : public parser
         {
+        public:
             using value_type = typename T::value_type;
+
+            difference_parser(const T & match, const T & dont) : _match{ match }, _dont{ dont }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            {
+                auto b1 = begin, b2 = begin;
+
+                auto m = _match.match(b1, end);
+                auto d = _dont.match(b2, end);
+
+                if (m && !d)
+                {
+                    begin = b1;
+                    return { m };
+                }
+
+                return {};
+            }
+
+        private:
+            T _match;
+            U _dont;
         };
 
         template<typename T, typename U>
