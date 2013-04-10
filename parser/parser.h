@@ -55,6 +55,15 @@ namespace reaver
                 }
             };
 
+            template<typename Ret, typename... Args>
+            struct _constructor<boost::optional<Ret>, Args...>
+            {
+                static boost::optional<Ret> construct(Args &&... args)
+                {
+                    return { Ret{ std::forward<Args>(args)... } };
+                }
+            };
+
             template<typename...>
             struct _unpacker;
 
@@ -103,6 +112,32 @@ namespace reaver
                         ::unpack(std::forward<T1>(tuple1), std::forward<T2>(tuple2));
                 }
             };
+
+            template<typename Ret>
+            class _converter
+            {
+            public:
+                virtual ~_converter() {}
+
+                virtual Ret get(std::vector<lexer::token>::iterator &, std::vector<lexer::token>::iterator) = 0;
+            };
+
+            template<typename Ret, typename Parser>
+            class _converter_impl : public _converter<Ret>
+            {
+            public:
+                _converter_impl(const Parser & p) : _parser{ p }
+                {
+                }
+
+                virtual Ret get(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+                {
+                    return _constructor<Ret, typename Parser::value_type>::convert(_parser->match(begin, end));
+                }
+
+            private:
+                Parser _parser;
+            };
         }
 
         class parser
@@ -117,19 +152,19 @@ namespace reaver
 
             template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value &&
                 std::is_constructible<T, typename U::value_type>::value>::type>
-            rule(const U & parser)
+            rule(const U & p) : _type{ -1 }, _converter{ new _detail::_converter_impl<T, U>{ p } }
             {
             }
 
             // directly use lexer token description as a parser
             // in this case, the type check is done at runtime - therefore, produces less helpful error messages
-            rule(const lexer::token_description & desc)
+            rule(const lexer::token_description & desc) : _type(desc.type())
             {
             }
 
             // directly use lexer token *definition* as a parser
             // in *this* case, the type check is done at compile time - error messages are compile time
-            rule(const lexer::token_definition<T> & def)
+            rule(const lexer::token_definition<T> & def) : _type(def.type())
             {
             }
 
@@ -143,6 +178,8 @@ namespace reaver
                 std::is_constructible<T, typename U::value_type>::value>::type>
             rule & operator=(const U & parser)
             {
+                _type = -1;
+                _converter = new _detail::_converter_impl<T, U>{ parser };
                 return *this;
             }
 
@@ -150,6 +187,8 @@ namespace reaver
             // in this case, the type check is done at runtime - therefore, produces less helpful error messages
             rule & operator=(const lexer::token_description & desc)
             {
+                _type = desc.type();
+                _converter = nullptr;
                 return * this;
             }
 
@@ -157,6 +196,8 @@ namespace reaver
             // in *this* case, the type check is done at compile time - error messages are compile time
             rule & operator=(const lexer::token_definition<T> & def)
             {
+                _type = def.type();
+                _converter = nullptr;
                 return *this;
             }
 
@@ -167,8 +208,51 @@ namespace reaver
                 return *this;
             }
 
+            boost::optional<value_type> match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            {
+                if (begin == end)
+                {
+                    return {};
+                }
+
+                if (_type != -1)
+                {
+                    if (begin->type() == _type)
+                    {
+                        if (!_allowed_values.empty())
+                        {
+                            if (_allowed_values.find(begin->as<T>()) != _allowed_values.end())
+                            {
+                                return { (begin++)->as<T>() };
+                            }
+
+                            else
+                            {
+                                return {};
+                            }
+                        }
+
+                        return { (begin++)->as<T>() };
+                    }
+
+                    else
+                    {
+                        return {};
+                    }
+                }
+
+                else
+                {
+                    return _converter->match(begin, end);
+                }
+            }
+
         private:
-            uint64_t _expected_type;
+            uint64_t _type;
+            std::vector<T> _allowed_values; // if empty, any value is allowed - only has effect _type parser,
+            // no effect on _parser parser
+
+            std::unique_ptr<_detail::_converter<T>> _converter;
         };
 
         template<typename T>
