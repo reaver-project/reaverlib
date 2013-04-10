@@ -32,7 +32,7 @@
 
 namespace reaver
 {
-    template<typename T>
+    template<typename>
     struct is_vector : public std::false_type
     {
     };

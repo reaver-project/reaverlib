@@ -1,24 +1,24 @@
 #include <reaver/parser/parser.h>
 
-using namespace reaver::lexer;
-using namespace reaver::parser;
+namespace lex = reaver::lexer;
+namespace par = reaver::parser;
 
 int main()
 {
-    tokens_description desc;
+    lex::tokens_description desc;
 
-    token_definition<uint64_t> def{ 2, "0x[0-9a-fA-F]+", [](const std::string & str)
+    lex::token_definition<uint64_t> def{ 2, "0x[0-9a-fA-F]+", [](const std::string & str)
     {
         uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
     } };
 
     desc.add(1, "[a-zA-Z_][a-zA-Z0-9_]*")
         (def)
-        (3, "[0-9]+", match_type<uint64_t>{})
+        (3, "[0-9]+", lex::match_type<uint64_t>{})
         (4, "\"([^\"\\\\]|\\\\.)*\"")
         (5, "[ \n]");
 
-    auto t = tokenize("identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc);
+    auto t = lex::tokenize("identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc);
 
     for (auto elem : t)
     {
@@ -39,5 +39,21 @@ int main()
             case 5:
                 std::cout << "Type: `white space`" << std::endl;
         }
+    }
+
+    par::rule<uint8_t> a = par::token(def);
+    t = lex::tokenize("0x1000", desc);
+
+    auto begin = t.begin();
+    auto x = a.match(begin, t.end());
+
+    if (begin != t.end() || !x)
+    {
+        std::cout << "Something went wrong." << std::endl;
+    }
+
+    else
+    {
+        std::cout << (uint32_t)*x << std::endl;
     }
 }
