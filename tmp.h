@@ -27,6 +27,8 @@
 #include <vector>
 #include <tuple>
 
+#include <boost/optional.hpp>
+
 namespace reaver
 {
     template<typename T>
@@ -46,6 +48,16 @@ namespace reaver
 
     template<typename... Ts>
     struct is_tuple<std::tuple<Ts...>> : public std::true_type
+    {
+    };
+
+    template<typename T>
+    struct is_optional : public std::false_type
+    {
+    };
+
+    template<typename T>
+    struct is_optional<boost::optional<T>> : public std::true_type
     {
     };
 

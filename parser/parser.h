@@ -64,6 +64,15 @@ namespace reaver
                 }
             };
 
+            template<typename Ret, typename Arg>
+            struct _constructor<Ret, boost::optional<Arg>>
+            {
+                static Ret construct(boost::optional<Arg> arg)
+                {
+                    return _constructor<Ret, Arg>::construct(*arg);
+                }
+            };
+
             template<typename...>
             struct _unpacker;
 
@@ -122,7 +131,8 @@ namespace reaver
                 virtual Ret get(std::vector<lexer::token>::iterator &, std::vector<lexer::token>::iterator) = 0;
             };
 
-            template<typename Ret, typename Parser>
+            template<typename Ret, typename Parser, typename = typename std::enable_if<!std::is_same<typename Parser::value_type,
+                void>::value>::type>
             class _converter_impl : public _converter<Ret>
             {
             public:
@@ -264,37 +274,119 @@ namespace reaver
         template<typename T>
         class not_parser : public parser
         {
+        public:
             using value_type = void;
+
+            not_parser(const T & np) : _negated{ np }
+            {
+            }
+
+            bool match(std::vector<lexer::token>::iterator begin, std::vector<lexer::token>::iterator end)
+            {
+                return !_negated.match(begin, end);
+            }
+
+        private:
+            T _negated;
         };
 
         template<typename T>
         class and_parser : public parser
         {
+        public:
             using value_type = void;
+
+            and_parser(const T & ap) : _and{ ap }
+            {
+            }
+
+            bool match(std::vector<lexer::token>::iterator begin, std::vector<lexer::token>::iterator end)
+            {
+                return _and.match(begin, end);
+            }
+
+        private:
+            T _and;
         };
 
-        template<typename T>
+        template<typename T, typename = typename std::enable_if<!std::is_same<typename T::value_type, void>::value>::type>
         class optional_parser : public parser
         {
-            using value_type = typename std::conditional<std::is_same<typename T::value_type, void>::value,
-                boost::optional<typename T::value_type>, void>::type;
+        public:
+            using value_type = boost::optional<typename T::value_type>;
+
+            optional_parser(const T & opt) : _optional{ opt }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            {
+                return _optional.match(begin, end);
+            }
+
+        private:
+            T _optional;
         };
 
-        template<typename T>
+        template<typename T, typename = typename std::enable_if<is_optional<typename T::value_type>::value>::type>
         class kleene_parser : public parser
         {
-            using value_type = typename std::conditional<std::is_same<typename T::value_type, void>::value,
-                std::vector<typename T::value_type>, void>::type;
+        public:
+            using value_type = std::vector<typename T::value_type::value_type>;
+
+            kleene_parser(const T & other) : _kleene{ other }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            {
+                value_type ret;
+
+                boost::optional<typename value_type::value_type> val;
+
+                while (val = _kleene.match(begin, end))
+                {
+                    val = _kleene.match(begin, end);
+                    ret.emplace_back(_detail::_constructor<value_type, typename T::value_type>::construct(std::move(*val)));
+                }
+
+                return ret;
+            }
+
+        private:
+            T _kleene;
         };
 
-        template<typename T>
+        template<typename T, typename = typename std::enable_if<is_optional<typename T::value_type>::value>::type>
         class plus_parser : public parser
         {
-            using value_type = typename std::conditional<std::is_same<typename T::value_type, void>::value,
-                std::vector<typename T::value_type>, void>::type;
+        public:
+            using value_type = boost::optional<std::vector<typename T::value_type::value_type>>;
+
+            plus_parser(const T & other) : _plus{ other }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            {
+                value_type ret;
+
+                boost::optional<typename value_type::value_type> val = _plus.match(begin, end);
+
+                if (!val)
+                {
+                    return {};
+                }
+
+                return kleene_parser<T>{ _plus }.match(begin, end);
+            }
+
+        private:
+            T _plus;
         };
 
-        template<typename T, typename U>
+        template<typename T, typename U, typename = typename std::enable_if<is_optional<typename T::value_type>::value ||
+            is_optional<typename U::value_type>::value>::type>
         class variant_parser : public parser
         {
             using value_type = typename std::conditional<
