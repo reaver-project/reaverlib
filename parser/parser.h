@@ -379,7 +379,7 @@ namespace reaver
             {
                 while (skip.match(begin, end)) {}
 
-                return !_negated.match(begin, end);
+                return !_negated.match(begin, end, skip);
             }
 
         private:
@@ -406,7 +406,7 @@ namespace reaver
             {
                 while (skip.match(begin, end)) {}
 
-                return _and.match(begin, end);
+                return _and.match(begin, end, skip);
             }
 
         private:
@@ -433,7 +433,7 @@ namespace reaver
             {
                 while (skip.match(begin, end)) {}
 
-                return _optional.match(begin, end);
+                return _optional.match(begin, end, skip);
             }
 
         private:
@@ -464,7 +464,7 @@ namespace reaver
 
                 boost::optional<typename value_type::value_type> val;
 
-                while (val = _kleene.match(begin, end))
+                while (val = _kleene.match(begin, end, skip))
                 {
                     ret.emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
                         ::construct(val));
@@ -501,7 +501,7 @@ namespace reaver
 
                 value_type ret{ typename value_type::value_type{} };
 
-                auto val = _plus.match(begin, end);
+                auto val = _plus.match(begin, end, skip);
 
                 if (!val)
                 {
@@ -514,7 +514,7 @@ namespace reaver
                         ::construct(val));
 
                     while (skip.match(begin, end)) {}
-                } while (val = _plus.match(begin, end));
+                } while (val = _plus.match(begin, end, skip));
 
                 return ret;
             }
@@ -559,14 +559,14 @@ namespace reaver
             {
                 while (skip.match(begin, end)) {}
 
-                auto f = _first.match(begin, end);
+                auto f = _first.match(begin, end, skip);
 
                 if (f)
                 {
                     return { _detail::_constructor<value_type, typename T::value_type>::construct(f) };
                 }
 
-                auto s = _second.match(begin, end);
+                auto s = _second.match(begin, end, skip);
 
                 if (s)
                 {
@@ -625,12 +625,12 @@ namespace reaver
                 while (skip.match(begin, end)) {}
 
                 auto b = begin;
-                auto m = _match.match(b, end);
+                auto m = _match.match(b, end, skip);
 
                 while (skip.match(b, end)) {}
 
                 auto b2 = b;
-                auto d = _dont.match(b, end);
+                auto d = _dont.match(b, end, skip);
 
                 if (m && !d)
                 {
