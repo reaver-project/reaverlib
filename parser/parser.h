@@ -713,7 +713,7 @@ namespace reaver
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
-        sequence_parser<T, U> operator<<(const T & lhs, const U & rhs)
+        sequence_parser<T, U> operator>>(const T & lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
