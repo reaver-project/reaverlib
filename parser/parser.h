@@ -499,7 +499,7 @@ namespace reaver
             {
                 while (skip.match(begin, end)) {}
 
-                value_type ret;
+                value_type ret{ typename value_type::value_type{} };
 
                 auto val = _plus.match(begin, end);
 
