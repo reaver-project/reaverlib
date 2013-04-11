@@ -50,15 +50,28 @@ int main()
 
     t = lex::tokenize("0x1000", desc);
 
-    auto begin = t.begin();
+    auto begin = t.cbegin();
     auto x = alternative.match(begin, t.end());
 
     std::cout << *x << std::endl;
 
     t = lex::tokenize("foobar1_", desc);
 
-    begin = t.begin();
+    begin = t.cbegin();
     x = alternative.match(begin, t.end());
 
     std::cout << *x << std::endl;
+
+    auto sequence = par::kleene_parser<par::rule<uint64_t>>{ par::token(hex) };
+    t = lex::tokenize("0x1 0x2 0x3 0x4 0x5", desc);
+
+    begin = t.cbegin();
+    auto y = sequence.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    std::cout << " ---- " << std::endl;
+    for (auto & val : y)
+    {
+        std::cout << val << std::endl;
+    }
+    std::cout << " ---- " << std::endl;
 }

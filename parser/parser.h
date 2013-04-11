@@ -44,6 +44,10 @@ namespace reaver
 {
     namespace parser
     {
+        class parser
+        {
+        };
+
         namespace _detail
         {
             // TODO: deep removal of optionals when constructing variants
@@ -135,13 +139,47 @@ namespace reaver
                 }
             };
 
+            class _skip_wrapper : public parser
+            {
+            public:
+                virtual ~_skip_wrapper() {}
+
+                virtual bool match(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator) const = 0;
+            };
+
+            template<typename T>
+            class _skip_wrapper_impl : public _skip_wrapper
+            {
+            public:
+                _skip_wrapper_impl(const T & skip) : _skip_ref{ skip }
+                {
+                }
+
+                virtual bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+                {
+                    return _skip_ref.match(begin, end);
+                }
+
+            private:
+                const T & _skip_ref;
+            };
+
             template<typename Ret>
             class _converter
             {
             public:
                 virtual ~_converter() {}
 
-                virtual Ret get(std::vector<lexer::token>::iterator &, std::vector<lexer::token>::iterator) = 0;
+                virtual Ret get(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator) const = 0;
+
+                template<typename T>
+                void set_skip(const T & skip)
+                {
+                    _skip.reset(new _skip_wrapper_impl<T>{ skip });
+                }
+
+            protected:
+                std::shared_ptr<_skip_wrapper> _skip;
             };
 
             template<typename Ret, typename Parser, typename = typename std::enable_if<!std::is_same<typename Parser::value_type,
@@ -153,19 +191,28 @@ namespace reaver
                 {
                 }
 
-                virtual Ret get(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+                virtual Ret get(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
                 {
-                    return _constructor<Ret, typename Parser::value_type>::construct(_parser.match(begin, end));
+                    while (this->_skip->match(begin, end)) {}
+
+                    return _constructor<Ret, typename Parser::value_type>::construct(_parser.match(begin, end, this->_skip));
                 }
 
             private:
                 Parser _parser;
             };
-        }
 
-        class parser
-        {
-        };
+            class _def_skip : public parser
+            {
+            public:
+                using value_type = bool;
+
+                bool match(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator) const
+                {
+                    return false;
+                }
+            };
+        }
 
         template<typename T>
         class rule : public parser
@@ -239,8 +286,16 @@ namespace reaver
                 return *this;
             }
 
-            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 if (begin == end)
                 {
                     return {};
@@ -274,6 +329,7 @@ namespace reaver
 
                 else if (_converter)
                 {
+                    _converter->set_skip(skip);
                     return _converter->get(begin, end);
                 }
 
@@ -298,6 +354,12 @@ namespace reaver
         }
 
         template<typename T>
+        rule<T> token(const lexer::token_description & desc)
+        {
+            return rule<T>{ desc };
+        }
+
+        template<typename T>
         class not_parser : public parser
         {
         public:
@@ -307,8 +369,16 @@ namespace reaver
             {
             }
 
-            bool match(std::vector<lexer::token>::iterator begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 return !_negated.match(begin, end);
             }
 
@@ -326,8 +396,16 @@ namespace reaver
             {
             }
 
-            bool match(std::vector<lexer::token>::iterator begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 return _and.match(begin, end);
             }
 
@@ -345,8 +423,16 @@ namespace reaver
             {
             }
 
-            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 return _optional.match(begin, end);
             }
 
@@ -364,8 +450,16 @@ namespace reaver
             {
             }
 
-            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 value_type ret;
 
                 boost::optional<typename value_type::value_type> val;
@@ -375,6 +469,8 @@ namespace reaver
                     val = _kleene.match(begin, end);
                     ret.emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
                         ::construct(std::move(*val)));
+
+                    while (skip.match(begin, end)) {}
                 }
 
                 return ret;
@@ -394,8 +490,16 @@ namespace reaver
             {
             }
 
-            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 value_type ret;
 
                 boost::optional<typename value_type::value_type> val = _plus.match(begin, end);
@@ -409,6 +513,9 @@ namespace reaver
                 {
                     ret->emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
                         ::construct(std::move(*val)));
+
+                    while (skip.match(begin, end)) {}
+
                     ret = _plus.match(begin, end);
                 } while (val);
 
@@ -445,8 +552,16 @@ namespace reaver
             {
             }
 
-            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 auto f = _first.match(begin, end);
 
                 if (f)
@@ -502,11 +617,21 @@ namespace reaver
             {
             }
 
-            value_type match(std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                while (skip.match(begin, end)) {}
+
                 auto b1 = begin, b2 = begin;
 
                 auto m = _match.match(b1, end);
+
+                while (skip.match(begin, end)) {}
                 auto d = _dont.match(b2, end);
 
                 if (m && !d)

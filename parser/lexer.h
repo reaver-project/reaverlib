@@ -76,7 +76,7 @@ namespace reaver
             }
 
             template<typename T>
-            T as()
+            T as() const
             {
                 if (dynamic_cast<_detail::_token_impl<T> *>(&*_token))
                 {
@@ -89,7 +89,7 @@ namespace reaver
                 }
             }
 
-            uint64_t type()
+            uint64_t type() const
             {
                 return _type;
             }
