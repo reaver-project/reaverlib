@@ -373,7 +373,8 @@ namespace reaver
                 while (val = _kleene.match(begin, end))
                 {
                     val = _kleene.match(begin, end);
-                    ret.emplace_back(_detail::_constructor<value_type, typename T::value_type>::construct(std::move(*val)));
+                    ret.emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
+                        ::construct(std::move(*val)));
                 }
 
                 return ret;
@@ -404,7 +405,14 @@ namespace reaver
                     return {};
                 }
 
-                return kleene_parser<T>{ _plus }.match(begin, end);
+                do
+                {
+                    ret->emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
+                        ::construct(std::move(*val)));
+                    ret = _plus.match(begin, end);
+                } while (val);
+
+                return ret;
             }
 
         private:
