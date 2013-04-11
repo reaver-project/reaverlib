@@ -27,7 +27,7 @@
  * Watch out, crazy template code ahead. All hope abandon ye who enter here.
  *
  * Lexer is full of run-time, er, somethings, this one is full of compile time
- * ones.
+ * ones. And run-time too. I *did* write `all hope abandon`, didn't I?
  */
 
 #pragma once
@@ -73,7 +73,7 @@ namespace reaver
             template<typename Ret, typename Arg>
             struct _constructor<Ret, boost::optional<Arg>>
             {
-                static Ret construct(boost::optional<Arg> arg)
+                static Ret construct(boost::optional<Arg> & arg)
                 {
                     return _constructor<Ret, Arg>::construct(*arg);
                 }
@@ -82,7 +82,7 @@ namespace reaver
             template<typename Ret, typename Arg>
             struct _constructor<boost::optional<Ret>, boost::optional<Arg>>
             {
-                static boost::optional<Ret> construct(boost::optional<Arg> arg)
+                static boost::optional<Ret> construct(boost::optional<Arg> & arg)
                 {
                     return { Ret{ *arg } };
                 }
@@ -467,7 +467,7 @@ namespace reaver
                 while (val = _kleene.match(begin, end))
                 {
                     ret.emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
-                        ::construct(std::move(*val)));
+                        ::construct(val));
 
                     while (skip.match(begin, end)) {}
                 }
@@ -501,7 +501,7 @@ namespace reaver
 
                 value_type ret;
 
-                boost::optional<typename value_type::value_type> val = _plus.match(begin, end);
+                auto val = _plus.match(begin, end);
 
                 if (!val)
                 {
@@ -510,13 +510,11 @@ namespace reaver
 
                 do
                 {
-                    ret->emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
-                        ::construct(std::move(*val)));
+                    ret->emplace_back(_detail::_constructor<typename value_type::value_type::value_type, typename T::value_type>
+                        ::construct(val));
 
                     while (skip.match(begin, end)) {}
-
-                    ret = _plus.match(begin, end);
-                } while (val);
+                } while (val = _plus.match(begin, end));
 
                 return ret;
             }
