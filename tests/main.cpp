@@ -7,13 +7,15 @@ int main()
 {
     lex::tokens_description desc;
 
-    lex::token_definition<uint64_t> def{ 2, "0x[0-9a-fA-F]+", [](const std::string & str)
+    lex::token_definition<uint64_t> hex{ 2, "0x[0-9a-fA-F]+", [](const std::string & str)
     {
         uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
     } };
 
-    desc.add(1, "[a-zA-Z_][a-zA-Z0-9_]*")
-        (def)
+    lex::token_definition<std::string> ident{ 1, "[a-zA-Z_][a-zA-Z0-9_]*" };
+
+    desc.add(ident)
+        (hex)
         (3, "[0-9]+", lex::match_type<uint64_t>{})
         (4, "\"([^\"\\\\]|\\\\.)*\"")
         (5, "[ \n]");
@@ -41,19 +43,22 @@ int main()
         }
     }
 
-    par::rule<uint8_t> a = par::token(def);
+    auto ident_parser = par::token(ident);
+    auto hex_parser = par::token(hex);
+
+    auto alternative = ident_parser | hex_parser;
+
     t = lex::tokenize("0x1000", desc);
 
     auto begin = t.begin();
-    auto x = a.match(begin, t.end());
+    auto x = alternative.match(begin, t.end());
 
-    if (begin != t.end() || !x)
-    {
-        std::cout << "Something went wrong." << std::endl;
-    }
+    std::cout << *x << std::endl;
 
-    else
-    {
-        std::cout << (uint32_t)*x << std::endl;
-    }
+    t = lex::tokenize("foobar1_", desc);
+
+    begin = t.begin();
+    x = alternative.match(begin, t.end());
+
+    std::cout << *x << std::endl;
 }
