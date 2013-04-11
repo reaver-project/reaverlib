@@ -62,8 +62,8 @@ int main()
 
     std::cout << *x << std::endl;
 
-    auto sequence = +par::token(hex);
-    t = lex::tokenize("0x1 0x2 0x3 0x4 0x5", desc);
+    auto sequence = +alternative;
+    t = lex::tokenize("0x1 foo 0x2 foo 0x3 bar 0x4 bar 0x5", desc);
 
     begin = t.cbegin();
     auto y = sequence.match(begin, t.cend(), par::token<std::string>(desc[5]));
@@ -74,4 +74,19 @@ int main()
         std::cout << val << std::endl;
     }
     std::cout << " ---- " << std::endl;
+
+    auto hex_no_string = hex_parser - ident_parser;
+
+    begin = t.cbegin();
+    auto z = hex_no_string.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    if (z)
+    {
+        std::cout << *z << " (shouldn't've been matched)" << std::endl;
+    }
+
+    else
+    {
+        std::cout << "no match (correct!)" << std::endl;
+    }
 }

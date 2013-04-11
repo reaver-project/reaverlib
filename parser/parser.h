@@ -610,7 +610,7 @@ namespace reaver
         public:
             using value_type = typename T::value_type;
 
-            difference_parser(const T & match, const T & dont) : _match{ match }, _dont{ dont }
+            difference_parser(const T & match, const U & dont) : _match{ match }, _dont{ dont }
             {
             }
 
@@ -624,16 +624,17 @@ namespace reaver
             {
                 while (skip.match(begin, end)) {}
 
-                auto b1 = begin, b2 = begin;
+                auto b = begin;
+                auto m = _match.match(b, end);
 
-                auto m = _match.match(b1, end);
+                while (skip.match(b, end)) {}
 
-                while (skip.match(begin, end)) {}
-                auto d = _dont.match(b2, end);
+                auto b2 = b;
+                auto d = _dont.match(b, end);
 
                 if (m && !d)
                 {
-                    begin = b1;
+                    begin = b;
                     return { m };
                 }
 
