@@ -61,6 +61,30 @@ namespace reaver
                 }
             };
 
+            template<typename Ret, typename... Args1, typename Opt, typename... Args2>
+            struct _constructor<Ret, Args1..., boost::optional<Opt>, Args2...>
+            {
+                static Ret construct(const Args1 &... args1, const boost::optional<Opt> opt, const Args2 &... args2)
+                {
+                    return _constructor<Ret, Args1..., Opt, Args2...>::construct(args1..., *opt, args2...);
+                }
+            };
+
+            template<typename Ret, typename... Args1, typename... TupleTypes, typename... Args2>
+            struct _constructor<Ret, Args1..., std::tuple<TupleTypes...>, Args2...>
+            {
+                template<int... I>
+                static Ret unpack(const Args1... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
+                {
+                    return _constructor<Ret, Args1..., TupleTypes..., Args2...>::construct(args1..., std::get<I>(t)..., args2...);
+                }
+
+                static Ret construct(const Args1... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
+                {
+                    return unpack<generator<sizeof...(TupleTypes)>::value>(args1..., t, args2...);
+                }
+            };
+
             template<typename Ret, typename... Args>
             struct _constructor<boost::optional<Ret>, Args...>
             {
@@ -73,7 +97,7 @@ namespace reaver
             template<typename Ret, typename Arg>
             struct _constructor<Ret, boost::optional<Arg>>
             {
-                static Ret construct(boost::optional<Arg> & arg)
+                static Ret construct(const boost::optional<Arg> & arg)
                 {
                     return _constructor<Ret, Arg>::construct(*arg);
                 }
@@ -82,32 +106,9 @@ namespace reaver
             template<typename Ret, typename Arg>
             struct _constructor<boost::optional<Ret>, boost::optional<Arg>>
             {
-                static boost::optional<Ret> construct(boost::optional<Arg> & arg)
+                static boost::optional<Ret> construct(const boost::optional<Arg> & arg)
                 {
                     return { Ret{ *arg } };
-                }
-            };
-
-            template<typename...>
-            struct _unpacker;
-
-            template<typename Ret, int... Seq>
-            struct _unpacker<Ret, sequence<Seq...>>
-            {
-                template<typename T>
-                static Ret _unpack(T && tuple)
-                {
-                    return Ret{ std::get<Seq>(tuple)... };
-                }
-            };
-
-            template<typename Ret, typename T>
-            struct _constructor<Ret, typename std::enable_if<is_tuple<T>::value, T>::type>
-            {
-                // construct an object from a tuple
-                static Ret construct(const T & tuple)
-                {
-                    return _unpacker<Ret, generator<std::tuple_size<T>::value>>::unpack(std::forward<T>(tuple));
                 }
             };
 
@@ -125,16 +126,6 @@ namespace reaver
                     }
 
                     return ret;
-                }
-            };
-
-            template<typename Ret, typename T1, typename T2>
-            struct _constructor<Ret, T1, typename std::enable_if<is_tuple<T1>::value && is_tuple<T2>::value, T2>::type>
-            {
-                static Ret construct(const T1 & tuple1, const T2 & tuple2)
-                {
-                    return _unpacker<Ret, generator<std::tuple_size<T1>::value>, generator<std::tuple_size<T2>::value>>
-                        ::unpack(std::forward<T1>(tuple1), std::forward<T2>(tuple2));
                 }
             };
 
@@ -194,7 +185,7 @@ namespace reaver
                 {
                     while (this->_skip->match(begin, end)) {}
 
-                    return _constructor<Ret, typename Parser::value_type>::construct(_parser.match(begin, end, this->_skip));
+                    return _constructor<Ret, typename Parser::value_type>::construct(_parser.match(begin, end, *this->_skip));
                 }
 
             private:
@@ -223,7 +214,7 @@ namespace reaver
             {
             }
 
-            rule(const rule & rhs) : _type{ rhs._type }, _allowed_values{ rhs._allowed_values }, _converter{ rhs._converter }
+            rule(const rule & rhs) : _type{ rhs._type }, _converter{ rhs._converter }
             {
             }
 
@@ -251,12 +242,11 @@ namespace reaver
                 static_assert(std::is_same<T, U>::value, "You cannot create a rule directly from token definition with another match type.");
             }
 
-            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value &&
-                std::is_constructible<T, typename U::value_type>::value>::type>
+            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value>::type>
             rule & operator=(const U & parser)
             {
                 _type = -1;
-                _converter = new _detail::_converter_impl<T, U>{ parser };
+                _converter.reset(new _detail::_converter_impl<T, U>{ parser });
                 return *this;
             }
 
@@ -265,7 +255,7 @@ namespace reaver
             rule & operator=(const lexer::token_description & desc)
             {
                 _type = desc.type();
-                _converter = nullptr;
+                _converter.reset();
                 return * this;
             }
 
@@ -274,7 +264,7 @@ namespace reaver
             rule & operator=(const lexer::token_definition<T> & def)
             {
                 _type = def.type();
-                _converter = nullptr;
+                _converter.reset();
                 return *this;
             }
 
@@ -304,19 +294,6 @@ namespace reaver
                 {
                     if (begin->type() == _type)
                     {
-                        if (!_allowed_values.empty())
-                        {
-                            if (std::find(_allowed_values.begin(), _allowed_values.end(), begin->as<T>()) != _allowed_values.end())
-                            {
-                                return { (begin++)->as<T>() };
-                            }
-
-                            else
-                            {
-                                return {};
-                            }
-                        }
-
                         return { (begin++)->as<T>() };
                     }
 
@@ -340,9 +317,6 @@ namespace reaver
 
         private:
             uint64_t _type;
-            std::vector<T> _allowed_values; // if empty, any value is allowed - only has effect _type parser,
-            // no effect on _parser parser
-
             std::shared_ptr<_detail::_converter<T>> _converter;
         };
 
