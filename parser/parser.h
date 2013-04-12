@@ -479,7 +479,7 @@ namespace reaver
         };
 
         template<typename Tref, typename = typename std::enable_if<!std::is_same<typename std::remove_reference<Tref>
-            ::value_type, void>::value>::type>
+            ::type::value_type, void>::value>::type>
         class optional_parser : public parser
         {
         public:
@@ -670,12 +670,14 @@ namespace reaver
             Uref _second;
         };
 
-        template<typename Tref, typename Uref, typename = typename std::enable_if<std::is_base_of<parser, Tref>::value
-            && std::is_base_of<parser, Uref>::value && !(std::is_same<typename std::remove_reference<Tref>::value_type, void>::value
+        template<typename Tref, typename Uref, typename = typename std::enable_if<
+            std::is_base_of<parser, typename std::remove_reference<Tref>::type>::value
+            && std::is_base_of<parser, typename std::remove_reference<Uref>::type>::value
+            && !(std::is_same<typename std::remove_reference<Tref>::type::value_type, void>::value
             && std::is_same<typename std::remove_reference<Uref>::type::value_type, void>::value)
             && (std::is_same<typename std::remove_reference<Tref>::type::value_type, void>::value
                 || is_vector<typename std::remove_reference<Tref>::type::value_type>::value
-                || is_optional<typename std::remove_reference<Tref>::value_type>::value)
+                || is_optional<typename std::remove_reference<Tref>::type::value_type>::value)
             && (std::is_same<typename std::remove_reference<Uref>::type::value_type, void>::value
                 || is_vector<typename std::remove_reference<Uref>::type::value_type>::value
                 || is_optional<typename std::remove_reference<Uref>::type::value_type>::value)>::type>
