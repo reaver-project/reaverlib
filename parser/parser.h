@@ -59,15 +59,6 @@ namespace reaver
                 }
             };
 
-            template<typename Ret, typename... Args1, typename Opt, typename... Args2>
-            struct _constructor<Ret, Args1..., boost::optional<Opt>, Args2...>
-            {
-                static Ret construct(const Args1 &... args1, const boost::optional<Opt> & opt, const Args2 &... args2)
-                {
-                    return _constructor<Ret, Args1..., Opt, Args2...>::construct(args1..., *opt, args2...);
-                }
-            };
-
             template<typename...>
             struct _unpacker;
 

@@ -119,8 +119,8 @@ int main()
     auto operation = par::token(op);
     par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
 
-//    begin = t.cbegin();
-//    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+    begin = t.cbegin();
+    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
     t = lex::tokenize("0x0 0x1", desc);
     par::rule<std::vector<uint64_t>> seq = hex_parser >> hex_parser;
