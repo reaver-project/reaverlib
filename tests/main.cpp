@@ -3,6 +3,25 @@
 namespace lex = reaver::lexer;
 namespace par = reaver::parser;
 
+struct op_desc
+{
+    uint64_t first;
+    std::string op;
+    uint64_t second;
+};
+
+struct recursive_op_desc
+{
+    boost::variant<boost::recursive_wrapper<recursive_op_desc>, uint64_t> first;
+    std::string op;
+    boost::variant<boost::recursive_wrapper<recursive_op_desc>, uint64_t> second;
+};
+
+std::ostream & operator<<(std::ostream & o, const recursive_op_desc & r)
+{
+    return o << r.first << r.op << r.second;
+}
+
 int main()
 {
     lex::tokens_description desc;
@@ -108,22 +127,6 @@ int main()
         std::cout << "no match (wrong this time)" << std::endl;
     }
 
-    struct op_desc
-    {
-        uint64_t first;
-        std::string op;
-        uint64_t second;
-    };
-
-    t = tokenize("0x1 + 0x2", desc);
-    auto operation = par::token(op);
-    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
-
-    begin = t.cbegin();
-    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
-
-    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
-
     t = lex::tokenize("0x0 0x1", desc);
     par::rule<std::vector<uint64_t>> seq = hex_parser >> hex_parser;
 
@@ -136,4 +139,27 @@ int main()
         std::cout << elem << std::endl;
     }
     std::cout << " ----" << std::endl;
+
+    t = tokenize("0x1 + 0x2", desc);
+    auto operation = par::token(op);
+    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
+
+    begin = t.cbegin();
+    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
+
+    par::rule<recursive_op_desc> recursive;
+    recursive = (recursive | hex_parser) >> operation >> (recursive | hex_parser);
+
+    begin = t.begin();
+    auto bar = recursive.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    std::cout << *bar << std::endl;
+
+    t = lex::tokenize("0x1 + 0x2 * 0x3 - 0x4", desc);
+    begin = t.begin();
+    bar = recursive.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    std::cout << *bar << std::endl;
 }

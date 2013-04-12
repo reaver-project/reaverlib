@@ -148,10 +148,11 @@ namespace reaver
             template<typename Ret, typename First, typename Second, typename... TupleTypes, typename... Args>
             struct _constructor<boost::optional<Ret>, First, Second, std::tuple<TupleTypes...>, Args...>
             {
-                static boost::optional<Ret> construct(const First & f, const Second & s, const std::tuple<TupleTypes...> & t, const Args &... args)
+                static boost::optional<Ret> construct(const First & f, const Second & s, const std::tuple<TupleTypes...> & t,
+                    const Args &... args)
                 {
                     return { _unpacker<typename generator<sizeof...(TupleTypes)>::type, First, Second, std::tuple<TupleTypes...>,
-                    Args...>::unpack(f, s, t, args...) };
+                        Args...>::unpack(f, s, t, args...) };
                 }
             };
 
@@ -211,7 +212,8 @@ namespace reaver
             public:
                 virtual ~_skip_wrapper() {}
 
-                virtual bool match(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator) const = 0;
+                virtual bool match(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator)
+                    const = 0;
             };
 
             template<typename T>
@@ -222,7 +224,8 @@ namespace reaver
                 {
                 }
 
-                virtual bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+                virtual bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
+                    ::const_iterator end) const
                 {
                     return _skip_ref.match(begin, end);
                 }
@@ -237,7 +240,8 @@ namespace reaver
             public:
                 virtual ~_converter() {}
 
-                virtual Ret get(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator) const = 0;
+                virtual Ret get(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator)
+                    const = 0;
 
                 template<typename T>
                 void set_skip(const T & skip)
@@ -249,16 +253,19 @@ namespace reaver
                 std::shared_ptr<_skip_wrapper> _skip;
             };
 
-            template<typename Ret, typename Parser, typename = typename std::enable_if<!std::is_same<typename Parser::value_type,
-                void>::value>::type>
+            template<typename Ret, typename Parserref, typename = typename std::enable_if<!std::is_same<typename
+                std::remove_reference<Parserref>::type::value_type, void>::value>::type>
             class _converter_impl : public _converter<Ret>
             {
             public:
+                using Parser = typename std::remove_reference<Parserref>::type;
+
                 _converter_impl(const Parser & p) : _parser{ p }
                 {
                 }
 
-                virtual Ret get(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+                virtual Ret get(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
+                    ::const_iterator end) const
                 {
                     while (this->_skip->match(begin, end)) {}
 
@@ -352,13 +359,15 @@ namespace reaver
                 return *this;
             }
 
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
+                ::const_iterator end) const
             {
                 return match(begin, end, _detail::_def_skip{});
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 while (skip.match(begin, end)) {}
 
@@ -409,10 +418,12 @@ namespace reaver
             return rule<T>{ desc };
         }
 
-        template<typename T>
+        template<typename Tref>
         class not_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+
             using value_type = bool;
 
             not_parser(const T & np) : _negated{ np }
@@ -425,7 +436,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 while (skip.match(begin, end)) {}
 
@@ -433,13 +445,15 @@ namespace reaver
             }
 
         private:
-            T _negated;
+            Tref _negated;
         };
 
-        template<typename T>
+        template<typename Tref>
         class and_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+
             using value_type = bool;
 
             and_parser(const T & ap) : _and{ ap }
@@ -452,7 +466,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 while (skip.match(begin, end)) {}
 
@@ -460,13 +475,16 @@ namespace reaver
             }
 
         private:
-            T _and;
+            Tref _and;
         };
 
-        template<typename T, typename = typename std::enable_if<!std::is_same<typename T::value_type, void>::value>::type>
+        template<typename Tref, typename = typename std::enable_if<!std::is_same<typename std::remove_reference<Tref>
+            ::value_type, void>::value>::type>
         class optional_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+
             using value_type = typename std::conditional<is_optional<typename T::value_type>::value, typename T::value_type,
                 boost::optional<typename T::value_type>>::type;
 
@@ -480,7 +498,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 while (skip.match(begin, end)) {}
 
@@ -488,13 +507,16 @@ namespace reaver
             }
 
         private:
-            T _optional;
+            Tref _optional;
         };
 
-        template<typename T, typename = typename std::enable_if<is_optional<typename T::value_type>::value>::type>
+        template<typename Tref, typename = typename std::enable_if<is_optional<typename std::remove_reference<Tref>::type
+            ::value_type>::value>::type>
         class kleene_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+
             using value_type = std::vector<typename T::value_type::value_type>;
 
             kleene_parser(const T & other) : _kleene{ other }
@@ -507,7 +529,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 while (skip.match(begin, end)) {}
 
@@ -527,13 +550,16 @@ namespace reaver
             }
 
         private:
-            T _kleene;
+            Tref _kleene;
         };
 
-        template<typename T, typename = typename std::enable_if<is_optional<typename T::value_type>::value>::type>
+        template<typename Tref, typename = typename std::enable_if<is_optional<typename std::remove_reference<Tref>::type
+            ::value_type>::value>::type>
         class plus_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+
             using value_type = boost::optional<std::vector<typename T::value_type::value_type>>;
 
             plus_parser(const T & other) : _plus{ other }
@@ -546,7 +572,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 value_type ret{ typename value_type::value_type{} };
 
@@ -561,8 +588,8 @@ namespace reaver
 
                 do
                 {
-                    ret->emplace_back(_detail::_constructor<typename value_type::value_type::value_type, typename T::value_type::value_type>
-                        ::construct(*val));
+                    ret->emplace_back(_detail::_constructor<typename value_type::value_type::value_type, typename T
+                        ::value_type::value_type>::construct(*val));
 
                     while (skip.match(b, end)) {}
                 } while (val = _plus.match(b, end, skip));
@@ -573,7 +600,7 @@ namespace reaver
             }
 
         private:
-            T _plus;
+            Tref _plus;
         };
 
         namespace _detail
@@ -590,12 +617,16 @@ namespace reaver
             };
         }
 
-        template<typename T, typename U, typename = typename std::enable_if<(is_optional<typename T::value_type>::value
-            || _detail::_is_variant_parser<T>::value) && (is_optional<typename U::value_type>::value
-            || _detail::_is_variant_parser<U>::value)>::type>
+        template<typename Tref, typename Uref, typename = typename std::enable_if<(is_optional<typename
+            std::remove_reference<Tref>::type::value_type>::value || _detail::_is_variant_parser<Tref>::value)
+            && (is_optional<typename std::remove_reference<Uref>::type::value_type>::value || _detail::_is_variant_parser<Uref>
+            ::value)>::type>
         class variant_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+            using U = typename std::remove_reference<Uref>::type;
+
             using value_type = boost::optional<typename make_variant_type<typename T::value_type, typename U::value_type>::type>;
 
             variant_parser(const T & first, const U & second) : _first{ first }, _second{ second }
@@ -608,7 +639,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 auto b = begin;
 
@@ -634,19 +666,25 @@ namespace reaver
             }
 
         private:
-            T _first;
-            U _second;
+            Tref _first;
+            Uref _second;
         };
 
-        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value
-            && std::is_base_of<parser, U>::value && !(std::is_same<typename T::value_type, void>::value
-            && std::is_same<typename U::value_type, void>::value) && (std::is_same<typename T::value_type, void>::value
-                || is_vector<typename T::value_type>::value || is_optional<typename T::value_type>::value)
-            && (std::is_same<typename U::value_type, void>::value || is_vector<typename U::value_type>::value
-                || is_optional<typename U::value_type>::value)>::type>
+        template<typename Tref, typename Uref, typename = typename std::enable_if<std::is_base_of<parser, Tref>::value
+            && std::is_base_of<parser, Uref>::value && !(std::is_same<typename std::remove_reference<Tref>::value_type, void>::value
+            && std::is_same<typename std::remove_reference<Uref>::type::value_type, void>::value)
+            && (std::is_same<typename std::remove_reference<Tref>::type::value_type, void>::value
+                || is_vector<typename std::remove_reference<Tref>::type::value_type>::value
+                || is_optional<typename std::remove_reference<Tref>::value_type>::value)
+            && (std::is_same<typename std::remove_reference<Uref>::type::value_type, void>::value
+                || is_vector<typename std::remove_reference<Uref>::type::value_type>::value
+                || is_optional<typename std::remove_reference<Uref>::type::value_type>::value)>::type>
         class sequence_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+            using U = typename std::remove_reference<Uref>::type;
+
             using value_type = boost::optional<typename std::conditional<
                 !std::is_same<typename T::value_type, void>::value
                     && std::is_same<typename T::value_type, typename U::value_type>::value,
@@ -673,7 +711,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 auto b = begin;
 
@@ -696,8 +735,8 @@ namespace reaver
                 begin = b;
 
                 return _detail::_constructor<value_type, typename _detail::_true_type<typename T::value_type>::type,
-                    typename _detail::_true_type<typename U::value_type>::type>::construct(_detail::_pass_true_type(first_matched),
-                    _detail::_pass_true_type(second_matched));
+                    typename _detail::_true_type<typename U::value_type>::type>::construct(_detail::_pass_true_type(
+                        first_matched), _detail::_pass_true_type(second_matched));
             }
 
         private:
@@ -725,15 +764,19 @@ namespace reaver
                 return _checker<V>::matched(v);
             }
 
-            T _first;
-            U _second;
+            Tref _first;
+            Uref _second;
         };
 
-        template<typename T, typename U, typename = typename std::enable_if<is_optional<typename T::value_type>::value
-            && is_optional<typename T::value_type>::value>::type>
+        template<typename Tref, typename Uref, typename = typename std::enable_if<is_optional<typename
+            std::remove_reference<Tref>::type::value_type>::value && is_optional<typename std::remove_reference<Uref>
+            ::type::value_type>::value>::type>
         class difference_parser : public parser
         {
         public:
+            using T = typename std::remove_reference<Tref>::type;
+            using U = typename std::remove_reference<Uref>::type;
+
             using value_type = typename T::value_type;
 
             difference_parser(const T & match, const U & dont) : _match{ match }, _dont{ dont }
@@ -746,7 +789,8 @@ namespace reaver
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                const Skip & skip) const
             {
                 while (skip.match(begin, end)) {}
 
@@ -768,13 +812,16 @@ namespace reaver
             }
 
         private:
-            T _match;
-            U _dont;
+            Tref _match;
+            Uref _dont;
         };
 
-        template<typename T, typename U>
+        template<typename Tref, typename Uref>
         class seqor_parser : public parser
         {
+            using T = typename std::remove_reference<Tref>::type;
+            using U = typename std::remove_reference<Uref>::type;
+
             using value_type = typename std::conditional<
                 std::is_same<typename T::value_type, void>::value,
                 typename std::conditional<
@@ -801,66 +848,131 @@ namespace reaver
         class expect_parser;
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
-        not_parser<T> operator!(const T & parser)
+        not_parser<T> operator!(T && parser)
+        {
+            return { std::move(parser) };
+        }
+
+        template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
+        not_parser<const T &> operator!(const T & parser)
         {
             return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
-        and_parser<T> operator&(const T & parser)
+        and_parser<T> operator&(T && parser)
+        {
+            return { std::move(parser) };
+        }
+
+        template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
+        and_parser<const T &> operator&(const T & parser)
         {
             return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
-        optional_parser<T> operator-(const T & parser)
+        optional_parser<T> operator-(T && parser)
+        {
+            return { std::move(parser) };
+        }
+
+        template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
+        optional_parser<const T &> operator-(const T & parser)
         {
             return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
-        plus_parser<T> operator+(const T & parser)
+        plus_parser<T> operator+(T && parser)
+        {
+            return { std::move(parser) };
+        }
+
+        template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
+        plus_parser<const T &> operator+(const T & parser)
         {
             return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
-        kleene_parser<T> operator*(const T & parser)
+        kleene_parser<T> operator*(T && parser)
+        {
+            return { std::move(parser) };
+        }
+
+        template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
+        kleene_parser<const T &> operator*(const T & parser)
         {
             return { parser };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
-        variant_parser<T, U> operator|(const T & lhs, const U & rhs)
+        variant_parser<T, U> operator|(T && lhs, U && rhs)
+        {
+            return { std::move(lhs), std::move(rhs) };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        variant_parser<const T &, const U &> operator|(const T & lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
-        sequence_parser<T, U> operator>>(const T & lhs, const U & rhs)
+        sequence_parser<T, U> operator>>(T && lhs, U && rhs)
+        {
+            return { std::move(lhs), std::move(rhs) };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        sequence_parser<const T &, const U &> operator>>(const T & lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
-        difference_parser<T, U> operator-(const T & lhs, const U & rhs)
+        difference_parser<T, U> operator-(T && lhs, U && rhs)
+        {
+            return { std::move(lhs), std::move(rhs) };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        difference_parser<const T &, const U &> operator-(const T & lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
-        seqor_parser<T, U> operator||(const T & lhs, const U & rhs)
+        seqor_parser<T, U> operator||(T && lhs, U && rhs)
+        {
+            return { std::move(lhs), std::move(rhs) };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        seqor_parser<const T &, const U &> operator||(const T & lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
-        list_parser<T, U> operator%(const T & lhs, const U & rhs)
+        list_parser<T, U> operator%(T && lhs, U && rhs)
+        {
+            return { std::move(lhs), std::move(rhs) };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        list_parser<const T &, const U &> operator%(const T & lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
