@@ -76,12 +76,22 @@ namespace reaver
             };
 
             template<typename Ret, typename... TupleTypes, typename... Args>
-            struct _constructor<typename std::enable_if<!is_optional<Ret>::value, Ret>::type, std::tuple<TupleTypes...>, Args...>
+            struct _constructor<Ret, std::tuple<TupleTypes...>, Args...>
             {
                 static Ret construct(const std::tuple<TupleTypes...> & t, const Args &... args)
                 {
                     return _unpacker<typename generator<sizeof...(TupleTypes)>::type, Ret, std::tuple<TupleTypes...>,
                         Args...>::unpack(t, args...);
+                }
+            };
+
+            template<typename Ret, typename... TupleTypes, typename... Args>
+            struct _constructor<boost::optional<Ret>, std::tuple<TupleTypes...>, Args...>
+            {
+                static boost::optional<Ret> construct(const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return { _unpacker<typename generator<sizeof...(TupleTypes)>::type, Ret, std::tuple<TupleTypes...>,
+                        Args...>::unpack(t, args...) };
                 }
             };
 
@@ -105,6 +115,16 @@ namespace reaver
                 }
             };
 
+            template<typename Ret, typename First, typename... TupleTypes, typename... Args>
+            struct _constructor<boost::optional<Ret>, First, std::tuple<TupleTypes...>, Args...>
+            {
+                static boost::optional<Ret> construct(const First & f, const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return { _unpacker<typename generator<sizeof...(TupleTypes)>::type, First, std::tuple<TupleTypes...>,
+                        Args...>::unpack(f, t, args...) };
+                }
+            };
+
             // 2 args before tuple
             template<int... I, typename Ret, typename First, typename Second, typename... TupleTypes, typename... Args>
             struct _unpacker<sequence<I...>, Ret, First, Second, std::tuple<TupleTypes...>, Args...>
@@ -122,6 +142,16 @@ namespace reaver
                 {
                     return _unpacker<typename generator<sizeof...(TupleTypes)>::type, First, Second, std::tuple<TupleTypes...>,
                         Args...>::unpack(f, s, t, args...);
+                }
+            };
+
+            template<typename Ret, typename First, typename Second, typename... TupleTypes, typename... Args>
+            struct _constructor<boost::optional<Ret>, First, Second, std::tuple<TupleTypes...>, Args...>
+            {
+                static boost::optional<Ret> construct(const First & f, const Second & s, const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return { _unpacker<typename generator<sizeof...(TupleTypes)>::type, First, Second, std::tuple<TupleTypes...>,
+                    Args...>::unpack(f, s, t, args...) };
                 }
             };
 
