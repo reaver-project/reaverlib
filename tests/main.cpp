@@ -14,11 +14,14 @@ int main()
 
     lex::token_definition<std::string> ident{ 1, "[a-zA-Z_][a-zA-Z0-9_]*" };
 
+    lex::token_definition<std::string> op{ 6, "[\\+\\-\\*\\/]" };
+
     desc.add(ident)
         (hex)
         (3, "[0-9]+", lex::match_type<uint64_t>{})
         (4, "\"([^\"\\\\]|\\\\.)*\"")
-        (5, "[ \n]");
+        (5, "[ \n]")
+        (op);
 
     auto t = lex::tokenize("identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc);
 
@@ -104,4 +107,31 @@ int main()
     {
         std::cout << "no match (wrong this time)" << std::endl;
     }
+
+    struct op_desc
+    {
+        uint64_t first;
+        std::string op;
+        uint64_t second;
+    };
+
+    t = tokenize("0x1 + 0x2", desc);
+    auto operation = par::token(op);
+//    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
+
+//    begin = t.cbegin();
+//    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    t = lex::tokenize("0x0 0x1", desc);
+    par::rule<std::vector<uint64_t>> seq = hex_parser >> hex_parser;
+
+    begin = t.cbegin();
+    auto vec = seq.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    std::cout << " ----" << std::endl;
+    for (auto & elem : *vec)
+    {
+        std::cout << elem << std::endl;
+    }
+    std::cout << " ----" << std::endl;
 }

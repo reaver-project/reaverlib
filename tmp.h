@@ -72,28 +72,22 @@ namespace reaver
     {
     };
 
-    template<typename T, typename U>
+    template<typename... Ts>
     struct make_tuple_type
     {
-        using type = std::tuple<T, U>;
+        using type = std::tuple<Ts...>;
     };
 
-    template<typename T, typename... Ts>
-    struct make_tuple_type<T, std::tuple<Ts...>>
+    template<typename... T1s, typename... Ts, typename... T2s>
+    struct make_tuple_type<T1s..., std::tuple<Ts...>, T2s...>
     {
-        using type = std::tuple<T, Ts...>;
+        using type = typename make_tuple_type<T1s..., Ts..., T2s...>::type;
     };
 
-    template<typename... Ts, typename T>
-    struct make_tuple_type<std::tuple<Ts...>, T>
+    template<typename... T1s, typename T, typename... T2s>
+    struct make_tuple_type<T1s..., boost::optional<T>, T2s...>
     {
-        using type = std::tuple<Ts..., T>;
-    };
-
-    template<typename... T1s, typename... T2s>
-    struct make_tuple_type<std::tuple<T1s...>, std::tuple<T2s...>>
-    {
-        using type = std::tuple<T1s..., T2s...>;
+        using type = typename make_tuple_type<T1s..., T, T2s...>::type;
     };
 
     template<typename T>

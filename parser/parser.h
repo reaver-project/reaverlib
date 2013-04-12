@@ -50,8 +50,6 @@ namespace reaver
 
         namespace _detail
         {
-            // TODO: deep removal of optionals when constructing variants
-
             template<typename Ret, typename... Args>
             struct _constructor
             {
@@ -64,7 +62,7 @@ namespace reaver
             template<typename Ret, typename... Args1, typename Opt, typename... Args2>
             struct _constructor<Ret, Args1..., boost::optional<Opt>, Args2...>
             {
-                static Ret construct(const Args1 &... args1, const boost::optional<Opt> opt, const Args2 &... args2)
+                static Ret construct(const Args1 &... args1, const boost::optional<Opt> & opt, const Args2 &... args2)
                 {
                     return _constructor<Ret, Args1..., Opt, Args2...>::construct(args1..., *opt, args2...);
                 }
@@ -74,12 +72,12 @@ namespace reaver
             struct _constructor<Ret, Args1..., std::tuple<TupleTypes...>, Args2...>
             {
                 template<int... I>
-                static Ret unpack(const Args1... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
+                static Ret unpack(const Args1 &... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
                 {
                     return _constructor<Ret, Args1..., TupleTypes..., Args2...>::construct(args1..., std::get<I>(t)..., args2...);
                 }
 
-                static Ret construct(const Args1... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
+                static Ret construct(const Args1 &... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
                 {
                     return unpack<generator<sizeof...(TupleTypes)>::value>(args1..., t, args2...);
                 }
@@ -90,39 +88,46 @@ namespace reaver
             {
                 static boost::optional<Ret> construct(const Args &... args)
                 {
-                    return { Ret{ args... } };
+                    return { _constructor<Ret, Args...>::construct(args...) };
                 }
             };
 
-            template<typename Ret, typename Arg>
-            struct _constructor<Ret, boost::optional<Arg>>
+            template<typename V>
+            struct _true_type
             {
-                static Ret construct(const boost::optional<Arg> & arg)
-                {
-                    return _constructor<Ret, Arg>::construct(*arg);
-                }
+                using type = typename V::value_type;
             };
 
-            template<typename Ret, typename Arg>
-            struct _constructor<boost::optional<Ret>, boost::optional<Arg>>
+            template<typename V>
+            struct _true_type<std::vector<V>>
             {
-                static boost::optional<Ret> construct(const boost::optional<Arg> & arg)
-                {
-                    return { Ret{ *arg } };
-                }
+                using type = std::vector<V>;
             };
+
+            template<typename V>
+            typename _true_type<V>::type _pass_true_type(const V & t)
+            {
+                return *t;
+            }
+
+            template<typename V>
+            const std::vector<V> & _pass_true_type(const std::vector<V> & v)
+            {
+                return v;
+            }
 
             template<typename Ret, typename T>
-            struct _constructor<Ret, typename std::enable_if<is_vector<Ret>::value && is_vector<T>::value, T>::type>
+            struct _constructor<std::vector<Ret>, std::vector<T>>
             {
                 // construct vector of objects from a vector of values
-                static Ret construct(const T & vec)
+                static std::vector<Ret> construct(const std::vector<T> & vec)
                 {
-                    Ret ret(vec.size());
+                    std::vector<Ret> ret;
+                    ret.reserve(vec.size());
 
                     for (auto it = vec.begin(); it != vec.end(); ++it)
                     {
-                        ret.emplace_back(_constructor<typename T::value_type>::construct(*it));
+                        ret.emplace_back(_constructor<Ret, typename _true_type<T>::type>::construct(_pass_true_type(*it)));
                     }
 
                     return ret;
@@ -185,7 +190,8 @@ namespace reaver
                 {
                     while (this->_skip->match(begin, end)) {}
 
-                    return _constructor<Ret, typename Parser::value_type>::construct(_parser.match(begin, end, *this->_skip));
+                    return _constructor<Ret, typename _true_type<typename Parser::value_type>::type>::construct(
+                        _pass_true_type(_parser.match(begin, end, *this->_skip)));
                 }
 
             private:
@@ -218,8 +224,7 @@ namespace reaver
             {
             }
 
-            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value &&
-                std::is_constructible<T, typename U::value_type::value_type>::value>::type>
+            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value>::type>
             rule(const U & p) : _type{ -1 }, _converter{ new _detail::_converter_impl<T, U>{ p } }
             {
             }
@@ -390,7 +395,8 @@ namespace reaver
         class optional_parser : public parser
         {
         public:
-            using value_type = boost::optional<typename T::value_type>;
+            using value_type = typename std::conditional<is_optional<typename T::value_type>::value, typename T::value_type,
+                boost::optional<typename T::value_type>>::type;
 
             optional_parser(const T & opt) : _optional{ opt }
             {
@@ -439,8 +445,8 @@ namespace reaver
 
                 while (val = _kleene.match(begin, end, skip))
                 {
-                    ret.emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type>
-                        ::construct(val));
+                    ret.emplace_back(_detail::_constructor<typename value_type::value_type, typename T::value_type::value_type>
+                        ::construct(*val));
 
                     while (skip.match(begin, end)) {}
                 }
@@ -483,8 +489,8 @@ namespace reaver
 
                 do
                 {
-                    ret->emplace_back(_detail::_constructor<typename value_type::value_type::value_type, typename T::value_type>
-                        ::construct(val));
+                    ret->emplace_back(_detail::_constructor<typename value_type::value_type::value_type, typename T::value_type::value_type>
+                        ::construct(*val));
 
                     while (skip.match(b, end)) {}
                 } while (val = _plus.match(b, end, skip));
@@ -541,7 +547,7 @@ namespace reaver
                 if (f)
                 {
                     begin = b;
-                    return { _detail::_constructor<value_type, typename T::value_type>::construct(f) };
+                    return { _detail::_constructor<value_type, typename T::value_type::value_type>::construct(*f) };
                 }
 
                 auto s = _second.match(b, end, skip);
@@ -549,7 +555,7 @@ namespace reaver
                 if (s)
                 {
                     begin = b;
-                    return { _detail::_constructor<value_type, typename U::value_type>::construct(s) };
+                    return { _detail::_constructor<value_type, typename U::value_type::value_type>::construct(*s) };
                 }
 
                 return {};
@@ -616,7 +622,9 @@ namespace reaver
 
                 begin = b;
 
-                return _detail::_constructor<value_type, typename T::value_type, typename U::value_type>::construct(first_matched, second_matched);
+                return _detail::_constructor<value_type, typename _detail::_true_type<typename T::value_type>::type,
+                    typename _detail::_true_type<typename U::value_type>::type>::construct(_detail::_pass_true_type(first_matched),
+                    _detail::_pass_true_type(second_matched));
             }
 
         private:
@@ -648,7 +656,8 @@ namespace reaver
             U _second;
         };
 
-        template<typename T, typename U>
+        template<typename T, typename U, typename = typename std::enable_if<is_optional<typename T::value_type>::value
+            && is_optional<typename T::value_type>::value>::type>
         class difference_parser : public parser
         {
         public:
