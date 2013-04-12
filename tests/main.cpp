@@ -89,4 +89,19 @@ int main()
     {
         std::cout << "no match (correct!)" << std::endl;
     }
+
+    begin = t.cbegin();
+    auto many_blocks = *(hex_parser >> ident_parser) >> hex_parser;
+    auto w = many_blocks.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+    if (w)
+    {
+        std::cout << " - number of pairs: " << std::get<0>(*w).size() << std::endl;
+        std::cout << " - last number: " << *std::get<1>(*w) << std::endl;
+    }
+
+    else
+    {
+        std::cout << "no match (wrong this time)" << std::endl;
+    }
 }

@@ -129,10 +129,9 @@ namespace reaver
             };
 
             template<typename Ret, typename T1, typename T2>
-            struct _constructor<Ret, T1, T2>
+            struct _constructor<Ret, T1, typename std::enable_if<is_tuple<T1>::value && is_tuple<T2>::value, T2>::type>
             {
-                template<typename = typename std::enable_if<is_tuple<T1>::value && is_tuple<T2>::value>::type>
-                static Ret construct(T1 && tuple1, T2 && tuple2)
+                static Ret construct(const T1 & tuple1, const T2 & tuple2)
                 {
                     return _unpacker<Ret, generator<std::tuple_size<T1>::value>, generator<std::tuple_size<T2>::value>>
                         ::unpack(std::forward<T1>(tuple1), std::forward<T2>(tuple2));
@@ -363,7 +362,7 @@ namespace reaver
         class not_parser : public parser
         {
         public:
-            using value_type = void;
+            using value_type = bool;
 
             not_parser(const T & np) : _negated{ np }
             {
@@ -390,7 +389,7 @@ namespace reaver
         class and_parser : public parser
         {
         public:
-            using value_type = void;
+            using value_type = bool;
 
             and_parser(const T & ap) : _and{ ap }
             {
@@ -497,11 +496,11 @@ namespace reaver
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
             value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
             {
-                while (skip.match(begin, end)) {}
-
                 value_type ret{ typename value_type::value_type{} };
 
-                auto val = _plus.match(begin, end, skip);
+                auto b = begin;
+                while (skip.match(b, end)) {}
+                auto val = _plus.match(b, end, skip);
 
                 if (!val)
                 {
@@ -513,8 +512,10 @@ namespace reaver
                     ret->emplace_back(_detail::_constructor<typename value_type::value_type::value_type, typename T::value_type>
                         ::construct(val));
 
-                    while (skip.match(begin, end)) {}
-                } while (val = _plus.match(begin, end, skip));
+                    while (skip.match(b, end)) {}
+                } while (val = _plus.match(b, end, skip));
+
+                begin = b;
 
                 return ret;
             }
@@ -557,19 +558,23 @@ namespace reaver
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
             value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
             {
-                while (skip.match(begin, end)) {}
+                auto b = begin;
 
-                auto f = _first.match(begin, end, skip);
+                while (skip.match(b, end)) {}
+
+                auto f = _first.match(b, end, skip);
 
                 if (f)
                 {
+                    begin = b;
                     return { _detail::_constructor<value_type, typename T::value_type>::construct(f) };
                 }
 
-                auto s = _second.match(begin, end, skip);
+                auto s = _second.match(b, end, skip);
 
                 if (s)
                 {
+                    begin = b;
                     return { _detail::_constructor<value_type, typename U::value_type>::construct(s) };
                 }
 
@@ -581,10 +586,16 @@ namespace reaver
             U _second;
         };
 
-        template<typename T, typename U>
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value
+            && std::is_base_of<parser, U>::value && !(std::is_same<typename T::value_type, void>::value
+            && std::is_same<typename U::value_type, void>::value) && (std::is_same<typename T::value_type, void>::value
+                || is_vector<typename T::value_type>::value || is_optional<typename T::value_type>::value)
+            && (std::is_same<typename U::value_type, void>::value || is_vector<typename U::value_type>::value
+                || is_optional<typename U::value_type>::value)>::type>
         class sequence_parser : public parser
         {
-            using value_type = typename std::conditional<
+        public:
+            using value_type = boost::optional<typename std::conditional<
                 !std::is_same<typename T::value_type, void>::value
                     && std::is_same<typename T::value_type, typename U::value_type>::value,
                 typename std::conditional<
@@ -594,14 +605,73 @@ namespace reaver
                 >::type,
                 typename std::conditional<
                     std::is_same<typename T::value_type, void>::value,
-                    typename std::conditional<
-                        std::is_same<typename U::value_type, void>::value,
-                        void,
-                        std::vector<typename U::value_type>
-                    >::type,
+                    std::vector<typename U::value_type>,
                     typename make_tuple_type<typename T::value_type, typename U::value_type>::type
                 >::type
-            >::type; // this is not even my final form! ...and probably some bugs on the way
+            >::type>; // this is not even my final form! ...and probably some bugs on the way
+
+            sequence_parser(const T & first, const U & second) : _first{ first }, _second{ second }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end, const Skip & skip) const
+            {
+                auto b = begin;
+
+                while (skip.match(b, end)) {}
+                auto first_matched = _first.match(b, end, skip);
+
+                if (!_matched(first_matched))
+                {
+                    return {};
+                }
+
+                while (skip.match(b, end)) {}
+                auto second_matched = _second.match(b, end, skip);
+
+                if (!_matched(second_matched))
+                {
+                    return {};
+                }
+
+                begin = b;
+
+                return _detail::_constructor<value_type, typename T::value_type, typename U::value_type>::construct(first_matched, second_matched);
+            }
+
+        private:
+            template<typename V>
+            struct _checker
+            {
+                static bool matched(const V & v)
+                {
+                    return v;
+                }
+            };
+
+            template<typename V>
+            struct _checker<std::vector<V>>
+            {
+                static bool matched(const std::vector<V> &)
+                {
+                    return true;
+                }
+            };
+
+            template<typename V>
+            bool _matched(const V & v) const
+            {
+                return _checker<V>::matched(v);
+            }
+
+            T _first;
+            U _second;
         };
 
         template<typename T, typename U>
