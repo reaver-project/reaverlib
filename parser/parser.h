@@ -68,18 +68,69 @@ namespace reaver
                 }
             };
 
-            template<typename Ret, typename... Args1, typename... TupleTypes, typename... Args2>
-            struct _constructor<Ret, Args1..., std::tuple<TupleTypes...>, Args2...>
-            {
-                template<int... I>
-                static Ret unpack(const Args1 &... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
-                {
-                    return _constructor<Ret, Args1..., TupleTypes..., Args2...>::construct(args1..., std::get<I>(t)..., args2...);
-                }
+            template<typename...>
+            struct _unpacker;
 
-                static Ret construct(const Args1 &... args1, const std::tuple<TupleTypes...> & t, const Args2 &... args2)
+            // C++11 variadic templates are dumb
+            // you cannot even do struct _constructor<Args1..., std::tuple<TupleTypes...>, Args2...> :F
+
+            // 0 args before tuple
+            template<int... I, typename Ret, typename... TupleTypes, typename... Args>
+            struct _unpacker<sequence<I...>, Ret, std::tuple<TupleTypes...>, Args...>
+            {
+                static Ret unpack(const std::tuple<TupleTypes...> & t, const Args &... args)
                 {
-                    return unpack<generator<sizeof...(TupleTypes)>::value>(args1..., t, args2...);
+                    return _constructor<Ret, TupleTypes..., Args...>::construct(std::get<I>(t)..., args...);
+                }
+            };
+
+            template<typename Ret, typename... TupleTypes, typename... Args>
+            struct _constructor<typename std::enable_if<!is_optional<Ret>::value, Ret>::type, std::tuple<TupleTypes...>, Args...>
+            {
+                static Ret construct(const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return _unpacker<typename generator<sizeof...(TupleTypes)>::type, Ret, std::tuple<TupleTypes...>,
+                        Args...>::unpack(t, args...);
+                }
+            };
+
+            // 1 arg before tuple
+            template<int... I, typename Ret, typename First, typename... TupleTypes, typename... Args>
+            struct _unpacker<sequence<I...>, Ret, First, std::tuple<TupleTypes...>, Args...>
+            {
+                static Ret unpack(const First & f, const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return _constructor<Ret, First, TupleTypes..., Args...>::construct(f, std::get<I>(t)..., args...);
+                }
+            };
+
+            template<typename Ret, typename First, typename... TupleTypes, typename... Args>
+            struct _constructor<Ret, First, std::tuple<TupleTypes...>, Args...>
+            {
+                static Ret construct(const First & f, const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return _unpacker<typename generator<sizeof...(TupleTypes)>::type, First, std::tuple<TupleTypes...>,
+                        Args...>::unpack(f, t, args...);
+                }
+            };
+
+            // 2 args before tuple
+            template<int... I, typename Ret, typename First, typename Second, typename... TupleTypes, typename... Args>
+            struct _unpacker<sequence<I...>, Ret, First, Second, std::tuple<TupleTypes...>, Args...>
+            {
+                static Ret unpack(const First & f, const Second & s, const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return _constructor<Ret, First, Second, TupleTypes..., Args...>::construct(f, s, std::get<I>(t)..., args...);
+                }
+            };
+
+            template<typename Ret, typename First, typename Second, typename... TupleTypes, typename... Args>
+            struct _constructor<Ret, First, Second, std::tuple<TupleTypes...>, Args...>
+            {
+                static Ret construct(const First & f, const Second & s, const std::tuple<TupleTypes...> & t, const Args &... args)
+                {
+                    return _unpacker<typename generator<sizeof...(TupleTypes)>::type, First, Second, std::tuple<TupleTypes...>,
+                        Args...>::unpack(f, s, t, args...);
                 }
             };
 
@@ -586,7 +637,8 @@ namespace reaver
                 typename std::conditional<
                     std::is_same<typename T::value_type, void>::value,
                     std::vector<typename U::value_type>,
-                    typename make_tuple_type<typename T::value_type, typename U::value_type>::type
+                    typename make_tuple_type<typename remove_optional<typename T::value_type>::type,
+                        typename remove_optional<typename U::value_type>::type>::type
                 >::type
             >::type>; // this is not even my final form! ...and probably some bugs on the way
 

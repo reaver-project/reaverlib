@@ -100,7 +100,7 @@ int main()
     if (w)
     {
         std::cout << " - number of pairs: " << std::get<0>(*w).size() << std::endl;
-        std::cout << " - last number: " << *std::get<1>(*w) << std::endl;
+        std::cout << " - last number: " << std::get<1>(*w) << std::endl;
     }
 
     else
@@ -117,7 +117,7 @@ int main()
 
     t = tokenize("0x1 + 0x2", desc);
     auto operation = par::token(op);
-//    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
+    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
 
 //    begin = t.cbegin();
 //    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));

@@ -72,22 +72,46 @@ namespace reaver
     {
     };
 
+    namespace _detail
+    {
+        template<typename T>
+        std::tuple<T> _tuple(T && t)
+        {
+            return t;
+        }
+
+        template<typename... TupleTypes>
+        const std::tuple<TupleTypes...> & _tuple(const std::tuple<TupleTypes...> & t)
+        {
+            return t;
+        }
+
+        template<typename... TupleTypes>
+        std::tuple<TupleTypes...> && _tuple(std::tuple<TupleTypes...> && t)
+        {
+            return std::move(t);
+        }
+    }
+
+    template<typename... T>
+    auto tuple_val_cat(T &&... t) -> decltype(std::tuple_cat(_detail::_tuple(t)...))
+    {
+        return std::tuple_cat(_detail::_tuple(t)...);
+    }
+
+    template<typename>
+    struct remove_tuple_references;
+
+    template<typename... TupleTypes>
+    struct remove_tuple_references<std::tuple<TupleTypes &...>>
+    {
+        using type = std::tuple<TupleTypes...>;
+    };
+
     template<typename... Ts>
     struct make_tuple_type
     {
-        using type = std::tuple<Ts...>;
-    };
-
-    template<typename... T1s, typename... Ts, typename... T2s>
-    struct make_tuple_type<T1s..., std::tuple<Ts...>, T2s...>
-    {
-        using type = typename make_tuple_type<T1s..., Ts..., T2s...>::type;
-    };
-
-    template<typename... T1s, typename T, typename... T2s>
-    struct make_tuple_type<T1s..., boost::optional<T>, T2s...>
-    {
-        using type = typename make_tuple_type<T1s..., T, T2s...>::type;
+        using type = typename remove_tuple_references<decltype(tuple_val_cat(std::declval<Ts>()...))>::type;
     };
 
     template<typename T>
