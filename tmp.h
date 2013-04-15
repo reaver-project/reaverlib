@@ -147,4 +147,31 @@ namespace reaver
     {
         using type = sequence<S...>;
     };
+
+    template<typename First, typename...>
+    struct first_type
+    {
+        using type = First;
+    };
+
+    template<typename...>
+    struct append_first_type;
+
+    template<typename... First, typename... Second>
+    struct append_first_type<std::tuple<First...>, std::tuple<Second...>>
+    {
+        using type = std::tuple<First..., typename first_type<Second...>::type>;
+    };
+
+    template<typename... Ts>
+    struct append_first_type<std::tuple<Ts...>, std::tuple<>>
+    {
+        using type = std::tuple<Ts...>;
+    };
+
+    template<typename First, typename... Ts>
+    struct cut_first
+    {
+        using type = std::tuple<Ts...>;
+    };
 }

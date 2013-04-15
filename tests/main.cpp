@@ -154,11 +154,9 @@ int main()
 
     par::rule<recursive_op_desc> expr;
     par::rule<recursive_op_desc> term;
-    par::rule<recursive_op_desc> factor;
 
     expr = term >> *(par::token(plus) >> term);
-    term = factor >> *(par::token(star) >> factor);
-    factor = hex_parser;
+    term = hex_parser >> *(par::token(star) >> hex_parser);
 
     begin = t.begin();
     auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
