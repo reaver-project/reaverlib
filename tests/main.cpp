@@ -10,16 +10,28 @@ struct op_desc
     uint64_t second;
 };
 
-struct recursive_op_desc
+struct expression;
+
+struct operation
 {
-    boost::variant<boost::recursive_wrapper<recursive_op_desc>, uint64_t> first;
     std::string op;
-    boost::variant<boost::recursive_wrapper<recursive_op_desc>, uint64_t> second;
+    boost::variant<boost::recursive_wrapper<expression>, uint64_t> operand;
 };
 
-std::ostream & operator<<(std::ostream & o, const recursive_op_desc & r)
+struct expression
 {
-    return o << r.first << r.op << r.second;
+    boost::variant<boost::recursive_wrapper<expression>, uint64_t> first;
+    std::vector<operation> ops;
+};
+
+std::ostream & operator<<(std::ostream & o, const expression & r)
+{
+    o << r.first;
+    for (const auto & x : r.ops)
+    {
+        o << x.op << x.operand;
+    }
+    return o;
 }
 
 int main()
@@ -152,11 +164,11 @@ int main()
 
 //    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
 
-    par::rule<recursive_op_desc> expr;
-    par::rule<recursive_op_desc> term;
+    par::rule<expression> expr;
+    par::rule<expression> term;
 
-    expr = term >> *(par::token(plus) >> term);
-    term = hex_parser >> *(par::token(star) >> hex_parser);
+    expr = term >> *(par::rule<operation>(par::token(plus) >> term));
+    term = hex_parser >> *(par::rule<operation>(par::token(star) >> hex_parser));
 
     begin = t.begin();
     auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));

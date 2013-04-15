@@ -59,6 +59,15 @@ namespace reaver
                 }
             };
 
+            template<typename T>
+            struct _constructor<T, T>
+            {
+                static const T & construct(const T & t)
+                {
+                    return t;
+                }
+            };
+
             template<typename...>
             struct _unpacker;
 
@@ -82,6 +91,15 @@ namespace reaver
                 {
                     return _unpacker<typename generator<sizeof...(TupleTypes)>::type, Ret, std::tuple<TupleTypes...>,
                         Args...>::unpack(t, args...);
+                }
+            };
+
+            template<typename... TupleTypes>
+            struct _constructor<std::tuple<TupleTypes...>, std::tuple<TupleTypes...>>
+            {
+                static const std::tuple<TupleTypes...> & construct(const std::tuple<TupleTypes...> & t)
+                {
+                    return t;
                 }
             };
 
