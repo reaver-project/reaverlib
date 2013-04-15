@@ -33,14 +33,17 @@ int main()
 
     lex::token_definition<std::string> ident{ 1, "[a-zA-Z_][a-zA-Z0-9_]*" };
 
-    lex::token_definition<std::string> op{ 6, "[\\+\\-\\*\\/]" };
+// soon:    lex::token_definition<std::string> op{ 6, "[\\+\\-\\*\\/]" };
+    lex::token_definition<std::string> plus{ 6, "\\+" };
+    lex::token_definition<std::string> star{ 7, "\\*" };
 
     desc.add(ident)
         (hex)
         (3, "[0-9]+", lex::match_type<uint64_t>{})
         (4, "\"([^\"\\\\]|\\\\.)*\"")
         (5, "[ \n]")
-        (op);
+        (plus)
+        (star);
 
     auto t = lex::tokenize("identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc);
 
@@ -140,26 +143,31 @@ int main()
     }
     std::cout << " ----" << std::endl;
 
-    t = tokenize("0x1 + 0x2", desc);
-    auto operation = par::token(op);
-    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
+//    t = tokenize("0x1 + 0x2", desc);
+//    auto operation = par::token(op);
+//    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
 
-    begin = t.cbegin();
-    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+//    begin = t.cbegin();
+//    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
-    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
+//    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
 
-    par::rule<recursive_op_desc> recursive;
-    recursive = (recursive | hex_parser) >> operation >> (recursive | hex_parser);
+    par::rule<recursive_op_desc> expr;
+    par::rule<recursive_op_desc> term;
+    par::rule<recursive_op_desc> factor;
+
+    expr = term >> *(par::token(plus) >> term);
+    term = factor >> *(par::token(star) >> factor);
+    factor = hex_parser;
 
     begin = t.begin();
-    auto bar = recursive.match(begin, t.cend(), par::token<std::string>(desc[5]));
+    auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
     std::cout << *bar << std::endl;
 
     t = lex::tokenize("0x1 + 0x2 * 0x3 - 0x4", desc);
     begin = t.begin();
-    bar = recursive.match(begin, t.cend(), par::token<std::string>(desc[5]));
+    bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
     std::cout << *bar << std::endl;
 }

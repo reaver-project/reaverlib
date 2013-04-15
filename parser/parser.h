@@ -207,6 +207,87 @@ namespace reaver
                 }
             };
 
+            template<typename Void, typename...>
+            struct _recursive_helper;
+
+            template<typename Ret, typename... TupleTypes, typename... Args, typename... OriginalArgs>
+            struct _recursive_helper<typename std::enable_if<std::is_constructible<Ret, OriginalArgs..., Args...>::value
+                && std::is_constructible<Ret, TupleTypes..., Args..., Ret>::value && std::is_constructible<Ret, TupleTypes...>
+                ::value>::type, Ret, std::tuple<OriginalArgs...>, std::tuple<Args...>, std::vector<std::tuple<Args...,
+                TupleTypes...>>>
+            {
+            };
+
+            template<typename Ret, typename TupleType, typename... TupleTypes, typename... Args, typename... OriginalArgs>
+            struct _recursive_helper<typename std::enable_if<!(std::is_constructible<Ret, OriginalArgs..., Args...>::value
+                && std::is_constructible<Ret, TupleType, TupleTypes..., Args..., Ret>::value && std::is_constructible<Ret,
+                TupleType, TupleTypes...>::value)>::type, Ret, std::tuple<OriginalArgs...>, std::tuple<Args...>, std::vector
+                <std::tuple<Args..., TupleType, TupleTypes...>>> : public _recursive_helper<void, std::tuple<TupleType>,
+                std::vector<std::tuple<TupleType, TupleTypes...>>>
+            {
+            };
+
+            template<typename Ret, typename... TupleTypes>
+            struct _constructor<Ret, std::vector<std::tuple<TupleTypes...>>> : public _recursive_helper<void, Ret,
+                std::tuple<>, std::tuple<>, std::vector<std::tuple<TupleTypes...>>>
+            {
+            };
+
+            template<typename Ret, typename First, typename... TupleTypes>
+            struct _constructor<Ret, First, std::vector<std::tuple<TupleTypes...>>> : public _recursive_helper<void,
+                Ret, std::tuple<First>, std::tuple<>, std::vector<std::tuple<TupleTypes...>>>
+            {
+            };
+
+            template<typename Ret, typename First, typename Second, typename... TupleTypes>
+            struct _constructor<Ret, First, Second, std::vector<std::tuple<TupleTypes...>>> : public _recursive_helper<void,
+                Ret, std::tuple<First, Second>, std::tuple<>, std::vector<std::tuple<TupleTypes...>>>
+            {
+            };
+
+            template<typename Ret, typename First, typename Second, typename Third, typename... TupleTypes>
+            struct _constructor<Ret, First, Second, Third, std::vector<std::tuple<TupleTypes...>>> : public _recursive_helper
+                <void, Ret, std::tuple<First, Second, Third>, std::tuple<>, std::vector<std::tuple<TupleTypes...>>>
+            {
+            };
+
+            template<typename Ret, typename... TupleTypes>
+            struct _constructor<boost::optional<Ret>, std::vector<std::tuple<TupleTypes...>>>
+            {
+                static boost::optional<Ret> construct(const std::vector<std::tuple<TupleTypes...>> & vt)
+                {
+                    return { _constructor<Ret, std::vector<std::tuple<TupleTypes...>>>::construct(vt) };
+                }
+            };
+
+            template<typename Ret, typename First, typename... TupleTypes>
+            struct _constructor<boost::optional<Ret>, First, std::vector<std::tuple<TupleTypes...>>>
+            {
+                static boost::optional<Ret> construct(const First & f, const std::vector<std::tuple<TupleTypes...>> & vt)
+                {
+                    return { _constructor<Ret, First, std::vector<std::tuple<TupleTypes...>>>::construct(f, vt) };
+                }
+            };
+
+            template<typename Ret, typename First, typename Second, typename... TupleTypes>
+            struct _constructor<boost::optional<Ret>, First, Second, std::vector<std::tuple<TupleTypes...>>>
+            {
+                static boost::optional<Ret> construct(const First & f, const Second & s, const std::vector<std::tuple<TupleTypes...>> & vt)
+                {
+                    return { _constructor<Ret, First, Second, std::vector<std::tuple<TupleTypes...>>>::construct(f, s, vt) };
+                }
+            };
+
+            template<typename Ret, typename First, typename Second, typename Third, typename... TupleTypes>
+            struct _constructor<boost::optional<Ret>, First, Second, Third, std::vector<std::tuple<TupleTypes...>>>
+            {
+                static boost::optional<Ret> construct(const First & f, const Second & s, const Third & t,
+                    const std::vector<std::tuple<TupleTypes...>> & vt)
+                {
+                    return { _constructor<Ret, First, Second, Third, std::vector<std::tuple<TupleTypes...>>>::construct(f, s, t, vt) };
+                }
+            };
+
             class _skip_wrapper : public parser
             {
             public:
