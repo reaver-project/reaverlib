@@ -15,12 +15,12 @@ struct expression;
 struct operation
 {
     std::string op;
-    boost::variant<boost::recursive_wrapper<expression>, uint64_t> operand;
+    boost::variant<uint64_t, boost::recursive_wrapper<expression>> operand;
 };
 
 struct expression
 {
-    boost::variant<boost::recursive_wrapper<expression>, uint64_t> first;
+    boost::variant<uint64_t, boost::recursive_wrapper<expression>> first;
     std::vector<operation> ops;
 };
 
@@ -166,18 +166,31 @@ int main()
 
     par::rule<expression> expr;
     par::rule<expression> term;
+    par::rule<operation> plusop;
+    par::rule<operation> timesop;
 
-    expr = term >> *(par::rule<operation>(par::token(plus) >> term));
-    term = hex_parser >> *(par::rule<operation>(par::token(star) >> hex_parser));
+    plusop = par::token(plus) >> term;
+    timesop = par::token(star) >> hex_parser;
+
+    expr = term >> *plusop;
+    term = hex_parser >> *timesop;
 
     begin = t.begin();
     auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
     std::cout << *bar << std::endl;
 
-    t = lex::tokenize("0x1 + 0x2 * 0x3 - 0x4", desc);
+    t = lex::tokenize("0x1 + 0x2 * 0x3 + 0x4", desc);
     begin = t.begin();
     bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
-    std::cout << *bar << std::endl;
+    if (bar)
+    {
+        std::cout << *bar << std::endl;
+    }
+
+    else
+    {
+        std::cout << "not mached (wrong)" << std::endl;
+    }
 }
