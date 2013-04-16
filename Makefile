@@ -32,3 +32,5 @@ clean:
 test: all
 	$(CC) $(CFLAGS) tests/main.cpp -o tests/main.o
 	$(CC) -stdlib=libc++ tests/main.o -o tests/output -lc++ -lc++abi -lreaver
+	$(CC) $(CFLAGS) tests/calc.cpp -o tests/calc.o
+	$(CC) -stdlib=libc++ tests/calc.o -o tests/calc -lc++ -lc++abi -lreaver
