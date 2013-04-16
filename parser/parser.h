@@ -546,6 +546,8 @@ namespace reaver
             {
             }
 
+            limited_rule(const limited_rule & rhs) = default;
+
             // directly use lexer token description as a parser
             // in this case, the type check is done at runtime - therefore, produces less helpful error messages
             limited_rule(const lexer::token_description & desc) : _type{ desc.type() }
@@ -597,6 +599,11 @@ namespace reaver
             value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
                 Skip skip) const
             {
+                if (!_allowed.size())
+                {
+                    return {};
+                }
+
                 while (skip.match(begin, end)) {}
 
                 value_type ret;

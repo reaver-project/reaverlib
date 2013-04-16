@@ -166,8 +166,11 @@ int main()
     par::rule<::operation> plusop;
     par::rule<::operation> timesop;
 
-    plusop = par::token(op)({ "+" }) >> term;
-    timesop = par::token(op)({ "*" }) >> hex_parser;
+    auto plus = par::token(op)({ "+" });
+    auto times = par::token(op)({ "*" });
+
+    plusop = plus >> term;
+    timesop = times >> hex_parser;
 
     expr = term >> *plusop;
     term = hex_parser >> *timesop;
