@@ -509,7 +509,7 @@ namespace reaver
                 }
             }
 
-            limited_rule<T> & operator()(const std::vector<T> & add_allowed)
+            limited_rule<T> operator()(const std::vector<T> & add_allowed)
             {
                 limited_rule<T> ret{ *this };
                 return ret(add_allowed);
@@ -548,13 +548,13 @@ namespace reaver
 
             // directly use lexer token description as a parser
             // in this case, the type check is done at runtime - therefore, produces less helpful error messages
-            limited_rule(const lexer::token_description & desc) : _type(desc.type())
+            limited_rule(const lexer::token_description & desc) : _type{ desc.type() }
             {
             }
 
             // directly use lexer token *definition* as a parser
             // in *this* case, the type check is done at compile time - error messages are compile time
-            limited_rule(const lexer::token_definition<T> & def) : _type(def.type())
+            limited_rule(const lexer::token_definition<T> & def) : _type{ def.type() }
             {
             }
 
@@ -1078,7 +1078,7 @@ namespace reaver
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
         not_parser<T> operator!(T && parser)
         {
-            return { std::move(parser) };
+            return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
@@ -1090,7 +1090,7 @@ namespace reaver
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
         and_parser<T> operator&(T && parser)
         {
-            return { std::move(parser) };
+            return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
@@ -1102,7 +1102,7 @@ namespace reaver
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
         optional_parser<T> operator-(T && parser)
         {
-            return { std::move(parser) };
+            return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
@@ -1114,7 +1114,7 @@ namespace reaver
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
         plus_parser<T> operator+(T && parser)
         {
-            return { std::move(parser) };
+            return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
@@ -1126,7 +1126,7 @@ namespace reaver
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
         kleene_parser<T> operator*(T && parser)
         {
-            return { std::move(parser) };
+            return { parser };
         }
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
@@ -1139,7 +1139,7 @@ namespace reaver
             std::is_base_of<parser, U>::value>::type>
         variant_parser<T, U> operator|(T && lhs, U && rhs)
         {
-            return { std::move(lhs), std::move(rhs) };
+            return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
@@ -1153,7 +1153,7 @@ namespace reaver
             std::is_base_of<parser, U>::value>::type>
         sequence_parser<T, U> operator>>(T && lhs, U && rhs)
         {
-            return { std::move(lhs), std::move(rhs) };
+            return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
@@ -1167,7 +1167,7 @@ namespace reaver
             std::is_base_of<parser, U>::value>::type>
         difference_parser<T, U> operator-(T && lhs, U && rhs)
         {
-            return { std::move(lhs), std::move(rhs) };
+            return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
@@ -1181,12 +1181,13 @@ namespace reaver
             std::is_base_of<parser, U>::value>::type>
         seqor_parser<T, U> operator||(T && lhs, U && rhs)
         {
-            return { std::move(lhs), std::move(rhs) };
+            return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
         seqor_parser<const T &, const U &> operator||(const T & lhs, const U & rhs)
+
         {
             return { lhs, rhs };
         }
@@ -1195,7 +1196,7 @@ namespace reaver
             std::is_base_of<parser, U>::value>::type>
         list_parser<T, U> operator%(T && lhs, U && rhs)
         {
-            return { std::move(lhs), std::move(rhs) };
+            return { lhs, rhs };
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
