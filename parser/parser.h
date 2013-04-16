@@ -219,6 +219,11 @@ namespace reaver
                 return true;
             }
 
+            bool _is_matched(bool b)
+            {
+                return b;
+            }
+
             template<typename Ret, typename T>
             struct _constructor<std::vector<Ret>, std::vector<T>>
             {
@@ -711,6 +716,36 @@ namespace reaver
             Tref _and;
         };
 
+        template<typename Tref>
+        class discard_parser : public parser
+        {
+        public:
+            using T = typename std::remove_reference<Tref>::type;
+
+            using value_type = bool;
+
+            discard_parser(const T & discarded) : _discarded{ discarded }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                Skip skip) const
+            {
+                while (skip.match(begin, end)) {}
+
+                return _is_matched(_discarded.match(begin, end, skip));
+            }
+
+        private:
+            T _discarded;
+        };
+
         template<typename Tref, typename = typename std::enable_if<!std::is_same<typename std::remove_reference<Tref>
             ::type::value_type, void>::value>::type>
         class optional_parser : public parser
@@ -1126,6 +1161,18 @@ namespace reaver
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
         plus_parser<const T &> operator+(const T & parser)
+        {
+            return { parser };
+        }
+
+        template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
+        discard_parser<T> operator~(T && parser)
+        {
+            return { parser };
+        }
+
+        template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
+        discard_parser<const T &> operator~(const T & parser)
         {
             return { parser };
         }

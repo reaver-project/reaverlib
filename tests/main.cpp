@@ -167,6 +167,12 @@ int main()
         auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
         std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
+
+        begin = t.cbegin();
+        par::rule<std::pair<uint64_t, uint64_t>> expr_with_discarded = hex_parser >> ~operation >> hex_parser;
+        auto bar = expr_with_discarded.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        std::cout << bar->first << ", " << bar->second << std::endl;
     }
 
     {
@@ -184,13 +190,13 @@ int main()
         expr = term >> *plusop;
         term = hex_parser >> *timesop;
 
-        begin = t.begin();
+        auto begin = t.cbegin();
         auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
         std::cout << *bar << std::endl;
 
         t = lex::tokenize("0x1 + 0x2 * 0x3 + 0x4", desc);
-        begin = t.begin();
+        begin = t.cbegin();
         bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
         if (bar)
