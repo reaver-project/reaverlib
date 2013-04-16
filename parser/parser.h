@@ -241,6 +241,22 @@ namespace reaver
                 return b;
             }
 
+            template<typename T>
+            struct _variant_converter : public boost::static_visitor<T>
+            {
+                template<typename Arg>
+                T operator()(const Arg & a)
+                {
+                    return _constructor<T, Arg>::construct(a);
+                }
+            };
+
+            template<typename T, typename... Ts>
+            T _get_variant_as(const boost::variant<Ts...> & v)
+            {
+                return boost::apply_visitor(_variant_converter<T>{}, v);
+            }
+
             template<typename Ret, typename T>
             struct _constructor<std::vector<Ret>, std::vector<T>>
             {
@@ -912,7 +928,8 @@ namespace reaver
             using T = typename std::remove_reference<Tref>::type;
             using U = typename std::remove_reference<Uref>::type;
 
-            using value_type = boost::optional<typename make_variant_type<typename T::value_type, typename U::value_type>::type>;
+            using value_type = boost::optional<typename remove_optional<typename make_variant_type<typename T::value_type,
+                typename U::value_type>::type>::type>;
 
             variant_parser(const T & first, const U & second) : _first{ first }, _second{ second }
             {
@@ -1003,22 +1020,13 @@ namespace reaver
             using U = typename std::remove_reference<Uref>::type;
 
             using value_type = boost::optional<typename std::conditional<
-                !std::is_same<typename T::value_type, void>::value
-                    && std::is_same<typename T::value_type, typename U::value_type>::value,
+                std::is_same<typename T::value_type, void>::value,
+                typename remove_optional<typename U::value_type>::type,
                 typename std::conditional<
-                    is_vector<typename T::value_type>::value,
-                    typename T::value_type,
-                    std::vector<typename T::value_type>
-                >::type,
-                typename std::conditional<
-                    std::is_same<typename T::value_type, void>::value,
-                    typename remove_optional<typename U::value_type>::type,
-                    typename std::conditional<
-                        std::is_same<typename U::value_type, void>::value,
-                        typename remove_optional<typename T::value_type>::type,
-                        typename make_tuple_type<typename remove_optional<typename T::value_type>::type,
-                            typename remove_optional<typename U::value_type>::type>::type
-                    >::type
+                    std::is_same<typename U::value_type, void>::value,
+                    typename remove_optional<typename T::value_type>::type,
+                    typename make_tuple_type<typename remove_optional<typename T::value_type>::type,
+                        typename remove_optional<typename U::value_type>::type>::type
                 >::type
             >::type>; // this is not even my final form! ...and probably some bugs on the way
 

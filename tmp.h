@@ -132,6 +132,12 @@ namespace reaver
         using type = boost::variant<typename remove_optional<T1s>::type..., typename remove_optional<T2s>::type...>;
     };
 
+    template<typename T>
+    struct make_variant_type<T, T>
+    {
+        using type = T;
+    };
+
     template<int...>
     struct sequence
     {
