@@ -189,6 +189,12 @@ namespace reaver
                 using type = typename V::value_type;
             };
 
+            template<>
+            struct _true_type<void>
+            {
+                using type = void;
+            };
+
             template<typename V>
             struct _true_type<std::vector<V>>
             {
@@ -662,19 +668,19 @@ namespace reaver
         public:
             using T = typename std::remove_reference<Tref>::type;
 
-            using value_type = bool;
+            using value_type = void;
 
             not_parser(const T & np) : _negated{ np }
             {
             }
 
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
                 return match(begin, end, _detail::_def_skip{});
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end,
+            bool match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end,
                 Skip skip) const
             {
                 while (skip.match(begin, end)) {}
@@ -692,19 +698,19 @@ namespace reaver
         public:
             using T = typename std::remove_reference<Tref>::type;
 
-            using value_type = bool;
+            using value_type = void;
 
             and_parser(const T & ap) : _and{ ap }
             {
             }
 
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
                 return match(begin, end, _detail::_def_skip{});
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end,
+            bool match(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator end,
                 Skip skip) const
             {
                 while (skip.match(begin, end)) {}
@@ -722,24 +728,24 @@ namespace reaver
         public:
             using T = typename std::remove_reference<Tref>::type;
 
-            using value_type = bool;
+            using value_type = void;
 
             discard_parser(const T & discarded) : _discarded{ discarded }
             {
             }
 
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
             {
                 return match(begin, end, _detail::_def_skip{});
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+            bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
                 Skip skip) const
             {
                 while (skip.match(begin, end)) {}
 
-                return _is_matched(_discarded.match(begin, end, skip));
+                return _detail::_is_matched(_discarded.match(begin, end, skip));
             }
 
         private:
@@ -965,9 +971,13 @@ namespace reaver
                 >::type,
                 typename std::conditional<
                     std::is_same<typename T::value_type, void>::value,
-                    std::vector<typename U::value_type>,
-                    typename make_tuple_type<typename remove_optional<typename T::value_type>::type,
-                        typename remove_optional<typename U::value_type>::type>::type
+                    typename remove_optional<typename U::value_type>::type,
+                    typename std::conditional<
+                        std::is_same<typename U::value_type, void>::value,
+                        typename remove_optional<typename T::value_type>::type,
+                        typename make_tuple_type<typename remove_optional<typename T::value_type>::type,
+                            typename remove_optional<typename U::value_type>::type>::type
+                    >::type
                 >::type
             >::type>; // this is not even my final form! ...and probably some bugs on the way
 

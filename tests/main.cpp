@@ -169,10 +169,10 @@ int main()
         std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
 
         begin = t.cbegin();
-        par::rule<std::pair<uint64_t, uint64_t>> expr_with_discarded = hex_parser >> ~operation >> hex_parser;
+        par::rule<std::vector<uint64_t>> expr_with_discarded = hex_parser >> ~operation >> hex_parser;
         auto bar = expr_with_discarded.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
-        std::cout << bar->first << ", " << bar->second << std::endl;
+        std::cout << bar->at(0) << ", " << bar->at(1) << std::endl;
     }
 
     {
