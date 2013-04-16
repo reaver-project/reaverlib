@@ -80,117 +80,127 @@ int main()
     auto ident_parser = par::token(ident);
     auto hex_parser = par::token(hex);
 
-    auto alternative = ident_parser | hex_parser;
-
-    t = lex::tokenize("0x1000", desc);
-
-    auto begin = t.cbegin();
-    auto x = alternative.match(begin, t.end());
-
-    std::cout << *x << std::endl;
-
-    t = lex::tokenize("foobar1_", desc);
-
-    begin = t.cbegin();
-    x = alternative.match(begin, t.end());
-
-    std::cout << *x << std::endl;
-
-    auto sequence = +alternative;
-    t = lex::tokenize("0x1 foo 0x2 foo 0x3 bar 0x4 bar 0x5", desc);
-
-    begin = t.cbegin();
-    auto y = sequence.match(begin, t.cend(), par::token<std::string>(desc[5]));
-
-    std::cout << " ---- " << std::endl;
-    for (auto & val : *y)
     {
-        std::cout << val << std::endl;
-    }
-    std::cout << " ---- " << std::endl;
+        auto alternative = ident_parser | hex_parser;
 
-    auto hex_no_string = hex_parser - ident_parser;
+        t = lex::tokenize("0x1000", desc);
 
-    begin = t.cbegin();
-    auto z = hex_no_string.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto begin = t.cbegin();
+        auto x = alternative.match(begin, t.end());
 
-    if (z)
-    {
-        std::cout << *z << " (shouldn't've been matched)" << std::endl;
+        std::cout << *x << std::endl;
+
+        t = lex::tokenize("foobar1_", desc);
+
+        begin = t.cbegin();
+        x = alternative.match(begin, t.end());
+
+        std::cout << *x << std::endl;
+
+        auto sequence = +alternative;
+        t = lex::tokenize("0x1 foo 0x2 foo 0x3 bar 0x4 bar 0x5", desc);
+
+        begin = t.cbegin();
+        auto y = sequence.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        std::cout << " ---- " << std::endl;
+        for (auto & val : *y)
+        {
+            std::cout << val << std::endl;
+        }
+        std::cout << " ---- " << std::endl;
     }
 
-    else
     {
-        std::cout << "no match (correct!)" << std::endl;
+        auto hex_no_string = hex_parser - ident_parser;
+
+        auto begin = t.cbegin();
+        auto z = hex_no_string.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        if (z)
+        {
+            std::cout << *z << " (shouldn't've been matched)" << std::endl;
+        }
+
+        else
+        {
+            std::cout << "no match (correct!)" << std::endl;
+        }
     }
 
-    begin = t.cbegin();
-    auto many_blocks = *(hex_parser >> ident_parser) >> hex_parser;
-    auto w = many_blocks.match(begin, t.cend(), par::token<std::string>(desc[5]));
-
-    if (w)
     {
-        std::cout << " - number of pairs: " << std::get<0>(*w).size() << std::endl;
-        std::cout << " - last number: " << std::get<1>(*w) << std::endl;
+        auto begin = t.cbegin();
+        auto many_blocks = *(hex_parser >> ident_parser) >> hex_parser;
+        auto w = many_blocks.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        if (w)
+        {
+            std::cout << " - number of pairs: " << std::get<0>(*w).size() << std::endl;
+            std::cout << " - last number: " << std::get<1>(*w) << std::endl;
+        }
+
+        else
+        {
+            std::cout << "no match (wrong this time)" << std::endl;
+        }
     }
 
-    else
     {
-        std::cout << "no match (wrong this time)" << std::endl;
+        t = lex::tokenize("0x0 0x1", desc);
+        par::rule<std::vector<uint64_t>> seq = hex_parser >> hex_parser;
+
+        auto begin = t.cbegin();
+        auto vec = seq.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        std::cout << " ----" << std::endl;
+        for (auto & elem : *vec)
+        {
+            std::cout << elem << std::endl;
+        }
+        std::cout << " ----" << std::endl;
+
+        t = tokenize("0x1 + 0x2", desc);
+        auto operation = par::token(op);
+        par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
+
+        begin = t.cbegin();
+        auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
     }
 
-    t = lex::tokenize("0x0 0x1", desc);
-    par::rule<std::vector<uint64_t>> seq = hex_parser >> hex_parser;
-
-    begin = t.cbegin();
-    auto vec = seq.match(begin, t.cend(), par::token<std::string>(desc[5]));
-
-    std::cout << " ----" << std::endl;
-    for (auto & elem : *vec)
     {
-        std::cout << elem << std::endl;
-    }
-    std::cout << " ----" << std::endl;
+        par::rule<expression> expr;
+        par::rule<expression> term;
+        par::rule<operation> plusop;
+        par::rule<operation> timesop;
 
-    t = tokenize("0x1 + 0x2", desc);
-    auto operation = par::token(op);
-    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
+        auto plus = par::token(op)({ "+" });
+        auto times = par::token(op)({ "*" });
 
-    begin = t.cbegin();
-    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        plusop = plus >> term;
+        timesop = times >> hex_parser;
 
-    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
+        expr = term >> *plusop;
+        term = hex_parser >> *timesop;
 
-    par::rule<::expression> expr;
-    par::rule<::expression> term;
-    par::rule<::operation> plusop;
-    par::rule<::operation> timesop;
+        begin = t.begin();
+        auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
-    auto plus = par::token(op)({ "+" });
-    auto times = par::token(op)({ "*" });
-
-    plusop = plus >> term;
-    timesop = times >> hex_parser;
-
-    expr = term >> *plusop;
-    term = hex_parser >> *timesop;
-
-    begin = t.begin();
-    auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
-
-    std::cout << *bar << std::endl;
-
-    t = lex::tokenize("0x1 + 0x2 * 0x3 + 0x4", desc);
-    begin = t.begin();
-    bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
-
-    if (bar)
-    {
         std::cout << *bar << std::endl;
-    }
 
-    else
-    {
-        std::cout << "not mached (wrong)" << std::endl;
+        t = lex::tokenize("0x1 + 0x2 * 0x3 + 0x4", desc);
+        begin = t.begin();
+        bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        if (bar)
+        {
+            std::cout << *bar << std::endl;
+        }
+
+        else
+        {
+            std::cout << "not mached (wrong)" << std::endl;
+        }
     }
 }
