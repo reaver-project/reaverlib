@@ -195,6 +195,12 @@ namespace reaver
                 using type = void;
             };
 
+            template<>
+            struct _true_type<bool>
+            {
+                using type = bool;
+            };
+
             template<typename V>
             struct _true_type<std::vector<V>>
             {
@@ -211,6 +217,11 @@ namespace reaver
             const std::vector<V> & _pass_true_type(const std::vector<V> & v)
             {
                 return v;
+            }
+
+            bool _pass_true_type(bool b)
+            {
+                return b;
             }
 
             template<typename V>
@@ -944,6 +955,36 @@ namespace reaver
             Uref _second;
         };
 
+        namespace _detail
+        {
+            template<typename Ret, typename First, typename Second>
+            struct _sequence_constructor_helper
+            {
+                static Ret construct(const First & f, const Second & s)
+                {
+                    return _constructor<Ret, First, Second>::construct(f, s);
+                }
+            };
+
+            template<typename Ret, typename First>
+            struct _sequence_constructor_helper<Ret, First, void>
+            {
+                static Ret construct(const First & f, bool)
+                {
+                    return _constructor<Ret, First>::construct(f);
+                }
+            };
+
+            template<typename Ret, typename Second>
+            struct _sequence_constructor_helper<Ret, void, Second>
+            {
+                static Ret construct(bool, const Second & s)
+                {
+                    return _constructor<Ret, Second>::construct(s);
+                }
+            };
+        }
+
         template<typename Tref, typename Uref, typename = typename std::enable_if<
             std::is_base_of<parser, typename std::remove_reference<Tref>::type>::value
             && std::is_base_of<parser, typename std::remove_reference<Uref>::type>::value
@@ -1014,9 +1055,9 @@ namespace reaver
 
                 begin = b;
 
-                return _detail::_constructor<value_type, typename _detail::_true_type<typename T::value_type>::type,
-                    typename _detail::_true_type<typename U::value_type>::type>::construct(_detail::_pass_true_type(
-                        first_matched), _detail::_pass_true_type(second_matched));
+                return _detail::_sequence_constructor_helper<value_type, typename _detail::_true_type<typename T::
+                    value_type>::type, typename _detail::_true_type<typename U::value_type>::type>::construct(
+                    _detail::_pass_true_type(first_matched), _detail::_pass_true_type(second_matched));
             }
 
         private:
