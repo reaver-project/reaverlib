@@ -45,17 +45,14 @@ int main()
 
     lex::token_definition<std::string> ident{ 1, "[a-zA-Z_][a-zA-Z0-9_]*" };
 
-// soon:    lex::token_definition<std::string> op{ 6, "[\\+\\-\\*\\/]" };
-    lex::token_definition<std::string> plus{ 6, "\\+" };
-    lex::token_definition<std::string> star{ 7, "\\*" };
+    lex::token_definition<std::string> op{ 6, "[\\+\\-\\*\\/]" };
 
     desc.add(ident)
         (hex)
         (3, "[0-9]+", lex::match_type<uint64_t>{})
         (4, "\"([^\"\\\\]|\\\\.)*\"")
         (5, "[ \n]")
-        (plus)
-        (star);
+        (op);
 
     auto t = lex::tokenize("identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc);
 
@@ -155,22 +152,22 @@ int main()
     }
     std::cout << " ----" << std::endl;
 
-//    t = tokenize("0x1 + 0x2", desc);
-//    auto operation = par::token(op);
-//    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
+    t = tokenize("0x1 + 0x2", desc);
+    auto operation = par::token(op);
+    par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
 
-//    begin = t.cbegin();
-//    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+    begin = t.cbegin();
+    auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
 
-//    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
+    std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
 
-    par::rule<expression> expr;
-    par::rule<expression> term;
-    par::rule<operation> plusop;
-    par::rule<operation> timesop;
+    par::rule<::expression> expr;
+    par::rule<::expression> term;
+    par::rule<::operation> plusop;
+    par::rule<::operation> timesop;
 
-    plusop = par::token(plus) >> term;
-    timesop = par::token(star) >> hex_parser;
+    plusop = par::token(op)({ "+" }) >> term;
+    timesop = par::token(op)({ "*" }) >> hex_parser;
 
     expr = term >> *plusop;
     term = hex_parser >> *timesop;

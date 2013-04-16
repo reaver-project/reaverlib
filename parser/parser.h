@@ -356,7 +356,8 @@ namespace reaver
                     while (this->_skip.match(begin, end)) {}
 
                     _value = _parser.match(begin, end, this->_skip);
-                    return _value;
+
+                    return _is_matched(_value);
                 }
 
                 virtual Ret get() const
@@ -383,10 +384,15 @@ namespace reaver
         }
 
         template<typename T>
+        class limited_rule;
+
+        template<typename T>
         class rule : public parser
         {
         public:
             using value_type = boost::optional<T>;
+
+            friend class limited_rule<T>;
 
             rule() : _type{ -1 }, _converter{}
             {
@@ -503,6 +509,12 @@ namespace reaver
                 }
             }
 
+            limited_rule<T> & operator()(const std::vector<T> & add_allowed)
+            {
+                limited_rule<T> ret{ *this };
+                return ret(add_allowed);
+            }
+
         private:
             uint64_t _type;
             std::shared_ptr<_detail::_converter<T>> _converter;
@@ -519,6 +531,118 @@ namespace reaver
         {
             return rule<T>{ desc };
         }
+
+        template<typename T>
+        class limited_rule : public parser
+        {
+        public:
+            using value_type = boost::optional<T>;
+
+            limited_rule() : _type{ -1 }
+            {
+            }
+
+            limited_rule(const rule<T> & rhs) : _type{ rhs._type }
+            {
+            }
+
+            // directly use lexer token description as a parser
+            // in this case, the type check is done at runtime - therefore, produces less helpful error messages
+            limited_rule(const lexer::token_description & desc) : _type(desc.type())
+            {
+            }
+
+            // directly use lexer token *definition* as a parser
+            // in *this* case, the type check is done at compile time - error messages are compile time
+            limited_rule(const lexer::token_definition<T> & def) : _type(def.type())
+            {
+            }
+
+            template<typename U>
+            limited_rule(const lexer::token_definition<U> &)
+            {
+                static_assert(std::is_same<T, U>::value, "You cannot create a rule directly from token definition with another match type.");
+            }
+
+            // directly use lexer token description as a parser
+            // in this case, the type check is done at runtime - therefore, produces less helpful error messages
+            limited_rule & operator=(const lexer::token_description & desc)
+            {
+                _type = desc.type();
+                return *this;
+            }
+
+            // directly use lexer token *definition* as a parser
+            // in *this* case, the type check is done at compile time - error messages are compile time
+            limited_rule & operator=(const lexer::token_definition<T> & def)
+            {
+                _type = def.type();
+                return *this;
+            }
+
+            template<typename U>
+            limited_rule & operator=(const lexer::token_definition<U> &)
+            {
+                static_assert(std::is_same<T, U>::value, "You cannot create a rule directly from token definition with another match type.");
+                return *this;
+            }
+
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
+                ::const_iterator end) const
+            {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                Skip skip) const
+            {
+                while (skip.match(begin, end)) {}
+
+                value_type ret;
+
+                if (begin == end)
+                {
+                    return {};
+                }
+
+                if (_type != -1)
+                {
+                    if (begin->type() == _type)
+                    {
+                        ret = { (begin++)->as<T>() };
+                    }
+
+                    else
+                    {
+                        return {};
+                    }
+                }
+
+                else
+                {
+                    throw std::runtime_error{ "Called match on empty rule." };
+                }
+
+                if (!ret || std::find(_allowed.begin(), _allowed.end(), *ret) == _allowed.end())
+                {
+                    return {};
+                }
+
+                return ret;
+            }
+
+            limited_rule & operator()(const std::vector<T> & add_allowed)
+            {
+                std::copy(add_allowed.begin(), add_allowed.end(), std::back_inserter(_allowed));
+
+                return *this;
+            }
+
+        private:
+            uint64_t _type;
+            std::vector<T> _allowed;
+        };
 
         template<typename Tref>
         class not_parser : public parser
