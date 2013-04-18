@@ -245,7 +245,7 @@ namespace reaver
             struct _variant_converter : public boost::static_visitor<T>
             {
                 template<typename Arg>
-                T operator()(const Arg & a)
+                T operator()(const Arg & a) const
                 {
                     return _constructor<T, Arg>::construct(a);
                 }
@@ -256,6 +256,42 @@ namespace reaver
             {
                 return boost::apply_visitor(_variant_converter<T>{}, v);
             }
+
+            template<typename Ret, typename... Ts>
+            struct _constructor<Ret, boost::variant<Ts...>>
+            {
+                static Ret construct(const boost::variant<Ts...> & v)
+                {
+                    return _get_variant_as<Ret>(v);
+                }
+            };
+
+            template<typename Ret, typename... Ts>
+            struct _constructor<boost::optional<Ret>, boost::variant<Ts...>>
+            {
+                static boost::optional<Ret> construct(const boost::variant<Ts...> & v)
+                {
+                    return { _get_variant_as<Ret>(v) };
+                }
+            };
+
+            template<typename... Ts, typename... Us>
+            struct _constructor<boost::variant<Ts...>, boost::variant<Us...>>
+            {
+                static boost::variant<Ts...> construct(const boost::variant<Us...> & v)
+                {
+                    return { v };
+                }
+            };
+
+            template<typename... Ts>
+            struct _constructor<boost::variant<Ts...>, boost::variant<Ts...>>
+            {
+                static const boost::variant<Ts...> & construct(const boost::variant<Ts...> & v)
+                {
+                    return v;
+                }
+            };
 
             template<typename Ret, typename T>
             struct _constructor<std::vector<Ret>, std::vector<T>>
@@ -1264,6 +1300,20 @@ namespace reaver
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
+        variant_parser<const T &, U> operator|(const T & lhs, U && rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+        std::is_base_of<parser, U>::value>::type>
+        variant_parser<T, const U &> operator|(T && lhs, const U & rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
         sequence_parser<T, U> operator>>(T && lhs, U && rhs)
         {
             return { lhs, rhs };
@@ -1272,6 +1322,20 @@ namespace reaver
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
         sequence_parser<const T &, const U &> operator>>(const T & lhs, const U & rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        sequence_parser<const T &, U> operator>>(const T & lhs, U && rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        sequence_parser<T, const U &> operator>>(T && lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
@@ -1292,6 +1356,20 @@ namespace reaver
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
+        difference_parser<const T &, U> operator-(const T & lhs, U && rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        difference_parser<T, const U &> operator-(T && lhs, const U & rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
         seqor_parser<T, U> operator||(T && lhs, U && rhs)
         {
             return { lhs, rhs };
@@ -1300,7 +1378,20 @@ namespace reaver
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
         seqor_parser<const T &, const U &> operator||(const T & lhs, const U & rhs)
+        {
+            return { lhs, rhs };
+        }
 
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        seqor_parser<const T &, U> operator||(const T & lhs, U && rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        seqor_parser<T, const U &> operator||(T && lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
@@ -1315,6 +1406,20 @@ namespace reaver
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
         list_parser<const T &, const U &> operator%(const T & lhs, const U & rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        list_parser<const T &, U> operator%(const T & lhs, U && rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        list_parser<T, const U &> operator%(T && lhs, const U & rhs)
         {
             return { lhs, rhs };
         }

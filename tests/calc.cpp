@@ -9,7 +9,7 @@ namespace calculator
     {
         int64_t first, second;
 
-        operator int64_t()
+        operator int64_t() const
         {
             return first + second;
         }
@@ -19,7 +19,7 @@ namespace calculator
     {
         int64_t first, second;
 
-        operator int64_t()
+        operator int64_t() const
         {
             return first - second;
         }
@@ -29,7 +29,7 @@ namespace calculator
     {
         int64_t first, second;
 
-        operator int64_t()
+        operator int64_t() const
         {
             return first * second;
         }
@@ -39,7 +39,7 @@ namespace calculator
     {
         int64_t first, second;
 
-        operator int64_t()
+        operator int64_t() const
         {
             return first / second;
         }
@@ -50,19 +50,19 @@ int main()
 {
     lex::tokens_description desc;
 
-    lex::token_definition<int64_t> integer_token{ 1, "[\\+\\-]?[0-9]+" };
-    lex::token_definition<int64_t> hex_integer_token{ 2, "0x[0-9a-fA-F]+", [](const std::string & str)
+    lex::token_definition<int64_t> hex_integer_token{ 1, "0x[0-9a-fA-F]+", [](const std::string & str)
         {
             uint64_t i;
             std::stringstream s{ str };
-            s >> i;
+            s >> std::hex >> i;
             return i;
         }
     };
+    lex::token_definition<int64_t> integer_token{ 2, "[0-9]+" };
 
 //    lex::token_definition<long double> fp_token; // TODO
 
-    lex::token_definition<std::string> operation_token{ 4, "[\\+\\-\\*/]" };
+    lex::token_definition<std::string> operation_token{ 4, "[\\+\\-\\*\\/]" };
 //    lex::token_definition<std::string> parens_token; // TODO
 
     lex::token_definition<std::string> ignore{ 6, ".*" };   // used last, so can match anything
@@ -84,20 +84,37 @@ int main()
 
     par::rule<int64_t> number = integer | hex;
 
-    par::rule<int64_t> term;
-    par::rule<int64_t> factor;
+    par::rule<int64_t> operation;
+    par::rule<int64_t> expr;
 
-    addition = factor >> ~plus >> factor;
-    subtraction = factor >> ~minus >> factor;
-    multiplication = term >> ~star >> term;
-    division = term >> ~slash >> term;
+    par::rule<int64_t> lower = addition | subtraction;
+    par::rule<int64_t> higher = multiplication | division;
 
-    factor = number | multiplication | division;
-    term = addition | subtraction;
+    addition = number >> ~plus >> expr;
+    subtraction = number >> ~minus >> expr;
+    multiplication = number >> ~star >> expr;
+    division = number >> ~slash >> expr;
+
+    operation = addition | subtraction | multiplication | division;
+    expr = operation | number;
 
     while (true)
     {
         std::string buf;
         std::getline(std::cin, buf);
+
+        auto t = lex::tokenize(buf, desc);
+        auto begin = t.cbegin();
+        auto result = expr.match(begin, t.cend(), par::token(ignore));
+
+        if (result && begin == t.cend())
+        {
+            std::cout << "Result: " << *result << std::endl;
+        }
+
+        else
+        {
+            std::cout << "Syntax error, try again." << std::endl;
+        }
     }
 }
