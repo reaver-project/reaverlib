@@ -209,4 +209,26 @@ int main()
             std::cout << "not mached (wrong)" << std::endl;
         }
     }
+
+    {
+        par::rule<std::vector<uint64_t>> r = hex_parser % par::token(op);
+
+        t = lex::tokenize("0x1 + 0x2 + 0x3 + 0x4", desc);
+        auto begin = t.cbegin();
+        auto ret = r.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        if (ret)
+        {
+            for (const auto & x : *ret)
+            {
+                std::cout << x << ", ";
+            }
+            std::cout << std::endl;
+        }
+
+        else
+        {
+            std::cout << "list test failed" << std::endl;
+        }
+    }
 }

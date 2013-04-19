@@ -311,6 +311,15 @@ namespace reaver
                 }
             };
 
+            template<typename T>
+            struct _constructor<std::vector<T>, std::vector<T>>
+            {
+                static const std::vector<T> & construct(const std::vector<T> & vec)
+                {
+                    return vec;
+                }
+            };
+
             template<typename Ret, typename... TupleTypes>
             struct _constructor<boost::optional<Ret>, std::vector<std::tuple<TupleTypes...>>>
             {
@@ -1202,11 +1211,59 @@ namespace reaver
             >::type;
         };
 
-        template<typename T, typename U>
+        template<typename Tref, typename Uref, typename = typename std::enable_if<is_optional<typename std::remove_reference<Tref>
+            ::type::value_type>::value && is_optional<typename std::remove_reference<Uref>::type::value_type>::value>::type>
         class list_parser : public parser
         {
-            using value_type = std::vector<typename T::value_type>; // no void, sorry - you can hardly have a list of voids
-            // and it hardly makes any sense
+        public:
+            using T = typename std::remove_reference<Tref>::type;
+            using U = typename std::remove_reference<Uref>::type;
+
+            using value_type = boost::optional<std::vector<typename remove_optional<typename T::value_type>::type>>;
+
+            list_parser(const T & element, const U & separator) : _element{ element }, _separator{ separator }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                Skip skip) const
+            {
+                while (skip.match(begin, end)) {}
+
+                auto b = begin;
+                auto elem = _element.match(b, end, skip);
+
+                if (!elem)
+                {
+                    return {};
+                }
+
+                begin = b;
+
+                value_type ret{ { *elem } };
+
+                while (skip.match(begin, end)) {}
+                typename U::value_type sep;
+
+                b = begin;
+                while ((sep = _separator.match(b, end, skip)) && (elem = _element.match(b, end, skip)))
+                {
+                    ret->emplace_back(*elem);
+                    begin = b;
+                }
+
+                return ret;
+            }
+
+        private:
+            Tref _element;
+            Uref _separator;
         };
 
         template<typename T, typename U>

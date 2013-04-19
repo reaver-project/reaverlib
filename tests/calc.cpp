@@ -82,6 +82,9 @@ int main()
     par::rule<calculator::multiplication> multiplication;
     par::rule<calculator::division> division;
 
+    // FIXME: current set of rules fails miserably at operator precendence
+    // find some smart way to fix it
+
     par::rule<int64_t> number = integer | hex;
 
     par::rule<int64_t> operation;
