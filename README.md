@@ -107,18 +107,34 @@ in namespace `reaver::lexer` for given type to change the conversion globally, o
 
 Here's an example for (2).
 
-    lex::token_definition<uint64_t> hex{
+    reaver::lexer::token_definition<uint64_t> hex{
         2,                                                                      // (1)
         "0x[0-9a-fA-F]+",                                                       // (2)
         [](const std::string & str)                                             // (3)
         {
-            uint64_t a; std::stringstream(str) >> std::hex >> a; return a;
+            uint64_t a; std::stringstream{ str } >> std::hex >> a; return a;
         }
     };
 
 (1) and (2) are the same as before, (3) is a function object or pointer that takes apropriate
 string type ane returns type of `token_definition`'s template parameter.
 
-**TODO**: `token_description`, adding `token_description` and `token_definition` to the
-`tokens_description`, using `lexer::tokenize()`, getting lexed tokens out from vector of
-`token`s, using `tokens_description::operator[]`, using token aliases.
+`token_definition` is not a template, it doesn't carry compile-time information about type.
+It is used internally as a polymorphic wrapper for internal token description. You should
+have no interest in declaring `token_definition` by yourself; here's short description of its
+constructors, which will be helpful when talking about `tokens_description`. This is essentially
+the same thing as last `token_definition` example, just not carrying type information.
+
+    reaver::lexer::token_description hex{
+        2,
+        "0x[0-9a-fA-F]+",
+        reaver::lexer::match_type<uint64_t>{},
+        [](const std::string & str)
+        {
+            uint64_t a; std::stringstream{ str } >> std::hex >> a; return a;
+        }
+    };
+
+**TODO**: adding `token_description` and `token_definition` to the `tokens_description`, using
+`lexer::tokenize()`, getting lexed tokens out from vector of `token`s, using `tokens_description::operator[]`,
+using token aliases.
