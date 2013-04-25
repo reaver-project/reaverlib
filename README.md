@@ -21,8 +21,8 @@ Here's an example.
 
     int main()
     {
-        std::cout << "Here's normal text.\n";
         std::cout << style(colors::bred, colors::def, styles::bold) << "Here's bold, bright red text.\n";
+        std::cout << style() << "Here's normal text.\n";
     }
 
 
@@ -121,7 +121,7 @@ string type ane returns type of `token_definition`'s template parameter.
 
 `token_definition` is not a template, it doesn't carry compile-time information about type.
 It is used internally as a polymorphic wrapper for internal token description. You should
-have no interest in declaring `token_definition` by yourself; here's short description of its
+have no interest in declaring `token_description` by yourself; here's short description of its
 constructors, which will be helpful when talking about `tokens_description`. This is essentially
 the same thing as last `token_definition` example, just not carrying type information.
 
