@@ -1363,7 +1363,7 @@ namespace reaver
         }
 
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
-        std::is_base_of<parser, U>::value>::type>
+            std::is_base_of<parser, U>::value>::type>
         variant_parser<T, const U &> operator|(T && lhs, const U & rhs)
         {
             return { lhs, rhs };
