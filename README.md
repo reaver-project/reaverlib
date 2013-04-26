@@ -74,8 +74,7 @@ only after Reaver Assembler is implemented. - ]
 To use `reaver::lexer`, you must first define allowed tokens. They are then contained in
 class resembling `boost::program_options::options_description`, and passed to the
 `reaver::lexer::tokenize()` function. Upon encountering string not matching any of the
-defined tokens, `reaver::lexer::tokenize()` throws `std::runtime_exception` (it will, most
-surely, changed into native exception type one day).
+defined tokens, `reaver::lexer::tokenize()` throws `reaver::lexer::unexpected_characters`.
 
 There are two ways to define a token:
 

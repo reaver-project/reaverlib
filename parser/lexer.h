@@ -304,6 +304,14 @@ namespace reaver
             std::map<std::string, uint64_t> _aliases;
         };
 
+        class unexpected_characters : public std::runtime_error
+        {
+        public:
+            unexpected_characters() : std::runtime_error{ "Unexpected characters in tokenized string; tokenization failed." }
+            {
+            }
+        };
+
         inline std::vector<token> tokenize(const std::string & str, const tokens_description & def)
         {
             std::vector<token> ret;
@@ -328,7 +336,7 @@ namespace reaver
 
                 if (b == e)
                 {
-                    throw std::runtime_error{ "Unexpected characters in tokenized string; tokenization failed." };
+                    throw unexpected_characters{};
                 }
             }
 

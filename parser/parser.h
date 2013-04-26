@@ -1481,15 +1481,6 @@ namespace reaver
             return { lhs, rhs };
         }
 
-        template<typename T>
-        typename std::conditional<std::is_same<typename T::value_type, void>::value, bool, typename T::value_type>::type
-        parse(const T & parser, std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
-        {
-            auto ret = parser.match(begin, end);
-            while (skip.match(begin, end)) {}
-            return ret;
-        }
-
         template<typename T, typename Skip>
         typename std::conditional<std::is_same<typename T::value_type, void>::value, bool, typename T::value_type>::type
         parse(const T & parser, std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end,
@@ -1498,6 +1489,13 @@ namespace reaver
             auto ret = parser.match(begin, end, skip);
             while (skip.match(begin, end)) {}
             return ret;
+        }
+
+        template<typename T>
+        typename std::conditional<std::is_same<typename T::value_type, void>::value, bool, typename T::value_type>::type
+        parse(const T & parser, std::vector<lexer::token>::iterator & begin, std::vector<lexer::token>::iterator end)
+        {
+            parse(parser, begin, end, _detail::_def_skip{});
         }
     }
 }
