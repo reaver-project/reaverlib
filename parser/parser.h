@@ -831,8 +831,8 @@ namespace reaver
         public:
             using T = typename std::remove_reference<Tref>::type;
 
-            using value_type = typename std::conditional<is_optional<typename T::value_type>::value, typename T::value_type,
-                boost::optional<typename T::value_type>>::type;
+            using value_type = typename std::conditional<is_optional<typename T::value_type>::value, boost::optional<typename T::value_type>,
+                boost::optional<boost::optional<typename T::value_type>>>::type;
 
             optional_parser(const T & opt) : _optional{ opt }
             {

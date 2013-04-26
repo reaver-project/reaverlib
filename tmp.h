@@ -105,7 +105,7 @@ namespace reaver
     template<typename T>
     struct remove_optional<boost::optional<T>>
     {
-        using type = typename remove_optional<T>::type;
+        using type = T;
     };
 
     template<typename T, typename U>
