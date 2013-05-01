@@ -219,7 +219,7 @@ namespace reaver
                 return v;
             }
 
-            bool _pass_true_type(bool b)
+            inline bool _pass_true_type(bool b)
             {
                 return b;
             }
@@ -236,7 +236,7 @@ namespace reaver
                 return true;
             }
 
-            bool _is_matched(bool b)
+            inline bool _is_matched(bool b)
             {
                 return b;
             }
