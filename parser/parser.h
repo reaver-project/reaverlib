@@ -320,6 +320,22 @@ namespace reaver
                 }
             };
 
+            template<typename CharType>
+            struct _constructor<std::basic_string<CharType>, std::vector<std::basic_string<CharType>>>
+            {
+                static const std::basic_string<CharType> construct(const std::vector<std::basic_string<CharType>> & vec)
+                {
+                    std::string ret;
+
+                    for (auto & x : vec)
+                    {
+                        ret.append(x);
+                    }
+
+                    return ret;
+                }
+            };
+
             template<typename Ret, typename... TupleTypes>
             struct _constructor<boost::optional<Ret>, std::vector<std::tuple<TupleTypes...>>>
             {
@@ -1171,10 +1187,8 @@ namespace reaver
                 auto b = begin;
                 auto m = _match.match(b, end, skip);
 
-                while (skip.match(b, end)) {}
-
-                auto b2 = b;
-                auto d = _dont.match(b, end, skip);
+                auto b2 = begin;
+                auto d = _dont.match(b2, end, skip);
 
                 if (m && !d)
                 {
