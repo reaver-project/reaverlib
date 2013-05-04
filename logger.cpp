@@ -82,16 +82,16 @@ reaver::logger::action::action(logger & log, reaver::logger::level level, const 
 
 reaver::logger::action::~action()
 {
-    if (_level < _logger._level)
+    if (_level < logger_friend::_level(_logger))
     {
         return;
     }
 
     std::vector<std::pair<reaver::style::style, std::string>> strings = _strings;
 
-    for (auto & stream : _logger._streams)
+    for (auto & stream : _streams(_logger))
     {
-        _logger._async([=]() mutable
+        _async(_logger, [=]() mutable
         {
             for (auto x : strings)
             {
@@ -154,4 +154,19 @@ reaver::logger::action reaver::logger::logger::operator()(reaver::logger::level 
         case always:
             return action(*this, level);
     }
+}
+
+std::vector<reaver::logger::stream_wrapper> & reaver::logger::logger_friend::_streams(logger & l)
+{
+    return l._streams;
+}
+
+void reaver::logger::logger_friend::_async(logger & l, std::function<void()> f)
+{
+    l._async(f);
+}
+
+reaver::logger::level reaver::logger::logger_friend::_level(logger & l)
+{
+    return l._level;
 }

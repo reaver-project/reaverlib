@@ -61,7 +61,17 @@ namespace reaver
         class logger;
         extern logger dlog;
 
-        class action
+        class stream_wrapper;
+
+        class logger_friend
+        {
+        protected:
+            static std::vector<stream_wrapper> & _streams(logger &);
+            static void _async(logger &, std::function<void()>);
+            level _level(logger &);
+        };
+
+        class action : public logger_friend
         {
         public:
             action(logger & log = reaver::logger::dlog, level lev = always) : _logger(log), _level(lev), _strings()
@@ -178,7 +188,7 @@ namespace reaver
 
             action operator()(level = always);
 
-            friend class action;
+            friend class logger_friend;
 
         private:
             void _async(std::function<void()>);
