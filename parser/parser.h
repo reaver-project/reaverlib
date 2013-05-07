@@ -1280,8 +1280,110 @@ namespace reaver
             Uref _separator;
         };
 
-        template<typename T, typename U>
-        class expect_parser;
+        class expectation_failure : public std::exception
+        {
+            expectation_failure(std::vector<lexer::token>::const_iterator it) : iter{ it }
+            {
+            }
+
+            std::vector<lexer::token>::const_iterator iter;
+        };
+
+        template<typename Tref, typename Uref, typename = typename std::enable_if<
+            std::is_base_of<parser, typename std::remove_reference<Tref>::type>::value
+            && std::is_base_of<parser, typename std::remove_reference<Uref>::type>::value
+            && !(std::is_same<typename std::remove_reference<Tref>::type::value_type, void>::value
+            && std::is_same<typename std::remove_reference<Uref>::type::value_type, void>::value)
+            && (std::is_same<typename std::remove_reference<Tref>::type::value_type, void>::value
+                || is_vector<typename std::remove_reference<Tref>::type::value_type>::value
+                || is_optional<typename std::remove_reference<Tref>::type::value_type>::value)
+            && (std::is_same<typename std::remove_reference<Uref>::type::value_type, void>::value
+                || is_vector<typename std::remove_reference<Uref>::type::value_type>::value
+                || is_optional<typename std::remove_reference<Uref>::type::value_type>::value)>::type>
+        class expect_parser : public parser
+        {
+        public:
+            using T = typename std::remove_reference<Tref>::type;
+            using U = typename std::remove_reference<Uref>::type;
+
+            using value_type = boost::optional<typename std::conditional<
+                std::is_same<typename T::value_type, void>::value,
+                typename remove_optional<typename U::value_type>::type,
+                typename std::conditional<
+                    std::is_same<typename U::value_type, void>::value,
+                    typename remove_optional<typename T::value_type>::type,
+                    typename make_tuple_type<typename remove_optional<typename T::value_type>::type,
+                        typename remove_optional<typename U::value_type>::type>::type
+                >::type
+            >::type>;
+
+            sequence_parser(const T & first, const U & second) : _first{ first }, _second{ second }
+            {
+            }
+
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                Skip skip) const
+            {
+                auto b = begin;
+
+                while (skip.match(b, end)) {}
+                auto first_matched = _first.match(b, end, skip);
+
+                if (!_matched(first_matched))
+                {
+                    return {};
+                }
+
+                while (skip.match(b, end)) {}
+                auto second_matched = _second.match(b, end, skip);
+
+                if (!_matched(second_matched))
+                {
+                    throw expectation_failure{ b };
+                }
+
+                begin = b;
+
+                return _detail::_sequence_constructor_helper<value_type, typename _detail::_true_type<typename T::
+                    value_type>::type, typename _detail::_true_type<typename U::value_type>::type>::construct(
+                    _detail::_pass_true_type(first_matched), _detail::_pass_true_type(second_matched));
+                }
+
+        private:
+            template<typename V>
+            struct _checker
+            {
+                static bool matched(const V & v)
+                {
+                    return v;
+                }
+            };
+
+            template<typename V>
+            struct _checker<std::vector<V>>
+            {
+                static bool matched(const std::vector<V> &)
+                {
+                    return true;
+                }
+            };
+
+            template<typename V>
+            bool _matched(const V & v) const
+            {
+                return _checker<V>::matched(v);
+            }
+
+            Tref _first;
+            Uref _second;
+        };
+
 
         template<typename T, typename = typename std::enable_if<std::is_base_of<parser, T>::value>::type>
         not_parser<T> operator!(T && parser)
@@ -1491,6 +1593,34 @@ namespace reaver
         template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
             std::is_base_of<parser, U>::value>::type>
         list_parser<T, const U &> operator%(T && lhs, const U & rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        expect_parser<T, U> operator>(T && lhs, U && rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        expect_parser<const T &, const U &> operator>(const T & lhs, const U & rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        expect_parser<const T &, U> operator>(const T & lhs, U && rhs)
+        {
+            return { lhs, rhs };
+        }
+
+        template<typename T, typename U, typename = typename std::enable_if<std::is_base_of<parser, T>::value &&
+            std::is_base_of<parser, U>::value>::type>
+        expect_parser<T, const U &> operator>(T && lhs, const U & rhs)
         {
             return { lhs, rhs };
         }
