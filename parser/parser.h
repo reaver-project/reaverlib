@@ -1282,6 +1282,7 @@ namespace reaver
 
         class expectation_failure : public std::exception
         {
+        public:
             expectation_failure(std::vector<lexer::token>::const_iterator it) : iter{ it }
             {
             }
@@ -1317,7 +1318,7 @@ namespace reaver
                 >::type
             >::type>;
 
-            sequence_parser(const T & first, const U & second) : _first{ first }, _second{ second }
+            expect_parser(const T & first, const U & second) : _first{ first }, _second{ second }
             {
             }
 
