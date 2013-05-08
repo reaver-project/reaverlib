@@ -35,7 +35,9 @@
 #include <type_traits>
 
 #include <boost/optional.hpp>
+#define BOOST_NO_CXX11_RVALUE_REFERENCES
 #include <boost/variant.hpp>
+#undef BOOST_NO_CXX11_RVALUE_REFERENCES
 
 #include <reaver/parser/lexer.h>
 #include <reaver/tmp.h>
