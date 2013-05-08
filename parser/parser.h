@@ -106,7 +106,7 @@ namespace reaver
             template<typename... Tuple1Types, typename... Tuple2Types>
             struct _constructor<std::tuple<Tuple1Types..., Tuple2Types...>, std::tuple<Tuple1Types...>, std::tuple<Tuple2Types...>>
             {
-                static const std::tuple<Tuple1Types..., Tuple2Types...> construct(const std::tuple<Tuple1Types...> & t1,
+                static std::tuple<Tuple1Types..., Tuple2Types...> construct(const std::tuple<Tuple1Types...> & t1,
                     const std::tuple<Tuple2Types...> & t2)
                 {
                     return std::tuple_cat(t1, t2);
@@ -1028,8 +1028,8 @@ namespace reaver
             using T = typename std::remove_reference<Tref>::type;
             using U = typename std::remove_reference<Uref>::type;
 
-            using value_type = boost::optional<typename remove_optional<typename make_variant_type<typename T::value_type,
-                typename U::value_type>::type>::type>;
+            using value_type = boost::optional<typename make_variant_type<typename remove_optional<typename T::value_type>::type,
+                typename remove_optional<typename U::value_type>::type>::type>;
 
             variant_parser(const T & first, const U & second) : _first{ first }, _second{ second }
             {

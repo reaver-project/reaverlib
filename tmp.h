@@ -114,12 +114,6 @@ namespace reaver
         using type = boost::variant<typename remove_optional<T>::type, typename remove_optional<U>::type>;
     };
 
-    template<typename T, typename... Ts>
-    struct make_variant_type<T, boost::variant<Ts...>>
-    {
-        using type = boost::variant<typename remove_optional<T>::type, typename remove_optional<Ts>::type...>;
-    };
-
     namespace _detail
     {
         template<typename... Ts>
@@ -142,6 +136,12 @@ namespace reaver
             using type = _type_sequence<Types...>;
         };
 
+        template<typename... Types>
+        struct _make_variant_type_sequence_helper<_type_sequence<Types...>>
+        {
+            using type = _type_sequence<Types...>;
+        };
+
         template<typename, typename>
         struct _make_variant_helper;
 
@@ -152,15 +152,29 @@ namespace reaver
         };
     }
 
+    template<typename T, typename... Ts>
+    struct make_variant_type<T, boost::variant<Ts...>>
+    {
+        using type = typename _detail::_make_variant_helper<
+            typename _detail::_make_variant_type_sequence_helper<
+                _detail::_type_sequence<>,
+                typename remove_optional<Ts>::type...,
+                typename remove_optional<T>::type
+            >::type,
+            _detail::_type_sequence<>
+        >::type;
+    };
+
     template<typename... Ts, typename T>
     struct make_variant_type<boost::variant<Ts...>, T>
     {
         using type = typename _detail::_make_variant_helper<
             typename _detail::_make_variant_type_sequence_helper<
                 _detail::_type_sequence<>,
+                typename remove_optional<T>::type,
                 typename remove_optional<Ts>::type...
             >::type,
-            _detail::_type_sequence<typename remove_optional<T>::type>
+            _detail::_type_sequence<>
         >::type;
     };
 
