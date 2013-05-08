@@ -120,16 +120,63 @@ namespace reaver
         using type = boost::variant<typename remove_optional<T>::type, typename remove_optional<Ts>::type...>;
     };
 
+    namespace _detail
+    {
+        template<typename... Ts>
+        struct _type_sequence
+        {
+        };
+
+        template<typename...>
+        struct _make_variant_type_sequence_helper;
+
+        template<typename First, typename... Ts, typename... Types>
+        struct _make_variant_type_sequence_helper<_type_sequence<Types...>, First, Ts...>
+        {
+            using type = typename _make_variant_type_sequence_helper<_type_sequence<Types..., First>, Ts...>::type;
+        };
+
+        template<typename... Ts, typename... Types>
+        struct _make_variant_type_sequence_helper<_type_sequence<Types...>, boost::detail::variant::void_, Ts...>
+        {
+            using type = _type_sequence<Types...>;
+        };
+
+        template<typename, typename>
+        struct _make_variant_helper;
+
+        template<typename... Types1, typename... Types2>
+        struct _make_variant_helper<_type_sequence<Types1...>, _type_sequence<Types2...>>
+        {
+            using type = boost::variant<Types1..., Types2...>;
+        };
+    }
+
     template<typename... Ts, typename T>
     struct make_variant_type<boost::variant<Ts...>, T>
     {
-        using type = boost::variant<typename remove_optional<Ts>::type..., typename remove_optional<T>::type>;
+        using type = typename _detail::_make_variant_helper<
+            typename _detail::_make_variant_type_sequence_helper<
+                _detail::_type_sequence<>,
+                typename remove_optional<Ts>::type...
+            >::type,
+            _detail::_type_sequence<typename remove_optional<T>::type>
+        >::type;
     };
 
     template<typename... T1s, typename... T2s>
     struct make_variant_type<boost::variant<T1s...>, boost::variant<T2s...>>
     {
-        using type = boost::variant<typename remove_optional<T1s>::type..., typename remove_optional<T2s>::type...>;
+        using type = typename _detail::_make_variant_helper<
+            typename _detail::_make_variant_type_sequence_helper<
+                _detail::_type_sequence<>,
+                typename remove_optional<T1s>::type...
+            >::type,
+            typename _detail::_make_variant_type_sequence_helper<
+                _detail::_type_sequence<>,
+                typename remove_optional<T2s>::type...
+            >::type
+        >::type;
     };
 
     template<typename T>
