@@ -103,6 +103,27 @@ namespace reaver
                 }
             };
 
+            template<typename... Tuple1Types, typename... Tuple2Types>
+            struct _constructor<std::tuple<Tuple1Types..., Tuple2Types...>, std::tuple<Tuple1Types...>, std::tuple<Tuple2Types...>>
+            {
+                static const std::tuple<Tuple1Types..., Tuple2Types...> construct(const std::tuple<Tuple1Types...> & t1,
+                    const std::tuple<Tuple2Types...> & t2)
+                {
+                    return std::tuple_cat(t1, t2);
+                }
+            };
+
+            template<typename... Tuple1Types, typename... Tuple2Types>
+            struct _constructor<boost::optional<std::tuple<Tuple1Types..., Tuple2Types...>>, std::tuple<Tuple1Types...>,
+                std::tuple<Tuple2Types...>>
+            {
+                static const std::tuple<Tuple1Types..., Tuple2Types...> construct(const std::tuple<Tuple1Types...> & t1,
+                    const std::tuple<Tuple2Types...> & t2)
+                {
+                    return { std::tuple_cat(t1, t2) };
+                }
+            };
+
             template<typename Ret, typename... TupleTypes, typename... Args>
             struct _constructor<boost::optional<Ret>, std::tuple<TupleTypes...>, Args...>
             {
@@ -174,12 +195,30 @@ namespace reaver
                 }
             };
 
+            template<int... I, typename... Rets, typename... Ts>
+            struct _unpacker<sequence<I...>, boost::variant<Rets...>, std::tuple<Ts...>>
+            {
+                static boost::variant<Rets...> unpack(const std::tuple<Ts...> & t)
+                {
+                    return { t };
+                }
+            };
+
             template<typename Ret, typename... Args>
             struct _constructor<boost::optional<Ret>, Args...>
             {
                 static boost::optional<Ret> construct(const Args &... args)
                 {
                     return { _constructor<Ret, Args...>::construct(args...) };
+                }
+            };
+
+            template<typename Ret>
+            struct _constructor<boost::optional<Ret>, boost::optional<Ret>>
+            {
+                static const boost::optional<Ret> & construct(const boost::optional<Ret> & r)
+                {
+                    return r;
                 }
             };
 
