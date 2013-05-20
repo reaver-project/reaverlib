@@ -5,3 +5,4 @@
  * `README`: mention `logger::logger_friend`
  * `README`: finish `reaver::lexer` description
  * `README`: write `reaver::parser` description
+ * `reaver::parser`: always return rvalue references from the parser, rather than rvalues *or* const referencesc
