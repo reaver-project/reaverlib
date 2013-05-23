@@ -47,46 +47,65 @@ namespace reaver
 
         namespace _detail
         {
+            template<typename CharType>
             struct _token
             {
+                _token(const std::basic_string<CharType> & s) : literal{ s }
+                {
+                }
+
                 virtual ~_token() {}
+
+                std::basic_string<CharType> literal;
             };
 
-            template<typename T>
-            struct _token_impl : public _token
+            template<typename T, typename CharType>
+            struct _token_impl : public _token<CharType>
             {
-                _token_impl(const T & t) : match{ t }
+                _token_impl(const T & t, const std::basic_string<CharType> & s) : _token<CharType>{ s }, match{ t }
                 {
                 }
 
                 T match;
             };
+
+            template<typename CharType>
+            struct _token_impl<std::basic_string<CharType>, CharType> : public _token<CharType>
+            {
+                _token_impl(const std::basic_string<CharType> & s) : _token<CharType>{ s }, match{ _token<CharType>::literal }
+                {
+                }
+
+                std::basic_string<CharType> & match;
+            };
+
+            template<typename, typename>
+            struct _as;
         }
 
-        class token
+        template<typename CharType>
+        class basic_token
         {
         public:
-            token(uint64_t type) : _type{ type }
+            basic_token(uint64_t type) : _type{ type }
             {
             }
 
             template<typename T>
-            token(uint64_t type, const T & t) : _type{ type }, _token{ new _detail::_token_impl<T>{ t } }
+            basic_token(uint64_t type, const T & t, std::basic_string<CharType> s) : _type{ type }, _token{ new _detail::_token_impl
+                <T, CharType>{ t, s } }
+            {
+            }
+
+            basic_token(uint64_t type, std::basic_string<CharType> s, const std::basic_string<CharType> &) : _type{ type },
+                _token{ new _detail::_token_impl<std::basic_string<CharType>, CharType>{ s } }
             {
             }
 
             template<typename T>
             T as() const
             {
-                if (dynamic_cast<_detail::_token_impl<T> *>(&*_token))
-                {
-                    return dynamic_cast<_detail::_token_impl<T> *>(&*_token)->match;
-                }
-
-                else
-                {
-                    throw std::bad_cast{};
-                }
+                return _detail::_as<T, CharType>::get(*this);
             }
 
             uint64_t type() const
@@ -96,18 +115,48 @@ namespace reaver
 
         private:
             uint64_t _type;
-            std::shared_ptr<_detail::_token> _token;
+            std::shared_ptr<_detail::_token<CharType>> _token;
+
+            template<typename, typename>
+            friend class _detail::_as;
         };
 
         namespace _detail
         {
+            template<typename T, typename CharType>
+            struct _as
+            {
+                static T get(const basic_token<CharType> & token)
+                {
+                    if (dynamic_cast<_detail::_token_impl<T, CharType> *>(&*token._token))
+                    {
+                        return dynamic_cast<_detail::_token_impl<T, CharType> *>(&*token._token)->match;
+                    }
+
+                    else
+                    {
+                        throw std::bad_cast{};
+                    }
+                }
+            };
+
+            template<typename CharType>
+            struct _as<std::basic_string<CharType>, CharType>
+            {
+                static std::basic_string<CharType> get(const basic_token<CharType> & token)
+                {
+                    return token._token->literal;
+                }
+            };
+
             template<typename CharType>
             class _token_description
             {
             public:
                 virtual ~_token_description() {}
 
-                virtual token match(typename std::basic_string<CharType>::const_iterator &, typename std::basic_string<CharType>::const_iterator) = 0;
+                virtual basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator &, typename
+                    std::basic_string<CharType>::const_iterator) = 0;
                 virtual uint64_t type() = 0;
             };
 
@@ -121,7 +170,8 @@ namespace reaver
                 {
                 }
 
-                virtual token match(typename std::basic_string<CharType>::const_iterator & begin, typename std::basic_string<CharType>::const_iterator end)
+                virtual basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator & begin, typename
+                    std::basic_string<CharType>::const_iterator end)
                 {
                     std::match_results<typename std::basic_string<CharType>::const_iterator> match;
 
@@ -130,11 +180,11 @@ namespace reaver
                         if (match[0].first - begin == 0)
                         {
                             begin += match[0].str().length();
-                            return token{ _type, _converter(match[0].str()) };
+                            return basic_token<CharType>{ _type, _converter(match[0].str()), match[0].str() };
                         }
                     }
 
-                    return token{ -1 };
+                    return basic_token<CharType>{ -1 };
                 }
 
                 virtual uint64_t type()
@@ -160,18 +210,21 @@ namespace reaver
 
             using value_type = T;
 
-            basic_token_definition(uint64_t type, std::basic_string<CharType> regex) : _desc{ new _detail::_token_description_impl<CharType, T>
-                { type, std::basic_regex<CharType>{ regex, std::regex::extended }, [](const std::basic_string<CharType> & str) { return convert<T>(str); } } }
+            basic_token_definition(uint64_t type, std::basic_string<CharType> regex) : _desc{ new _detail::_token_description_impl
+                <CharType, T>{ type, std::basic_regex<CharType>{ regex, std::regex::extended }, [](const std::basic_string
+                <CharType> & str) { return convert<T>(str); } } }
             {
             }
 
             template<typename F>
             basic_token_definition(uint64_t type, std::basic_string<CharType> regex, F converter) : _desc
-                { new _detail::_token_description_impl<CharType, T>{ type, std::basic_regex<CharType>{ regex, std::regex::extended }, converter } }
+                { new _detail::_token_description_impl<CharType, T>{ type, std::basic_regex<CharType>{ regex,
+                std::regex::extended }, converter } }
             {
             }
 
-            token match(typename std::basic_string<CharType>::const_iterator & begin, typename std::basic_string<CharType>::const_iterator end) const
+            basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator & begin, typename
+                std::basic_string<CharType>::const_iterator end) const
             {
                 return _desc->match(begin, end);
             }
@@ -199,24 +252,28 @@ namespace reaver
             {
             }
 
-            basic_token_description(uint64_t type, std::basic_string<CharType> regex) : _desc{ new _detail::_token_description_impl<CharType, std::basic_string<CharType>>
-                { type, std::basic_regex<CharType>{ regex, std::regex::extended }, [](const std::basic_string<CharType> & str) { return str; } } }
+            basic_token_description(uint64_t type, std::basic_string<CharType> regex) : _desc{ new _detail::_token_description_impl
+                <CharType, std::basic_string<CharType>>{ type, std::basic_regex<CharType>{ regex, std::regex::extended },
+                [](const std::basic_string<CharType> & str) { return str; } } }
             {
             }
 
             template<typename T>
-            basic_token_description(uint64_t type, std::basic_string<CharType> regex, match_type<T>) : _desc{ new _detail::_token_description_impl<CharType, T>
-                { type, std::basic_regex<CharType>{ regex, std::regex::extended }, [](const std::basic_string<CharType> & str) { return convert<T>(str); } } }
+            basic_token_description(uint64_t type, std::basic_string<CharType> regex, match_type<T>) : _desc{ new _detail::
+                _token_description_impl<CharType, T>{ type, std::basic_regex<CharType>{ regex, std::regex::extended },
+                [](const std::basic_string<CharType> & str) { return convert<T>(str); } } }
             {
             }
 
             template<typename T, typename F>
             basic_token_description(uint64_t type, std::basic_string<CharType> regex, match_type<T>, F converter) : _desc
-                { new _detail::_token_description_impl<CharType, T>{ type, std::basic_regex<CharType>{ regex, std::regex::extended }, converter } }
+                { new _detail::_token_description_impl<CharType, T>{ type, std::basic_regex<CharType>{ regex,
+                std::regex::extended }, converter } }
             {
             }
 
-            token match(typename std::basic_string<CharType>::const_iterator & begin, typename std::basic_string<CharType>::const_iterator end) const
+            basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator & begin, typename
+                std::basic_string<CharType>::const_iterator end) const
             {
                 return _desc->match(begin, end);
             }
@@ -319,9 +376,9 @@ namespace reaver
         };
 
         template<typename CharType>
-        std::vector<token> tokenize(const std::basic_string<CharType> & str, const basic_tokens_description<CharType> & def)
+        std::vector<basic_token<CharType>> tokenize(const std::basic_string<CharType> & str, const basic_tokens_description<CharType> & def)
         {
-            std::vector<token> ret;
+            std::vector<basic_token<CharType>> ret;
 
             auto begin = str.begin(), end = str.end();
 
@@ -331,7 +388,7 @@ namespace reaver
 
                 for (; b != e; ++b)
                 {
-                    token matched = b->second.match(begin, end);
+                    basic_token<CharType> matched = b->second.match(begin, end);
 
                     if (matched.type() != -1)
                     {
@@ -343,6 +400,11 @@ namespace reaver
 
                 if (b == e)
                 {
+                    if (*begin == '\0')
+                    {
+                        return ret;
+                    }
+
                     throw unexpected_characters{};
                 }
             }
@@ -351,26 +413,29 @@ namespace reaver
         }
 
         template<typename CharType, typename InputIterator>
-        std::vector<token> tokenize(InputIterator begin, InputIterator end, const basic_tokens_description<CharType> & def)
+        std::vector<basic_token<CharType>> tokenize(InputIterator begin, InputIterator end, const basic_tokens_description
+            <CharType> & def)
         {
             return tokenize({ begin, end }, def);
         }
 
         template<typename CharType>
-        std::vector<token> tokenize(std::basic_istream<CharType> & str, const basic_tokens_description<CharType> & def)
+        std::vector<basic_token<CharType>> tokenize(std::basic_istream<CharType> & str, const basic_tokens_description
+            <CharType> & def)
         {
             return tokenize(std::istreambuf_iterator<CharType>(str.rdbuf()), std::istreambuf_iterator<CharType>(), def);
         }
 
         template<typename CharType, uint64_t N>
-        std::vector<token> tokenize(const CharType (&str)[N], const basic_tokens_description<CharType> & def)
+        std::vector<basic_token<CharType>> tokenize(const CharType (&str)[N], const basic_tokens_description<CharType> & def)
         {
-            return tokenize({ str, str + N}, def);
+            return tokenize({ str, str + N }, def);
         }
 
         using token_description = basic_token_description<char>;
         template<typename T>
         using token_definition = basic_token_definition<char, T>;
         using tokens_description = basic_tokens_description<char>;
+        using token = basic_token<char>;
     }
 }
