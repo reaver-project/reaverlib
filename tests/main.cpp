@@ -112,23 +112,6 @@ int main()
     }
 
     {
-        auto hex_no_string = hex_parser - ident_parser;
-
-        auto begin = t.cbegin();
-        auto z = hex_no_string.match(begin, t.cend(), par::token<std::string>(desc[5]));
-
-        if (z)
-        {
-            std::cout << *z << " (shouldn't've been matched)" << std::endl;
-        }
-
-        else
-        {
-            std::cout << "no match (correct!)" << std::endl;
-        }
-    }
-
-    {
         auto begin = t.cbegin();
         auto many_blocks = *(hex_parser >> ident_parser) >> hex_parser;
         auto w = many_blocks.match(begin, t.cend(), par::token<std::string>(desc[5]));
