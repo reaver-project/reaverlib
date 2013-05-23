@@ -645,7 +645,7 @@ namespace reaver
 
                 else
                 {
-                    throw std::runtime_error{ "Called match on empty rule." };
+                    throw std::runtime_error{ "called match on empty rule." };
                 }
             }
 
@@ -768,7 +768,7 @@ namespace reaver
 
                 else
                 {
-                    throw std::runtime_error{ "Called match on empty rule." };
+                    throw std::runtime_error{ "called match on empty rule." };
                 }
 
                 if (!ret || std::find(_allowed.begin(), _allowed.end(), *ret) == _allowed.end())
@@ -980,9 +980,8 @@ namespace reaver
             {
                 value_type ret{ typename value_type::value_type{} };
 
-                auto b = begin;
-                while (skip.match(b, end)) {}
-                auto val = _plus.match(b, end, skip);
+                while (skip.match(begin, end)) {}
+                auto val = _plus.match(begin, end, skip);
 
                 if (!val)
                 {
@@ -994,10 +993,8 @@ namespace reaver
                     ret->emplace_back(_detail::_constructor<typename value_type::value_type::value_type, typename T
                         ::value_type::value_type>::construct(*val));
 
-                    while (skip.match(b, end)) {}
-                } while (val = _plus.match(b, end, skip));
-
-                begin = b;
+                    while (skip.match(begin, end)) {}
+                } while (val = _plus.match(begin, end, skip));
 
                 return ret;
             }
@@ -1058,6 +1055,7 @@ namespace reaver
                     return { _detail::_constructor<value_type, typename T::value_type::value_type>::construct(*f) };
                 }
 
+                b = begin;
                 auto s = _second.match(b, end, skip);
 
                 if (s)
@@ -1130,7 +1128,7 @@ namespace reaver
                     typename make_tuple_type<typename remove_optional<typename T::value_type>::type,
                         typename remove_optional<typename U::value_type>::type>::type
                 >::type
-            >::type>; // this is not even my final form! ...and probably some bugs on the way
+            >::type>;
 
             sequence_parser(const T & first, const U & second) : _first{ first }, _second{ second }
             {
@@ -1291,26 +1289,21 @@ namespace reaver
             {
                 while (skip.match(begin, end)) {}
 
-                auto b = begin;
-                auto elem = _element.match(b, end, skip);
+                auto elem = _element.match(begin, end, skip);
 
                 if (!elem)
                 {
                     return {};
                 }
 
-                begin = b;
-
                 value_type ret{ { *elem } };
 
                 while (skip.match(begin, end)) {}
                 typename U::value_type sep;
 
-                b = begin;
-                while ((sep = _separator.match(b, end, skip)) && (elem = _element.match(b, end, skip)))
+                while ((sep = _separator.match(begin, end, skip)) && (elem = _element.match(begin, end, skip)))
                 {
                     ret->emplace_back(*elem);
-                    begin = b;
                 }
 
                 return ret;
