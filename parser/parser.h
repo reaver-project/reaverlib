@@ -768,7 +768,7 @@ namespace reaver
 
                 else
                 {
-                    throw std::runtime_error{ "called match on empty rule." };
+                    throw std::runtime_error{ "called match on empty limited rule." };
                 }
 
                 if (!ret || std::find(_allowed.begin(), _allowed.end(), *ret) == _allowed.end())
@@ -1301,9 +1301,11 @@ namespace reaver
                 while (skip.match(begin, end)) {}
                 typename U::value_type sep;
 
-                while ((sep = _separator.match(begin, end, skip)) && (elem = _element.match(begin, end, skip)))
+                auto b = begin;
+                while ((sep = _separator.match(b, end, skip)) && (elem = _element.match(b, end, skip)))
                 {
                     ret->emplace_back(*elem);
+                    begin = b;
                 }
 
                 return ret;

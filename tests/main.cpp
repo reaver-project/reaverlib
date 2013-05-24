@@ -109,6 +109,36 @@ int main()
             std::cout << val << std::endl;
         }
         std::cout << " ---- " << std::endl;
+
+        begin = t.cbegin();
+        auto opt = -hex_parser >> ident_parser >> hex_parser;
+
+        auto z = opt.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        if (z)
+        {
+            std::cout << "optional #1: matched" << std::endl;
+        }
+
+        auto opt2 = -ident_parser >> hex_parser;
+
+        begin = t.cbegin();
+        auto w = opt2.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        if (w)
+        {
+            std::cout << "optional #2: matched" << std::endl;
+        }
+
+        auto opt3 = hex_parser >> -hex_parser >> ident_parser;
+
+        begin = t.cbegin();
+        auto v = opt3.match(begin, t.cend(), par::token<std::string>(desc[5]));
+
+        if (v)
+        {
+            std::cout << "optional #3: matched" << std::endl;
+        }
     }
 
     {
