@@ -1,5 +1,11 @@
 #include <reaver/parser/parser.h>
 
+template<typename T>
+void foo(const T &)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+}
+
 namespace lex = reaver::lexer;
 namespace par = reaver::parser;
 
