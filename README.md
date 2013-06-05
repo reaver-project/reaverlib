@@ -63,13 +63,9 @@ points and similar are planned.
 `reaver::lexer` is a simple and dumb lexer, based on `<regex>`, so it needs an environment
 with implemented and working implementation of standard C++ regular expressions.
 
-[ - **Note**: it is currently unusable with Unicode. As C++11 `<regex>` isn't Unicode-aware
-(hopefully it will be, one day), you can't use UTF-8 regular expressions (you can, though,
-call it *on* UTF-8 strings, but that ain't really a good idea). The only sane way is to
-use `char32_t` and `std::u32string`, but, as `reaver::lexer` (and `reaver::parser`) are not
-**yet** parametrized on `CharType` as most such libraries, it is impossible to use it with
-real Unicode. Support for `CharType` parameters is planned in near feature, but probably
-only after Reaver Assembler is implemented. - ]
+[ - **Note**: every type described in this section is a typedef for `CharType = char`. This
+library follows C++ Standard Library convention, i.e. for example `token` is a typedef for
+`basic_token<char>`. - ]
 
 To use `reaver::lexer`, you must first define allowed tokens. They are then contained in
 class resembling `boost::program_options::options_description`, and passed to the
