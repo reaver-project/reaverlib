@@ -22,3 +22,35 @@
  * Michał "Griwes" Dominiak
  *
  **/
+
+#pragma once
+
+namespace reaver
+{
+    template<uint64_t I>
+    struct increment
+    {
+        static constexpr uint64_t advance() const
+        {
+            return I + 1;
+        }
+    };
+
+    template<uint64_t Begin, uint64_t End, template<uint64_t> class Func, template<uint64_t> class Advance = increment>
+    struct static_for
+    {
+        static void exec()
+        {
+            Func<Begin>{}();
+            static_for<Advance<Begin>::advance(), End, Func>::exec();
+        }
+    };
+
+    template<uint64_t I, template<uint64_t> class Foo>
+    struct static_for<I, I, Foo>
+    {
+        static void exec()
+        {
+        }
+    };
+}
