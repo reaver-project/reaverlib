@@ -25,9 +25,9 @@
 
 #include "logger.h"
 
-reaver::logger::logger reaver::logger::dlog{std::cout};
+reaver::logger::logger reaver::logger::dlog{ std::cout };
 
-reaver::logger::logger::logger(reaver::logger::level level) : _level{level}, _worker{[=]()
+reaver::logger::logger::logger(reaver::logger::level level) : _level{ level }, _worker{ [=]()
     {
         while (!_quit)
         {
@@ -36,7 +36,7 @@ reaver::logger::logger::logger(reaver::logger::level level) : _level{level}, _wo
             std::queue<std::function<void()>> q;
 
             {
-                std::lock_guard<std::mutex> lock{_lock};
+                std::lock_guard<std::mutex> lock{ _lock };
                 std::swap(q, _queue);
             }
 
@@ -46,13 +46,13 @@ reaver::logger::logger::logger(reaver::logger::level level) : _level{level}, _wo
                 q.pop();
             }
         }
-    }}, _streams{}
+    } }, _streams{}
 {
 }
 
-reaver::logger::logger::logger(std::ostream & stream, reaver::logger::level level) : logger{level}
+reaver::logger::logger::logger(std::ostream & stream, reaver::logger::level level) : logger{ level }
 {
-    _streams.push_back({stream});
+    _streams.push_back({ stream });
 }
 
 reaver::logger::logger::~logger()
@@ -68,7 +68,7 @@ void reaver::logger::logger::add_stream(const reaver::logger::stream_wrapper & s
 
 void reaver::logger::logger::_async(std::function<void()> f)
 {
-    std::lock_guard<std::mutex> lock{_lock};
+    std::lock_guard<std::mutex> lock{ _lock };
 
     _queue.push(f);
 
@@ -76,7 +76,7 @@ void reaver::logger::logger::_async(std::function<void()> f)
 }
 
 reaver::logger::action::action(logger & log, reaver::logger::level level, const std::vector<std::pair<reaver::style::style, std::string>> & init)
-    : _logger(log), _level(level), _strings(init)
+    : _logger{ log }, _level{ level }, _strings{ init }
 {
 }
 
@@ -104,11 +104,11 @@ reaver::logger::action::~action()
     }
 }
 
-reaver::logger::stream_wrapper::stream_wrapper(std::ostream & stream) : _impl{new _detail::_stream_ref_wrapper{stream}}
+reaver::logger::stream_wrapper::stream_wrapper(std::ostream & stream) : _impl{ new _detail::_stream_ref_wrapper{ stream } }
 {
 }
 
-reaver::logger::stream_wrapper::stream_wrapper(const std::shared_ptr<std::fstream> & stream) : _impl{new _detail::_stream_shptr_wrapper{stream}}
+reaver::logger::stream_wrapper::stream_wrapper(const std::shared_ptr<std::fstream> & stream) : _impl{ new _detail::_stream_shptr_wrapper{ stream } }
 {
 }
 
