@@ -25,14 +25,14 @@
 
 #include "style.h"
 
-#ifdef REAVER_DETECT_POSIX
+#ifdef __unix__
 # include <unistd.h>
 #endif
 
 // stdout and stderr only supported at the moment
 std::ostream & operator<<(std::ostream & stream, const reaver::style::style & style)
 {
-#ifdef REAVER_DETECT_POSIX
+#ifdef __unix__
     if ((&stream == &std::cout && isatty(STDOUT_FILENO)) || (&stream == &std::cerr && isatty(STDERR_FILENO)))
     {
         stream << "\033[" << (uint16_t)style._style << ';' << (uint16_t)style._forecolor << ';' << (uint16_t)style._backcolor + 10 << 'm';
