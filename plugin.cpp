@@ -58,9 +58,9 @@ std::weak_ptr<std::function<T>> reaver::plugin::load_symbol(std::string name)
 {
     if (!_handle)
     {
-        _detail::_function_wrapper_impl<T> f{ (T *)dlsym(_handle, name.c_str()) };
-        auto ret = f.get();
-        _imported.insert(f);
+        _detail::_function_wrapper_impl<T> * f = new _detail::_function_wrapper_impl<T>{ (T *)dlsym(_handle, name.c_str()) };
+        auto ret = f->get();
+        _imported.emplace(f);
 
         return ret;
     }

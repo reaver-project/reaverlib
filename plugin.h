@@ -41,7 +41,7 @@ namespace reaver
         };
 
         template<typename T>
-        class _function_wrapper_impl
+        class _function_wrapper_impl : public _function_wrapper
         {
         public:
             _function_wrapper_impl(const T * f) : _f{ std::make_shared<std::function<T>>(f) }
@@ -68,13 +68,11 @@ namespace reaver
         plugin(std::string);
         ~plugin();
 
-        void close();
-
         template<typename T>
         std::weak_ptr<std::function<T>> load_symbol(std::string);
 
     private:
-        std::set<_detail::_function_wrapper> _imported;
+        std::set<std::unique_ptr<_detail::_function_wrapper>> _imported;
         void * _handle;
     };
 }
