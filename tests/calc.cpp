@@ -1,4 +1,4 @@
-#include <reaver/parser/parser.h>
+#include <reaver/parser.h>
 
 namespace lex = reaver::lexer;
 namespace par = reaver::parser;

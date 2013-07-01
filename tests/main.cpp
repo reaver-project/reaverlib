@@ -1,4 +1,4 @@
-#include <reaver/parser/parser.h>
+#include <reaver/parser.h>
 
 template<typename T>
 void foo(const T &)
