@@ -1,6 +1,6 @@
 CC=clang++
 AR=ar
-CFLAGS=-c -Os -Wall -Wextra -pedantic -Werror -std=c++11 -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++
+CFLAGS=-c -Os -Wall -Wextra -pedantic -Werror -std=c++11 -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD
 SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/*")
 OBJECTS=$(SOURCES:.cpp=.o)
 
@@ -31,3 +31,5 @@ test: all
 	$(CC) -stdlib=libc++ tests/main.o -o tests/output -lc++ -lc++abi -lreaver
 	$(CC) $(CFLAGS) tests/calc.cpp -o tests/calc.o
 	$(CC) -stdlib=libc++ tests/calc.o -o tests/calc -lc++ -lc++abi -lreaver
+
+-include $(SOURCES:.cpp=.d)

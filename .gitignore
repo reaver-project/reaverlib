@@ -5,3 +5,5 @@ output
 *.out
 calc
 *.kate-swp
+*.d
+
