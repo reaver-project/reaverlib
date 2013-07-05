@@ -205,7 +205,7 @@ namespace reaver
 
             bool operator!=(iterator_wrapper rhs) const
             {
-                return !(*this != rhs);
+                return !(*this == rhs);
             }
 
             bool operator==(iterator_wrapper rhs) const
