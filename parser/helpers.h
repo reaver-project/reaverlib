@@ -240,6 +240,12 @@ namespace reaver
                 using type = std::vector<V>;
             };
 
+            template<typename... Types>
+            struct _true_type<std::tuple<Types...>>
+            {
+                using type = std::tuple<Types...>;
+            };
+
             template<typename V>
             typename _true_type<V>::type _pass_true_type(const V & t)
             {
@@ -255,6 +261,12 @@ namespace reaver
             inline bool _pass_true_type(bool b)
             {
                 return b;
+            }
+
+            template<typename... Types>
+            const std::tuple<Types...> & _pass_true_type(const std::tuple<Types...> & t)
+            {
+                return t;
             }
 
             template<typename V>

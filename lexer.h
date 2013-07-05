@@ -188,6 +188,13 @@ namespace reaver
                 return *this;
             }
 
+            iterator_wrapper operator+(uint64_t i)
+            {
+                iterator_wrapper<CharType> tmp = *this;
+                tmp += i;
+                return tmp;
+            }
+
             bool operator!=(iterator_wrapper rhs) const
             {
                 return !(*this == rhs);
@@ -304,14 +311,15 @@ namespace reaver
 
                 virtual basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end)
                 {
-                    std::match_results<iterator_wrapper<CharType>> match;
-
-                    if (std::regex_search(begin, end, match, _regex))
+                    for (auto e = begin + 1; e != end; e += 1)
                     {
-                        if (match[0].first == begin)
+                        auto _ = begin;
+                        auto t = _match(begin, e);
+
+                        if (_ != e)
                         {
-                            begin += match[0].str().length();
-                            return basic_token<CharType>{ _type, _converter(match[0].str()), match[0].str() };
+                            begin = _;
+                            return t;
                         }
                     }
 
@@ -327,6 +335,22 @@ namespace reaver
                 uint64_t _type;
                 std::basic_regex<CharType> _regex;
                 std::function<T (const std::basic_string<CharType> &)> _converter;
+
+                basic_token<CharType> _match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end)
+                {
+                    std::match_results<iterator_wrapper<CharType>> match;
+
+                    if (std::regex_search(begin, end, match, _regex, std::regex_constants::match_any | std::regex_constants::match_continuous))
+                    {
+                        if (match[0].first == begin)
+                        {
+                            begin += match[0].str().length();
+                            return basic_token<CharType>{ _type, _converter(match[0].str()), match[0].str() };
+                        }
+                    }
+
+                    return basic_token<CharType>{ -1 };
+                }
             };
         }
 
@@ -520,7 +544,7 @@ namespace reaver
 
                     if (matched.type() != -1)
                     {
-                        ret.push_back(matched);
+                        ret.emplace_back(std::move(matched));
 
                         break;
                     }
