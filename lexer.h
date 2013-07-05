@@ -90,9 +90,8 @@ namespace reaver
 
                 virtual const CharType & operator*() = 0;
                 virtual void operator++() = 0;
-                virtual std::ptrdiff_t operator-(_iterator_wrapper *) = 0;
-                virtual bool operator==(_iterator_wrapper *) = 0;
                 virtual void operator+=(uint64_t i) = 0;
+                virtual bool operator==(_iterator_wrapper *) = 0;
 
                 virtual std::shared_ptr<_iterator_wrapper<CharType>> clone() = 0;
             };
@@ -115,18 +114,6 @@ namespace reaver
                 virtual void operator++()
                 {
                     ++_it;
-                }
-
-                virtual std::ptrdiff_t operator-(_iterator_wrapper<CharType> * rhs)
-                {
-                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
-
-                    if (!orig)
-                    {
-                        throw std::bad_cast{};
-                    }
-
-                    return _it - orig->_it;
                 }
 
                 virtual bool operator==(_iterator_wrapper<CharType> * rhs)
@@ -173,6 +160,10 @@ namespace reaver
             {
             }
 
+            iterator_wrapper(const iterator_wrapper & rhs) : _it{ rhs._it->clone() }
+            {
+            }
+
             const CharType & operator*()
             {
                 return **_it;
@@ -186,15 +177,9 @@ namespace reaver
 
             iterator_wrapper operator++(int)
             {
-                iterator_wrapper<CharType> tmp{};
-                tmp._it = _it.clone();
+                iterator_wrapper<CharType> tmp = *this;
                 ++*this;
                 return tmp;
-            }
-
-            std::ptrdiff_t operator-(iterator_wrapper rhs) const
-            {
-                return *_it - &*rhs._it;
             }
 
             iterator_wrapper & operator+=(uint64_t i)
