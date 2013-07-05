@@ -81,8 +81,156 @@ namespace reaver
 
             template<typename, typename>
             struct _as;
+
+            template<typename CharType>
+            class _iterator_wrapper
+            {
+            public:
+                virtual ~_iterator_wrapper() {}
+
+                virtual const CharType & operator*() = 0;
+                virtual void operator++() = 0;
+                virtual std::ptrdiff_t operator-(_iterator_wrapper *) = 0;
+                virtual bool operator==(_iterator_wrapper *) = 0;
+                virtual void operator+=(uint64_t i) = 0;
+
+                virtual std::shared_ptr<_iterator_wrapper<CharType>> clone() = 0;
+            };
+
+            template<typename CharType, typename Iterator>
+            class _iterator_wrapper_impl : public _iterator_wrapper<CharType>
+            {
+            public:
+                _iterator_wrapper_impl(Iterator it) : _it{ it }
+                {
+                }
+
+                virtual ~_iterator_wrapper_impl() {}
+
+                virtual const CharType & operator*()
+                {
+                    return *_it;
+                }
+
+                virtual void operator++()
+                {
+                    ++_it;
+                }
+
+                virtual std::ptrdiff_t operator-(_iterator_wrapper<CharType> * rhs)
+                {
+                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
+
+                    if (!orig)
+                    {
+                        throw std::bad_cast{};
+                    }
+
+                    return _it - orig->_it;
+                }
+
+                virtual bool operator==(_iterator_wrapper<CharType> * rhs)
+                {
+                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
+
+                    if (!orig)
+                    {
+                        throw std::bad_cast{};
+                    }
+
+                    return _it == orig->_it;
+                }
+
+                virtual void operator+=(uint64_t i)
+                {
+                    _it += i;
+                }
+
+                virtual std::shared_ptr<_iterator_wrapper<CharType>> clone()
+                {
+                    return std::make_shared<_iterator_wrapper_impl<CharType, Iterator>>(_it);
+                }
+
+            private:
+                Iterator _it;
+            };
         }
 
+        template<typename CharType>
+        class iterator_wrapper
+        {
+        public:
+            using value_type = CharType;
+            using reference = const CharType &;
+            using pointer = const CharType *;
+            using distance = std::ptrdiff_t;
+
+            iterator_wrapper() = default;
+
+            template<typename T, typename = typename std::enable_if<std::is_same<typename std::iterator_traits<T>::value_type,
+                CharType>::value>::type>
+            iterator_wrapper(T iterator) : _it{ std::make_shared<_detail::_iterator_wrapper_impl<CharType, T>>(iterator) }
+            {
+            }
+
+            const CharType & operator*()
+            {
+                return **_it;
+            }
+
+            iterator_wrapper & operator++()
+            {
+                _it->operator++();
+                return *this;
+            }
+
+            iterator_wrapper operator++(int)
+            {
+                iterator_wrapper<CharType> tmp{};
+                tmp._it = _it.clone();
+                ++*this;
+                return tmp;
+            }
+
+            std::ptrdiff_t operator-(iterator_wrapper rhs) const
+            {
+                return *_it - &*rhs._it;
+            }
+
+            iterator_wrapper & operator+=(uint64_t i)
+            {
+                *_it += i;
+                return *this;
+            }
+
+            bool operator!=(iterator_wrapper rhs) const
+            {
+                return !(*this != rhs);
+            }
+
+            bool operator==(iterator_wrapper rhs) const
+            {
+                return *_it == &*rhs._it;
+            }
+
+        private:
+            std::shared_ptr<_detail::_iterator_wrapper<CharType>> _it;
+        };
+    }
+}
+
+template<typename CharType>
+struct std::iterator_traits<reaver::lexer::iterator_wrapper<CharType>>
+{
+    using value_type = CharType;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::forward_iterator_tag;
+};
+
+namespace reaver
+{
+    namespace lexer
+    {
         template<typename CharType>
         class basic_token
         {
@@ -155,8 +303,7 @@ namespace reaver
             public:
                 virtual ~_token_description() {}
 
-                virtual basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator &, typename
-                    std::basic_string<CharType>::const_iterator) = 0;
+                virtual basic_token<CharType> match(iterator_wrapper<CharType> &, iterator_wrapper<CharType>) = 0;
                 virtual uint64_t type() = 0;
             };
 
@@ -170,14 +317,13 @@ namespace reaver
                 {
                 }
 
-                virtual basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator & begin, typename
-                    std::basic_string<CharType>::const_iterator end)
+                virtual basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end)
                 {
-                    std::match_results<typename std::basic_string<CharType>::const_iterator> match;
+                    std::match_results<iterator_wrapper<CharType>> match;
 
                     if (std::regex_search(begin, end, match, _regex))
                     {
-                        if (match[0].first - begin == 0)
+                        if (match[0].first == begin)
                         {
                             begin += match[0].str().length();
                             return basic_token<CharType>{ _type, _converter(match[0].str()), match[0].str() };
@@ -223,8 +369,7 @@ namespace reaver
             {
             }
 
-            basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator & begin, typename
-                std::basic_string<CharType>::const_iterator end) const
+            basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end) const
             {
                 return _desc->match(begin, end);
             }
@@ -272,8 +417,7 @@ namespace reaver
             {
             }
 
-            basic_token<CharType> match(typename std::basic_string<CharType>::const_iterator & begin, typename
-                std::basic_string<CharType>::const_iterator end) const
+            basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end) const
             {
                 return _desc->match(begin, end);
             }
@@ -376,11 +520,10 @@ namespace reaver
         };
 
         template<typename CharType>
-        std::vector<basic_token<CharType>> tokenize(const std::basic_string<CharType> & str, const basic_tokens_description<CharType> & def)
+        std::vector<basic_token<CharType>> tokenize(iterator_wrapper<CharType> begin, iterator_wrapper<CharType> end,
+            const basic_tokens_description<CharType> & def)
         {
             std::vector<basic_token<CharType>> ret;
-
-            auto begin = str.begin(), end = str.end();
 
             while (begin != end)
             {
@@ -412,24 +555,32 @@ namespace reaver
             return ret;
         }
 
-        template<typename CharType, typename InputIterator>
-        std::vector<basic_token<CharType>> tokenize(InputIterator begin, InputIterator end, const basic_tokens_description
-            <CharType> & def)
+        template<typename CharType>
+        std::vector<basic_token<CharType>> tokenize(const std::basic_string<CharType> & str, const basic_tokens_description<CharType> & def)
         {
-            return tokenize({ begin, end }, def);
+            return tokenize(str.begin(), str.end(), def);
         }
 
         template<typename CharType>
         std::vector<basic_token<CharType>> tokenize(std::basic_istream<CharType> & str, const basic_tokens_description
             <CharType> & def)
         {
-            return tokenize(std::istreambuf_iterator<CharType>(str.rdbuf()), std::istreambuf_iterator<CharType>(), def);
+            return tokenize(iterator_wrapper<CharType>{ std::istreambuf_iterator<CharType>{ str.rdbuf() } }, iterator_wrapper<
+                CharType>{ std::istreambuf_iterator<CharType>{} }, def);
         }
 
         template<typename CharType, uint64_t N>
         std::vector<basic_token<CharType>> tokenize(const CharType (&str)[N], const basic_tokens_description<CharType> & def)
         {
-            return tokenize({ str, str + N }, def);
+            return tokenize(iterator_wrapper<CharType>{ str }, iterator_wrapper<CharType>{ str + N }, def);
+        }
+
+        template<typename Iterator>
+        std::vector<basic_token<typename std::iterator_traits<Iterator>::value_type>> tokenize(Iterator begin, Iterator end, const
+            basic_tokens_description<typename std::iterator_traits<Iterator>::value_type> & def)
+        {
+            return tokenize(iterator_wrapper<typename std::iterator_traits<Iterator>::value_type>{ begin }, iterator_wrapper<
+                typename std::iterator_traits<Iterator>::value_type>{ end }, def);
         }
 
         using token_description = basic_token_description<char>;
