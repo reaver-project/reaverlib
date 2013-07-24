@@ -145,6 +145,9 @@ reaver::logger::action reaver::logger::logger::operator()(reaver::logger::level 
         case warning:
             return action(*this, level, { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
                 std::make_pair(style(), "") });
+        case syntax:
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error: "),
+                std::make_pair(style(), "") });
         case error:
             return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
                 std::make_pair(style(), "") });

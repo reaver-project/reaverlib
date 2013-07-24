@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <reaver/logger.h>
+#include "logger.h"
 
 using namespace reaver::logger;
 
@@ -55,6 +55,9 @@ namespace reaver
                     _strings = { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
                         std::make_pair(style(), "") };
                     break;
+                case syntax:
+                    _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error: "),
+                        std::make_pair(style(), "") };
                 case error:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
                         std::make_pair(style(), "") };

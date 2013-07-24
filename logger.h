@@ -46,6 +46,7 @@ namespace reaver
             debug,
             info,
             warning,
+            syntax,
             error,
             crash,
             always
@@ -55,6 +56,7 @@ namespace reaver
         static constexpr auto debug = level::debug;
         static constexpr auto info = level::info;
         static constexpr auto warning = level::warning;
+        static constexpr auto syntax = level::syntax;
         static constexpr auto error = level::error;
         static constexpr auto crash = level::crash;
         static constexpr auto always = level::always;
