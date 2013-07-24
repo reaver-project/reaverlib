@@ -91,7 +91,9 @@ namespace reaver
         template<typename T>
         exception & operator<<(const T & rhs)
         {
-            _strings.back().second.append(std::to_string(rhs));
+            std::stringstream ss;
+            ss << rhs;
+            _strings.back().second.append(std::move(ss.str()));
             return *this;
         }
 

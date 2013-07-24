@@ -31,6 +31,7 @@
 #include <mutex>
 #include <fstream>
 #include <atomic>
+#include <sstream>
 
 #include "style.h"
 #include "semaphore.h"
@@ -96,7 +97,9 @@ namespace reaver
             template<typename T>
             action & operator<<(const T & rhs)
             {
-                _strings.back().second.append(std::to_string(rhs));
+                std::stringstream ss;
+                ss << rhs;
+                _strings.back().second.append(std::move(ss.str()));
                 return *this;
             }
 
