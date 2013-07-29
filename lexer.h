@@ -130,7 +130,7 @@ namespace reaver
 
                 virtual void operator+=(uint64_t i)
                 {
-                    _it += i;
+                    std::advance(_it, i);
                 }
 
                 virtual std::shared_ptr<_iterator_wrapper<CharType>> clone()
@@ -565,13 +565,14 @@ namespace reaver
         }
 
         template<typename CharType>
-        std::vector<basic_token<CharType>> tokenize(const std::basic_string<CharType> & str, const basic_tokens_description<CharType> & def)
+        std::vector<basic_token<CharType>> tokenize(const std::basic_string<CharType> & str, const basic_tokens_description
+            <CharType> & def)
         {
             return tokenize(str.begin(), str.end(), def);
         }
 
         template<typename CharType>
-        std::vector<basic_token<CharType>> tokenize(std::basic_istream<CharType> & str, const basic_tokens_description
+        std::vector<basic_token<CharType>> tokenize(const std::basic_istream<CharType> & str, const basic_tokens_description
             <CharType> & def)
         {
             return tokenize(iterator_wrapper<CharType>{ std::istreambuf_iterator<CharType>{ str.rdbuf() } }, iterator_wrapper<
