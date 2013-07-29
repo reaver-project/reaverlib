@@ -144,4 +144,46 @@ namespace reaver
 
         std::vector<std::pair<reaver::style::style, std::string>> _strings;
     };
+
+    class file_is_directory : public exception
+    {
+    public:
+        file_is_directory(const std::string & filename) : exception{ error }
+        {
+            using reaver::style::style;
+            using reaver::style::colors;
+            using reaver::style::styles;
+
+            *this << "file " << style::style(colors::bgray, colors::def, styles::bold) << filename << style::style()
+                << " is a directory.";
+        }
+    };
+
+    class file_not_found : public exception
+    {
+    public:
+        file_not_found(const std::string & filename) : exception{ error }
+        {
+            using reaver::style::style;
+            using reaver::style::colors;
+            using reaver::style::styles;
+
+            *this << "couldn't find file " << style::style(colors::bgray, colors::def, styles::bold) << filename
+                << style::style() << ".";
+        }
+    };
+
+    class file_failed_to_open : public exception
+    {
+    public:
+        file_failed_to_open(const std::string & filename) : exception{ error }
+        {
+            using reaver::style::style;
+            using reaver::style::colors;
+            using reaver::style::styles;
+
+            *this << "couldn't open file " << style::style(colors::bgray, colors::def, styles::bold) << filename
+                << style::style() << ".";
+        }
+    };
 }
