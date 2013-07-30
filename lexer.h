@@ -311,15 +311,20 @@ namespace reaver
 
                 virtual basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end)
                 {
-                    for (auto e = begin + 1; e != end; e += 1)
+                    for (auto e = begin + 1; ; e += 1)
                     {
                         auto _ = begin;
-                        auto t = _match(begin, e);
+                        auto t = _match(_, e);
 
-                        if (_ != e)
+                        if (_ != begin && (_ != e || e == end))
                         {
                             begin = _;
                             return t;
+                        }
+
+                        if (e == end)
+                        {
+                            break;
                         }
                     }
 
