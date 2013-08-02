@@ -290,6 +290,7 @@ namespace reaver
         {
             auto ret = parser.match(begin, end, skip);
             while (skip.match(begin, end)) {}
+            
             return ret;
         }
 
@@ -297,7 +298,7 @@ namespace reaver
         typename std::conditional<std::is_same<typename T::value_type, void>::value, bool, typename T::value_type>::type
         parse(const T & parser, std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end)
         {
-            parse(parser, begin, end, _detail::_def_skip{});
+            return parse(parser, begin, end, _detail::_def_skip{});
         }
     }
 }
