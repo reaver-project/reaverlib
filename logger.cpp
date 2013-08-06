@@ -140,8 +140,10 @@ reaver::logger::action reaver::logger::logger::operator()(reaver::logger::level 
             return action(*this, level, { std::make_pair(style(colors::bgray), "Trace: "), std::make_pair(style(), "") });
         case debug:
             return action(*this, level, { std::make_pair(style(colors::gray), "Debug: "), std::make_pair(style(), "") });
+        case note:
+            return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note: ") });
         case info:
-            return action(*this, level, { std::make_pair(style(), "Info: ") });
+            return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info: ") });
         case warning:
             return action(*this, level, { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
                 std::make_pair(style(), "") });

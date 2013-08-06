@@ -48,8 +48,11 @@ namespace reaver
                 case debug:
                     _strings = { std::make_pair(style(colors::gray), "Debug: "), std::make_pair(style(), "") };
                     break;
+                case note:
+                    _strings = { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note: ") };
+                    break;
                 case info:
-                    _strings = { std::make_pair(style(), "Info: ") };
+                    _strings = { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info: ") };
                     break;
                 case warning:
                     _strings = { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
@@ -69,10 +72,6 @@ namespace reaver
                 case always:
                     ;
             }
-        }
-
-        exception() : exception{ always }
-        {
         }
 
         ~exception()
@@ -134,7 +133,7 @@ namespace reaver
 
         friend reaver::logger::logger & operator<<(reaver::logger::logger &, const exception &);
 
-        level level() const
+        ::level level() const
         {
             return _level;
         }

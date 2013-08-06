@@ -44,6 +44,7 @@ namespace reaver
         {
             trace,
             debug,
+            note,
             info,
             warning,
             syntax,
@@ -54,6 +55,7 @@ namespace reaver
 
         static constexpr auto trace = level::trace;
         static constexpr auto debug = level::debug;
+        static constexpr auto note = level::note;
         static constexpr auto info = level::info;
         static constexpr auto warning = level::warning;
         static constexpr auto syntax = level::syntax;
