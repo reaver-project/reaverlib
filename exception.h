@@ -56,18 +56,22 @@ namespace reaver
                     break;
                 case warning:
                     _strings = { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
-                        std::make_pair(style(), "") };
+                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
                 case syntax:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error: "),
-                        std::make_pair(style(), "") };
+                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                 case error:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
-                        std::make_pair(style(), "") };
+                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
+                    break;
+                case fatal:
+                    _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Fatal error: "),
+                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
                 case crash:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Internal error: "),
-                        std::make_pair(style(), "") };
+                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
                 case always:
                     ;

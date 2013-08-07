@@ -42,7 +42,7 @@ namespace reaver
         {
             _errors.emplace_back(std::move(e));
 
-            if (_errors.back().level() >= _error_level)
+            if (_errors.back().level() >= _error_level && _errors.back().level() != always)
             {
                 ++_error_count;
             }
@@ -54,7 +54,7 @@ namespace reaver
 
             if (_error_count == _max_errors)
             {
-                _errors.emplace_back(exception(crash) << "too many errors emitted: " << _max_errors << ".");
+                _errors.emplace_back(exception(fatal) << "too many errors emitted: " << _max_errors << ".");
 
                 // uh... I'm sorry, officer, I can't explain how this happened
                 throw std::move(*this);
@@ -72,7 +72,7 @@ namespace reaver
 
             if (_error_count >= _max_errors)
             {
-                _errors.emplace_back(exception(crash) << "too many errors emitted: " << _max_errors << ".");
+                _errors.emplace_back(exception(fatal) << "too many errors emitted: " << _max_errors << ".");
 
                 throw std::move(*this);
             }
@@ -85,7 +85,8 @@ namespace reaver
                 e.print(l);
             }
 
-            (exception(always) << _error_count << " errors and " << _warning_count << " warnings generated.").print(l);
+            dlog() << _error_count << " error" << (_error_count != 1 ? "s" : "") << " and " << _warning_count << " warning"
+                << (_warning_count != 1 ? "s" : "") << " generated.";
         }
 
         template<typename T>

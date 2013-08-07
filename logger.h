@@ -49,6 +49,7 @@ namespace reaver
             warning,
             syntax,
             error,
+            fatal,
             crash,
             always
         };
@@ -60,6 +61,7 @@ namespace reaver
         static constexpr auto warning = level::warning;
         static constexpr auto syntax = level::syntax;
         static constexpr auto error = level::error;
+        static constexpr auto fatal = level::fatal;
         static constexpr auto crash = level::crash;
         static constexpr auto always = level::always;
 

@@ -146,16 +146,19 @@ reaver::logger::action reaver::logger::logger::operator()(reaver::logger::level 
             return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info: ") });
         case warning:
             return action(*this, level, { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
-                std::make_pair(style(), "") });
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
         case syntax:
             return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error: "),
-                std::make_pair(style(), "") });
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
         case error:
             return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
-                std::make_pair(style(), "") });
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
+        case fatal:
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Fatal error: "),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
         case crash:
             return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Internal error: "),
-                std::make_pair(style(), "") });
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
         case always:
             return action(*this, level);
     }
