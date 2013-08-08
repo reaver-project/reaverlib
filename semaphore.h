@@ -39,18 +39,18 @@ namespace reaver
         {
         }
 
-        void notify()
+        void notify(std::size_t i = 1)
         {
-            std::unique_lock<std::mutex> lock{_mutex};
+            std::unique_lock<std::mutex> lock{ _mutex };
 
-            ++_count;
+            _count += i;
 
             _condition.notify_one();
         }
 
         void wait()
         {
-            std::unique_lock<std::mutex> lock{_mutex};
+            std::unique_lock<std::mutex> lock{ _mutex };
 
             while (!_count)
             {
@@ -60,9 +60,22 @@ namespace reaver
             --_count;
         }
 
+        bool try_wait()
+        {
+            std::unique_lock<std::mutex> lock{ _mutex };
+
+            if (!_count)
+            {
+                return false;
+            }
+
+            --_count;
+            return true;
+        }
+
     private:
         std::mutex _mutex;
         std::condition_variable _condition;
-        std::atomic<uint64_t> _count;
+        std::atomic<std::size_t> _count;
     };
 }

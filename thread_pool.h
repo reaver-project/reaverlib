@@ -27,7 +27,7 @@
 
 #include <thread>
 #include <functional>
-#include <vector>
+#include <unordered_map>
 #include <queue>
 #include <atomic>
 #include <mutex>
@@ -54,26 +54,7 @@ namespace reaver
         {
             while (size--)
             {
-                _threads.emplace_back([this](){
-                    while (_end || _threads.size())
-                    {
-                        std::function<void ()> f;
-
-                        {
-                            std::unique_lock<std::mutex> lock{ _lock };
-
-                            while (_end && _queue.empty())
-                            {
-                                _cond.wait(lock);
-                            }
-
-                            f = std::move(_queue.front());
-                            _queue.pop();
-                        }
-
-                        f();
-                    }
-                });
+                _spawn();
             }
         }
 
@@ -82,9 +63,9 @@ namespace reaver
             _end = true;
             _cond.notify_all();
 
-            for (const auto & th : _threads)
+            for (auto & th : _threads)
             {
-                th.join();
+                th.second.join();
             }
         }
 
@@ -112,17 +93,85 @@ namespace reaver
 
         std::size_t size() const
         {
-            return _threads.size();
+            return _size;
         }
 
-        void resize(std::size_t);
+        void resize(std::size_t new_size)
+        {
+            std::unique_lock<std::mutex> lock{ _lock };
+
+            if (new_size == _size)
+            {
+                return;
+            }
+
+            if (new_size > _size)
+            {
+                while (_size++ < new_size)
+                {
+                    _spawn();
+                }
+            }
+
+            else
+            {
+                _die_semaphore.notify(new_size - _size);
+                _size = new_size;
+            }
+        }
 
     private:
-        std::vector<std::thread> _threads;
+        void _loop()
+        {
+            while (!_end || _threads.size())
+            {
+                if (_die_semaphore.try_wait())
+                {
+                    auto this_thread_id = std::this_thread::get_id();
+                    push([this_thread_id, this]() mutable {
+                        _threads.erase(_threads.find(this_thread_id));
+                    });
+                    return;
+                }
+
+                std::function<void ()> f;
+
+                {
+                    std::unique_lock<std::mutex> lock{ _lock };
+
+                    while (!_end && _queue.empty())
+                    {
+                        _cond.wait(lock);
+                    }
+
+                    if (_end && _queue.empty())
+                    {
+                        return;
+                    }
+
+                    f = std::move(_queue.front());
+                    _queue.pop();
+                }
+
+                f();
+            }
+        }
+
+        void _spawn()
+        {
+            std::thread t{ &thread_pool::_loop, this };
+            _threads.emplace(std::make_pair(t.get_id(), std::move(t)));
+        }
+
+        std::atomic<std::size_t> _size;
+
+        std::unordered_map<std::thread::id, std::thread> _threads;
         std::queue<std::function<void()>> _queue;
 
         std::condition_variable _cond;
         std::mutex _lock;
+
+        semaphore _die_semaphore;
 
         std::atomic<bool> _end;
     };
