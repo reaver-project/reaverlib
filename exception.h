@@ -1,5 +1,5 @@
 /**
- * Miranda License
+ * Reaver Library License
  *
  * Copyright (C) 2013 Reaver Project Team:
  * 1. Michał "Griwes" Dominiak
@@ -34,7 +34,7 @@ namespace reaver
     class exception : public std::exception, public reaver::logger::logger_friend
     {
     public:
-        exception(level l = always)
+        exception(level l = always) : _level { l }
         {
             using reaver::style::style;
             using reaver::style::colors;
@@ -111,8 +111,6 @@ namespace reaver
 
         virtual const char * what() const noexcept
         {
-            print(dlog);
-
             return "reaver::exception\ncall e.print(<logger object>) to get more detailed output";
         }
 

@@ -59,6 +59,11 @@ namespace reaver
                 // uh... I'm sorry, officer, I can't explain how this happened
                 throw std::move(*this);
             }
+
+            if (_errors.back().level() == crash || _errors.back().level() == fatal)
+            {
+                throw std::move(*this);
+            }
         }
 
         void set_error_level(::level l)
@@ -87,6 +92,11 @@ namespace reaver
 
             dlog() << _error_count << " error" << (_error_count != 1 ? "s" : "") << " and " << _warning_count << " warning"
                 << (_warning_count != 1 ? "s" : "") << " generated.";
+        }
+
+        operator bool() const
+        {
+            return _errors.empty();
         }
 
         template<typename T>
