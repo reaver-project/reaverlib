@@ -41,7 +41,7 @@ namespace reaver
     class thread_pool_closed : public exception
     {
     public:
-        thread_pool_closed() : exception{ error }
+        thread_pool_closed() : exception{ crash }
         {
             *this << "tried to insert a task into an already closed thread pool.";
         }
@@ -77,7 +77,16 @@ namespace reaver
             }
         }
 
-        ~thread_pool();
+        ~thread_pool()
+        {
+            _end = true;
+            _cond.notify_all();
+
+            for (const auto & th : _threads)
+            {
+                th.join();
+            }
+        }
 
         template<typename F, typename... Args>
         std::future<typename std::result_of<F (Args...)>::type> push(F && f, Args &&... args)
