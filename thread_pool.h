@@ -115,7 +115,7 @@ namespace reaver
 
             else
             {
-                _die_semaphore.notify(new_size - _size);
+                _die_semaphore.notify(_size - new_size);
                 _size = new_size;
             }
         }
@@ -131,6 +131,7 @@ namespace reaver
                     push([this_thread_id, this]() mutable {
                         _threads.erase(_threads.find(this_thread_id));
                     });
+
                     return;
                 }
 
