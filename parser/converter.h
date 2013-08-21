@@ -87,6 +87,32 @@ namespace reaver
                 Parserref _parser;
                 mutable typename Parser::value_type _value;
             };
+
+            template<typename Parserref>
+            class _converter_impl<void, Parserref> : public _converter<void>
+            {
+            public:
+                using Parser = typename std::remove_reference<Parserref>::type;
+
+                _converter_impl(const Parser & p) : _parser{ p }
+                {
+                }
+
+                virtual bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
+                    ::const_iterator end) const
+                {
+                    while (this->_skip.match(begin, end)) {}
+
+                    return _is_matched(_parser.match(begin, end, this->_skip));
+                }
+
+                virtual void get() const
+                {
+                }
+
+            private:
+                Parserref _parser;
+            };
         }
     }
 }

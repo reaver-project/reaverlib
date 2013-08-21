@@ -44,7 +44,7 @@ namespace reaver
         template<typename T>
         class limited_rule;
 
-        template<typename T>
+        template<typename T = void>
         class rule : public parser
         {
         public:
@@ -190,7 +190,101 @@ namespace reaver
             return rule<T>{ desc };
         }
 
-                template<typename T>
+        template<>
+        class rule<void> : public parser
+        {
+        public:
+            using value_type = bool;
+
+            rule() : _type{ -1 }, _converter{}
+            {
+            }
+
+            rule(const rule & rhs) : _type{ rhs._type }, _converter{ rhs._converter }
+            {
+            }
+
+            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value>::type>
+            rule(const U & p) : _type{ -1 }, _converter{ new _detail::_converter_impl<void, U>{ p } }
+            {
+            }
+
+            // directly use lexer token description as a parser
+            // in this case, the type check is done at runtime - therefore, produces less helpful error messages
+            rule(const lexer::token_description & desc) : _type(desc.type())
+            {
+            }
+
+            template<typename T>
+            rule(const lexer::token_definition<T> & def) : _type(def.type())
+            {
+            }
+
+            template<typename U, typename = typename std::enable_if<std::is_base_of<parser, U>::value>::type>
+            rule & operator=(const U & parser)
+            {
+                _type = -1;
+                _converter.reset(new _detail::_converter_impl<void, U>{ parser });
+                return *this;
+            }
+
+            // directly use lexer token description as a parser
+            // in this case, the type check is done at runtime - therefore, produces less helpful error messages
+            rule & operator=(const lexer::token_description & desc)
+            {
+                _type = desc.type();
+                _converter.reset();
+                return * this;
+            }
+
+            template<typename T>
+            rule & operator=(const lexer::token_definition<T> & def)
+            {
+                _type = def.type();
+                _converter.reset();
+                return *this;
+            }
+
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
+                ::const_iterator end) const
+            {
+                return match(begin, end, _detail::_def_skip{});
+            }
+
+            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
+                Skip skip) const
+            {
+                while (skip.match(begin, end)) {}
+
+                if (begin == end)
+                {
+                    return {};
+                }
+
+                if (_type != -1)
+                {
+                    return begin->type() == _type;
+                }
+
+                else if (_converter)
+                {
+                    _converter->set_skip(skip);
+                    return _converter->match(begin, end);
+                }
+
+                else
+                {
+                    throw std::runtime_error{ "called match on empty rule." };
+                }
+            }
+
+        private:
+            uint64_t _type;
+            std::shared_ptr<_detail::_converter<void>> _converter;
+        };
+
+        template<typename T>
         class limited_rule : public parser
         {
         public:
