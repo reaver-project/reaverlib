@@ -74,7 +74,7 @@ namespace reaver
                         std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
                 case always:
-                    ;
+                    _strings = { std::make_pair(style(), "") };
             }
         }
 

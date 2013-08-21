@@ -233,12 +233,12 @@ namespace reaver
 
             template<typename T>
             basic_token(uint64_t type, const T & t, std::basic_string<CharType> s) : _type{ type }, _token{ new _detail::_token_impl
-                <T, CharType>{ t, s } }
+                <T, CharType>{ t, std::move(s) } }
             {
             }
 
             basic_token(uint64_t type, std::basic_string<CharType> s, const std::basic_string<CharType> &) : _type{ type },
-                _token{ new _detail::_token_impl<std::basic_string<CharType>, CharType>{ s } }
+                _token{ new _detail::_token_impl<std::basic_string<CharType>, CharType>{ std::move(s) } }
             {
             }
 
@@ -253,8 +253,21 @@ namespace reaver
                 return _type;
             }
 
+            std::size_t position() const
+            {
+                return _pos;
+            }
+
+            std::size_t position(std::size_t pos)
+            {
+                auto ret = _pos;
+                _pos = pos;
+                return ret;
+            }
+
         private:
             uint64_t _type;
+            std::size_t _pos = 0;
             std::shared_ptr<_detail::_token<CharType>> _token;
 
             template<typename, typename>
@@ -538,6 +551,7 @@ namespace reaver
             const basic_tokens_description<CharType> & def)
         {
             std::vector<basic_token<CharType>> ret;
+            std::size_t position = 0;
 
             while (begin != end)
             {
@@ -546,9 +560,11 @@ namespace reaver
                 for (; b != e; ++b)
                 {
                     basic_token<CharType> matched = b->second.match(begin, end);
+                    matched.position(position);
 
                     if (matched.type() != -1)
                     {
+                        position += matched.template as<std::string>().length();
                         ret.emplace_back(std::move(matched));
 
                         break;

@@ -228,18 +228,28 @@ namespace reaver
         {
             while (!_end || _threads.size())
             {
-                if (_die_semaphore.try_wait())
                 {
-                    auto this_thread_id = std::this_thread::get_id();
-                    push([this_thread_id, this]() mutable {
-                        std::unique_lock<std::mutex> lock{ _lock };
+                    std::unique_lock<std::mutex> lock{ _lock };
 
-                        _threads.erase(_threads.find(this_thread_id));
+                    if (_die_semaphore.try_wait())
+                    {
+                        auto this_thread_id = std::this_thread::get_id();
+
+                        if (!_affinity_queues[this_thread_id].empty())
+                        {
+                            _die_semaphore.notify();
+                        }
+
                         _affinities.erase(std::find(_affinities.begin(), _affinities.end(), this_thread_id));
-                        --_size;
-                    });
+                        _affinity_queues.erase(_affinity_queues.find(this_thread_id));
+                        push([this_thread_id, this]() mutable {
+                            std::unique_lock<std::mutex> lock{ _lock };
+                            _threads.erase(_threads.find(this_thread_id));
+                            --_size;
+                        });
 
-                    return;
+                        return;
+                    }
                 }
 
                 std::function<void ()> f;

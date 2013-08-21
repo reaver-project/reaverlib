@@ -38,6 +38,27 @@ namespace reaver
         {
         }
 
+        error_engine(error_engine && moved_out)
+        {
+            using std::swap;
+
+            swap(_errors, moved_out._errors);
+            swap(_error_count, moved_out._error_count);
+            swap(_warning_count, moved_out._warning_count);
+            swap(_max_errors, moved_out._max_errors);
+            swap(_error_level, moved_out._error_level);
+            _printed_in_handler = moved_out._printed_in_handler;
+            moved_out._printed_in_handler = true;
+        }
+
+        ~error_engine()
+        {
+            if (_error_count && !_printed_in_handler)
+            {
+                throw std::move(*this);
+            }
+        }
+
         void push(exception e)
         {
             _errors.emplace_back(std::move(e));
@@ -71,6 +92,16 @@ namespace reaver
             _error_level = l;
         }
 
+        virtual const char * what() const noexcept
+        {
+            if (!_printed_in_handler && std::current_exception() != std::exception_ptr{})
+            {
+                _printed_in_handler = true;
+            }
+
+            return exception::what();
+        }
+
         void set_error_limit(uint64_t i)
         {
             _max_errors = i;
@@ -85,18 +116,33 @@ namespace reaver
 
         virtual void print(reaver::logger::logger & l) const noexcept
         {
+            if (std::current_exception())
+            {
+                _printed_in_handler = true;
+            }
+
             for (const auto & e : _errors)
             {
                 e.print(l);
             }
 
-            dlog() << _error_count << " error" << (_error_count != 1 ? "s" : "") << " and " << _warning_count << " warning"
+            l() << _error_count << " error" << (_error_count != 1 ? "s" : "") << " and " << _warning_count << " warning"
                 << (_warning_count != 1 ? "s" : "") << " generated.";
         }
 
         operator bool() const
         {
-            return _errors.empty();
+            return !_error_count;
+        }
+
+        bool operator!() const
+        {
+            return _error_count;
+        }
+
+        bool size() const
+        {
+            return _errors.size();
         }
 
         template<typename T>
@@ -108,5 +154,6 @@ namespace reaver
         uint64_t _warning_count = 0;
         uint64_t _max_errors;
         logger::level _error_level;
+        mutable bool _printed_in_handler = false;
     };
 }
