@@ -87,4 +87,49 @@ namespace reaver
             styles _style;
         };
     }
+
+    inline std::string spaces(const std::string & str, std::size_t count)
+    {
+        std::string ret;
+        ret.reserve(count);
+
+        for (std::size_t i = 0; i < count && i < str.size(); ++i)
+        {
+            if (str[i] == '\t')
+            {
+                ret.push_back('\t');
+            }
+
+            else
+            {
+                ret.push_back(' ');
+            }
+        }
+
+        return ret;
+    }
+
+    inline std::string characters(const std::string & str, std::size_t count, char ch)
+    {
+        std::string ret;
+        ret.reserve(count);
+
+        for (std::size_t i = 0; i < count && i < str.size(); ++i)
+        {
+            if (str[i] == '\t')
+            {
+                for (std::size_t j = 0; j < 8 - (i % 8); ++j)
+                {
+                    ret.push_back(ch);
+                }
+            }
+
+            else
+            {
+                ret.push_back(ch);
+            }
+        }
+
+        return ret;
+    }
 }
