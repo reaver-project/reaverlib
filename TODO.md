@@ -8,3 +8,5 @@
  * `reaver::parser`: special case for `expect_parser<T, list_parser<U, V>>`
  * `reaver::lexer`: add `basic_lexer_iterator`
  * `reaver::parser`: add support for `basic_lexer_iterator`, as opposed to only supporting `std::vector<token>::const_iterator`
+ * `reaver::parser`: add a way to get `begin` and `end` iterators of every subparser of invoked parser. Proper design work
+    on this one is probably *highly required*.
