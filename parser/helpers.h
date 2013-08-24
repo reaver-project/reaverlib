@@ -26,6 +26,7 @@
 #pragma once
 
 #include <type_traits>
+#include <vector>
 
 #include <boost/optional.hpp>
 #define BOOST_NO_CXX11_RVALUE_REFERENCES
@@ -33,6 +34,8 @@
 #undef BOOST_NO_CXX11_RVALUE_REFERENCES
 
 #include "../tmp.h"
+#include "../callbacks.h"
+#include "../lexer.h"
 
 namespace reaver
 {
@@ -44,6 +47,101 @@ namespace reaver
 
         namespace _detail
         {
+            template<typename ValueType>
+            class _parser_callbacks
+            {
+            public:
+                _parser_callbacks & operator()(std::function<void (std::size_t, std::size_t)> f)
+                {
+                    _callbacks_positions += std::move(f);
+                    return *this;
+                }
+
+                _parser_callbacks & operator()(std::function<void (std::vector<lexer::token>::const_iterator, std::vector<
+                    lexer::token>::const_iterator)> f)
+                {
+                    _callbacks_iterators += std::move(f);
+                    return *this;
+                }
+
+                _parser_callbacks & operator()(std::function<void (std::size_t, std::size_t, const ValueType &)> f)
+                {
+                    _callbacks_positions_value += std::move(f);
+                    return *this;
+                }
+
+                _parser_callbacks & operator()(std::function<void (std::vector<lexer::token>::const_iterator, std::vector<
+                    lexer::token>::const_iterator, const ValueType &)> f)
+                {
+                    _callbacks_iterators_value += std::move(f);
+                    return *this;
+                }
+
+                void operator()(std::size_t begin, std::size_t end) const
+                {
+                    _callbacks_positions(begin, end);
+                }
+
+                void operator()(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator
+                    end) const
+                {
+                    _callbacks_iterators(begin, end);
+                }
+
+                void operator()(std::size_t begin, std::size_t end, const ValueType & val) const
+                {
+                    _callbacks_positions_value(begin, end, val);
+                }
+
+                void operator()(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator
+                    end, const ValueType & val) const
+                {
+                    _callbacks_iterators_value(begin, end, val);
+                }
+
+            private:
+                callbacks<void (std::size_t, std::size_t)> _callbacks_positions;
+                callbacks<void (std::vector<lexer::token>::const_iterator, std::vector<lexer::token>::const_iterator)>
+                    _callbacks_iterators;
+                callbacks<void (std::size_t, std::size_t, const ValueType &)> _callbacks_positions_value;
+                callbacks<void (std::vector<lexer::token>::const_iterator, std::vector<lexer::token>::const_iterator,
+                    const ValueType &)> _callbacks_iterators_value;
+            };
+
+            template<>
+            class _parser_callbacks<bool>
+            {
+            public:
+                _parser_callbacks & operator()(std::function<void (std::size_t, std::size_t)> f)
+                {
+                    _callbacks_positions += std::move(f);
+                    return *this;
+                }
+
+                _parser_callbacks & operator()(std::function<void (std::vector<lexer::token>::const_iterator, std::vector<
+                    lexer::token>::const_iterator)> f)
+                {
+                    _callbacks_iterators += std::move(f);
+                    return *this;
+                }
+
+                void operator()(std::size_t begin, std::size_t end) const
+                {
+                    _callbacks_positions(begin, end);
+                }
+
+                void operator()(std::vector<lexer::token>::const_iterator begin, std::vector<lexer::token>::const_iterator
+                    end) const
+                {
+                    _callbacks_iterators(begin, end);
+                }
+
+            private:
+                callbacks<void (std::size_t, std::size_t)> _callbacks_positions;
+                callbacks<void (std::vector<lexer::token>::const_iterator, std::vector<lexer::token>::const_iterator)>
+                    _callbacks_iterators;
+            };
+
             template<typename Ret, typename... Args>
             struct _constructor
             {

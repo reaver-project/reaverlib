@@ -35,6 +35,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "exception.h"
+
 namespace reaver
 {
     namespace lexer
@@ -148,9 +150,9 @@ namespace reaver
         {
         public:
             using value_type = CharType;
-            using reference = const CharType &;
-            using pointer = const CharType *;
-            using distance = std::ptrdiff_t;
+            using reference_type = const CharType &;
+            using pointer_type = const CharType *;
+            using difference_type = std::ptrdiff_t;
 
             iterator_wrapper() = default;
 
@@ -324,20 +326,14 @@ namespace reaver
 
                 virtual basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end)
                 {
-                    for (auto e = begin + 1; ; e += 1)
+                    std::match_results<iterator_wrapper<CharType>> match;
+
+                    if (std::regex_search(begin, end, match, _regex, std::regex_constants::match_any | std::regex_constants::match_continuous))
                     {
-                        auto _ = begin;
-                        auto t = _match(_, e);
-
-                        if (_ != begin && (_ != e || e == end))
+                        if (match[0].first == begin)
                         {
-                            begin = _;
-                            return t;
-                        }
-
-                        if (e == end)
-                        {
-                            break;
+                            begin += match[0].str().length();
+                            return basic_token<CharType>{ _type, _converter(match[0].str()), match[0].str() };
                         }
                     }
 
@@ -353,22 +349,6 @@ namespace reaver
                 uint64_t _type;
                 std::basic_regex<CharType> _regex;
                 std::function<T (const std::basic_string<CharType> &)> _converter;
-
-                basic_token<CharType> _match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end)
-                {
-                    std::match_results<iterator_wrapper<CharType>> match;
-
-                    if (std::regex_search(begin, end, match, _regex, std::regex_constants::match_any | std::regex_constants::match_continuous))
-                    {
-                        if (match[0].first == begin)
-                        {
-                            begin += match[0].str().length();
-                            return basic_token<CharType>{ _type, _converter(match[0].str()), match[0].str() };
-                        }
-                    }
-
-                    return basic_token<CharType>{ -1 };
-                }
             };
         }
 
@@ -538,11 +518,12 @@ namespace reaver
             std::map<std::string, uint64_t> _aliases;
         };
 
-        class unexpected_characters : public std::runtime_error
+        class unexpected_characters : public exception
         {
         public:
-            unexpected_characters() : std::runtime_error{ "Unexpected characters in tokenized string; tokenization failed." }
+            unexpected_characters() : exception{ crash }
             {
+                *this << "unexpected characters in tokenized string.";
             }
         };
 
@@ -555,31 +536,37 @@ namespace reaver
 
             while (begin != end)
             {
-                auto b = def.begin(), e = def.end();
-
-                for (; b != e; ++b)
+                for (auto e = begin + 100; ; e += 100)
                 {
-                    basic_token<CharType> matched = b->second.match(begin, end);
-                    matched.position(position);
+                    auto defb = def.begin(), defe = def.end();
 
-                    if (matched.type() != -1)
+                    for (; defb != defe; ++defb)
                     {
-                        position += matched.template as<std::string>().length();
-                        ret.emplace_back(std::move(matched));
+                        auto _ = begin;
+                        basic_token<CharType> matched = defb->second.match(_, e);
+                        matched.position(position);
 
-                        break;
+                        if (matched.type() != -1)
+                        {
+                            if (_ != e || e == end)
+                            {
+                                begin = _;
+                                position += matched.template as<std::string>().length();
+                                ret.emplace_back(std::move(matched));
+
+                                goto after;
+                            }
+                        }
+                    }
+
+                    if (e == end)
+                    {
+                        throw unexpected_characters{};
                     }
                 }
 
-                if (b == e)
-                {
-                    if (*begin == '\0')
-                    {
-                        return ret;
-                    }
-
-                    throw unexpected_characters{};
-                }
+                after:
+                    ;
             }
 
             return ret;

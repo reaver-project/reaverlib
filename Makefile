@@ -29,7 +29,7 @@ clean:
 	@find . -name "*.so" -delete
 
 test: all
-	$(CC) $(CFLAGS) tests/main.cpp -o tests/output -lc++abi -lreaver
-	$(CC) $(CFLAGS) tests/calc.cpp -o tests/calc -lc++abi -lreaver
+	$(CC) $(CFLAGS) tests/main.cpp -o tests/output -lc++abi -lreaver -lboost_system -lboost_filesystem
+	$(CC) $(CFLAGS) tests/calc.cpp -o tests/calc -lc++abi -lreaver -lboost_system -lboost_filesystem
 
 -include $(SOURCES:.cpp=.d)
