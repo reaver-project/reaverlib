@@ -9,3 +9,5 @@
  * `reaver::parser`: add support for `basic_lexer_iterator`, as opposed to only supporting `std::vector<token>::const_iterator`
  * `reaver::parser`: add a way to get `begin` and `end` iterators of every subparser of invoked parser. Proper design work
     on this one is probably *highly required*.
+    *Couldn't this be solved by providing standard callback set and do this just with callback support? (Would probably involve
+    lots of boilerplate at call site, but it can be a good (as in: sane) solution - or at least a partial one.)*
