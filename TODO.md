@@ -1,6 +1,6 @@
- * `reaver::lexer`: add `basic_lexer_iterator`. `tokenize` will no longer exist. The iterator will be an iterator into
-    a (most probably) `std::deque`, and the tokenization will happen in asynchronous manner.
- * `reaver::parser`: migrate to `basic_lexer_iterator`. Parametrize parsers on `CharType` (it's a must since `token`
+ * `reaver::lexer`: add `lexer::basic_iterator`. `tokenize` will no longer exist. The iterator will be an iterator into
+    a `std::deque`-ish thing, and the tokenization will happen in asynchronous manner.
+ * `reaver::parser`: migrate to `lexer::basic_iterator`. Parametrize parsers on `CharType` (it's a must since `token`
     became `basic_token<CharType>`).
  * `reaver::parser`: add `literal`, as opposed to `rule`. `literal`s and `rule`s cannot be mixed in a single parser;
     `rule`s use `basic_lexer_iterator`, while `literal`s will use iterators over a CharType to work; it's not really possible
@@ -11,6 +11,13 @@
  * `README`: mention `logger::logger_friend`
  * `README`: finish `reaver::lexer` description
  * `README`: write `reaver::parser` description
+ * `README`: write `reaver::exception` and `reaver::error_engine` description
+ * `README`: write `reaver::plugin` description
+ * `README`: write `reaver::semaphore` description
+ * `README`: write `reaver::static_for` description
+ * `README`: write `reaver::callbacks` description
+ * `README`: write `reaver::target` description
+ * `README`: describe traits and helpers found in `tmp.h`
  * `reaver::parser`: always return rvalues from the parser, rather than rvalues *or* const references (so a move out is
     always possible)
  * `reaver::parser`: special case for `expect_parser<T, list_parser<U, V>>`
@@ -20,3 +27,4 @@
     lots of boilerplate at call site, but it can be a good (as in: sane) solution - or at least a partial one.)*
  * `reaver::thread_pool`: testing, testing, testing!
  * `reaver::async`: write as a sane wrapper over a default `reaver::thread_pool`.
+ * `README`: write `reaver::thread_pool` and `reaver::async` description

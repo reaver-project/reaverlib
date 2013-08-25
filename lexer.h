@@ -34,6 +34,7 @@
 #include <functional>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/optional.hpp>
 
 #include "exception.h"
 
@@ -229,7 +230,7 @@ namespace reaver
         class basic_token
         {
         public:
-            basic_token(uint64_t type) : _type{ type }
+            basic_token(uint64_t type = -1) : _type{ type }
             {
             }
 
@@ -601,10 +602,295 @@ namespace reaver
                 typename std::iterator_traits<Iterator>::value_type>{ end }, def);
         }
 
+        namespace _detail
+        {
+            template<typename CharType>
+            class _queue_chunk
+            {
+            public:
+                _queue_chunk() : _array{{}}, _next_index{}, _last_chunk{}
+                {
+                }
+
+                void push(basic_token<CharType> token)
+                {
+                    if (_next_index == 4096)
+                    {
+                        throw std::out_of_range{ "reaver::lexer::_detail::_queue_chunk::push" };
+                    }
+
+                    new (_array.begin() + _next_index++) basic_token<CharType>{ std::move(token) };
+                }
+
+                basic_token<CharType> & get(std::size_t index)
+                {
+                    if (index >= _next_index)
+                    {
+                        throw std::out_of_range{ "reaver::lexer::_detail::_queue_chunk::get" };
+                    }
+
+                    return _array[index];
+                }
+
+                std::shared_ptr<_queue_chunk> next()
+                {
+                    if (_last_chunk)
+                    {
+                        return { nullptr };
+                    }
+
+                    if (!_next)
+                    {
+                        _next = std::make_shared<_queue_chunk>();
+                    }
+
+                    return _next;
+                }
+
+                void end()
+                {
+                    _last_chunk = true;
+                }
+
+                bool last() const
+                {
+                    return _last_chunk;
+                }
+
+                std::size_t size() const
+                {
+                    return _next_index;
+                }
+
+            private:
+                std::array<basic_token<CharType>, 4096> _array;
+                std::atomic<std::size_t> _next_index;
+                std::atomic<bool> _last_chunk;
+                std::shared_ptr<_queue_chunk> _next;
+            };
+
+            template<typename CharType>
+            void _worker(iterator_wrapper<CharType> begin, iterator_wrapper<CharType> end, basic_tokens_description<CharType>
+                def, std::shared_ptr<_queue_chunk<CharType>> chunk, std::size_t index, std::shared_ptr<semaphore> sem,
+                std::shared_ptr<boost::optional<unexpected_characters>> exception, std::shared_ptr<std::atomic<bool>> end_marker)
+            {
+                std::size_t position = 0;
+
+                while (begin != end)
+                {
+                    for (auto e = begin + 100; ; e += 100)
+                    {
+                        auto defb = def.begin(), defe = def.end();
+
+                        for (; defb != defe; ++defb)
+                        {
+                            if (*end_marker)
+                            {
+                                chunk->end();
+                                sem->notify();
+                                return;
+                            }
+
+                            auto _ = begin;
+                            basic_token<CharType> matched = defb->second.match(_, e);
+                            matched.position(position);
+
+                            if (matched.type() != -1)
+                            {
+                                if (_ != e || e == end)
+                                {
+                                    begin = _;
+                                    position += matched.template as<std::string>().length();
+
+                                    chunk->push(std::move(matched));
+                                    if (++index == 4095)
+                                    {
+                                        chunk = chunk->next();
+                                        index = 0;
+                                    }
+
+                                    sem->notify();
+
+                                    goto after;
+                                }
+                            }
+                        }
+
+                        if (e == end)
+                        {
+                            *exception = unexpected_characters{};
+                            return;
+                        }
+                    }
+
+                    after:
+                        ;
+                }
+
+                chunk->end();
+                sem->notify();
+            }
+
+            struct _ender
+            {
+                _ender(std::shared_ptr<std::atomic<bool>> end, std::shared_ptr<std::thread> worker) : end{ std::move(end) },
+                    worker{ std::move(worker) }
+                {
+                }
+
+                ~_ender()
+                {
+                    *end = true;
+                    worker->join();
+                }
+
+                std::shared_ptr<std::atomic<bool>> end;
+                std::shared_ptr<std::thread> worker;
+            };
+        }
+
+        class incompatible_iterators : public exception
+        {
+        public:
+            incompatible_iterators() : exception{ crash }
+            {
+                *this << "incompatible lexer iterators compared.";
+            }
+        };
+
+        template<typename CharType>
+        class basic_iterator
+        {
+        public:
+            template<typename Iterator>
+            basic_iterator(Iterator begin, Iterator end, const basic_tokens_description<CharType> & def) : _chunk{
+                std::make_shared<_detail::_queue_chunk<CharType>>() }, _ready_semaphore{ std::make_shared<semaphore>() },
+                _index{}, _exception{ std::make_shared<boost::optional<unexpected_characters>>() }, _end{ std::make_shared<
+                std::atomic<bool>>() }
+            {
+                static_assert(std::is_same<CharType, typename std::iterator_traits<Iterator>::value_type>::value,
+                    "incompatible iterator type used in initialization of basic_lexer_iterator (value_type must be the "
+                    "same as `basic_lexer_iterator`'s template parameter");
+
+                _worker_thread = std::make_shared<std::thread>(&_detail::_worker<CharType>, begin, end, def, _chunk, _index,
+                    _ready_semaphore, _exception, _end);
+                _ender = std::make_shared<_detail::_ender>(_end, _worker_thread);
+                _ready_semaphore->wait();
+            }
+
+            basic_iterator() : _index{ -1 }
+            {
+            }
+
+            basic_iterator & operator++()
+            {
+                if (_index != -1)
+                {
+                    if (_chunk->last())
+                    {
+                        return *this = basic_iterator{};
+                    }
+
+                    _ready_semaphore->wait();
+
+                    if (_chunk->last())
+                    {
+                        return *this = basic_iterator{};
+                    }
+
+                    if (*_exception)
+                    {
+                        throw std::move(**_exception);
+                    }
+
+                    if (!(++_index % 4096))
+                    {
+                        _chunk = _chunk->next();
+                    }
+                }
+
+                return *this;
+            }
+
+            basic_iterator operator++(int)
+            {
+                basic_iterator tmp{ *this };
+                ++*this;
+                return std::move(tmp);
+            }
+
+            basic_iterator & operator+=(std::size_t count)
+            {
+                if (_index != -1)
+                {
+                    while (count--)
+                    {
+                        ++*this;
+                    }
+                }
+
+                return *this;
+            }
+
+            basic_iterator operator+(std::size_t count)
+            {
+                basic_iterator tmp{ *this };
+                tmp += count;
+                return std::move(tmp);
+            }
+
+            basic_token<CharType> operator*()
+            {
+                return _chunk->get(_index % 4096);
+            }
+
+            basic_token<CharType> * operator->()
+            {
+                return &**this;
+            }
+
+            bool operator<(basic_iterator rhs)
+            {
+                if (rhs._index == -1)
+                {
+                    return _index != -1;
+                }
+
+                if (_worker_thread != rhs._worker_thread)
+                {
+                    throw incompatible_iterators{};
+                }
+
+                return _index < rhs._index;
+            }
+
+            bool operator!=(basic_iterator rhs)
+            {
+                return *this < rhs || rhs < *this;
+            }
+
+            bool operator==(basic_iterator rhs)
+            {
+                return !(*this != rhs);
+            }
+
+        private:
+            std::shared_ptr<_detail::_queue_chunk<CharType>> _chunk;
+            std::shared_ptr<semaphore> _ready_semaphore;
+            std::size_t _index;
+
+            std::shared_ptr<std::thread> _worker_thread;
+            std::shared_ptr<boost::optional<unexpected_characters>> _exception;
+
+            std::shared_ptr<std::atomic<bool>> _end;
+            std::shared_ptr<_detail::_ender> _ender;
+        };
+
         using token_description = basic_token_description<char>;
         template<typename T>
         using token_definition = basic_token_definition<char, T>;
         using tokens_description = basic_tokens_description<char>;
         using token = basic_token<char>;
+        using iterator = basic_iterator<char>;
     }
 }
