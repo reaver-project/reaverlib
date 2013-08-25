@@ -608,22 +608,26 @@ namespace reaver
             class _queue_chunk
             {
             public:
-                _queue_chunk() : _array{{}}, _next_index{}, _last_chunk{}
+                _queue_chunk() : _array{{}}, _next_index{ 0 }, _last_chunk{ false }
                 {
                 }
 
                 void push(basic_token<CharType> token)
                 {
+                    std::unique_lock<std::mutex> lock{ _mutex };
+
                     if (_next_index == 4096)
                     {
                         throw std::out_of_range{ "reaver::lexer::_detail::_queue_chunk::push" };
                     }
 
-                    new (_array.begin() + _next_index++) basic_token<CharType>{ std::move(token) };
+                    _array[_next_index++] = std::move(token);
                 }
 
                 basic_token<CharType> & get(std::size_t index)
                 {
+                    std::unique_lock<std::mutex> lock{ _mutex };
+
                     if (index >= _next_index)
                     {
                         throw std::out_of_range{ "reaver::lexer::_detail::_queue_chunk::get" };
@@ -634,6 +638,8 @@ namespace reaver
 
                 std::shared_ptr<_queue_chunk> next()
                 {
+                    std::unique_lock<std::mutex> lock{ _mutex };
+
                     if (_last_chunk)
                     {
                         return { nullptr };
@@ -649,6 +655,7 @@ namespace reaver
 
                 void end()
                 {
+                    std::unique_lock<std::mutex> lock{ _mutex };
                     _last_chunk = true;
                 }
 
@@ -667,12 +674,14 @@ namespace reaver
                 std::atomic<std::size_t> _next_index;
                 std::atomic<bool> _last_chunk;
                 std::shared_ptr<_queue_chunk> _next;
+                std::mutex _mutex;
             };
 
             template<typename CharType>
             void _worker(iterator_wrapper<CharType> begin, iterator_wrapper<CharType> end, basic_tokens_description<CharType>
-                def, std::shared_ptr<_queue_chunk<CharType>> chunk, std::size_t index, std::shared_ptr<semaphore> sem,
-                std::shared_ptr<boost::optional<unexpected_characters>> exception, std::shared_ptr<std::atomic<bool>> end_marker)
+                def, std::shared_ptr<_queue_chunk<CharType>> chunk, std::shared_ptr<std::atomic<size_t>> index, std::shared_ptr<
+                semaphore> sem, std::shared_ptr<boost::optional<unexpected_characters>> exception, std::shared_ptr<std::atomic<
+                bool>> end_marker)
             {
                 std::size_t position = 0;
 
@@ -703,10 +712,11 @@ namespace reaver
                                     position += matched.template as<std::string>().length();
 
                                     chunk->push(std::move(matched));
-                                    if (++index == 4095)
+
+                                    ++*index;
+                                    if (!(*index % 4096) && *index != 0)
                                     {
                                         chunk = chunk->next();
-                                        index = 0;
                                     }
 
                                     sem->notify();
@@ -765,17 +775,22 @@ namespace reaver
             template<typename Iterator>
             basic_iterator(Iterator begin, Iterator end, const basic_tokens_description<CharType> & def) : _chunk{
                 std::make_shared<_detail::_queue_chunk<CharType>>() }, _ready_semaphore{ std::make_shared<semaphore>() },
-                _index{}, _exception{ std::make_shared<boost::optional<unexpected_characters>>() }, _end{ std::make_shared<
-                std::atomic<bool>>() }
+                _index{}, _max_index{ std::make_shared<std::atomic<std::size_t>>(-1) }, _exception{ std::make_shared<
+                boost::optional<unexpected_characters>>() }, _end{ std::make_shared<std::atomic<bool>>(false) }
             {
                 static_assert(std::is_same<CharType, typename std::iterator_traits<Iterator>::value_type>::value,
                     "incompatible iterator type used in initialization of basic_lexer_iterator (value_type must be the "
                     "same as `basic_lexer_iterator`'s template parameter");
 
-                _worker_thread = std::make_shared<std::thread>(&_detail::_worker<CharType>, begin, end, def, _chunk, _index,
+                _worker_thread = std::make_shared<std::thread>(&_detail::_worker<CharType>, begin, end, def, _chunk, _max_index,
                     _ready_semaphore, _exception, _end);
                 _ender = std::make_shared<_detail::_ender>(_end, _worker_thread);
                 _ready_semaphore->wait();
+
+                if (*_exception)
+                {
+                    throw std::move(**_exception);
+                }
             }
 
             basic_iterator() : _index{ -1 }
@@ -786,14 +801,17 @@ namespace reaver
             {
                 if (_index != -1)
                 {
-                    if (_chunk->last())
+                    if (_chunk->last() && _index == *_max_index)
                     {
                         return *this = basic_iterator{};
                     }
 
-                    _ready_semaphore->wait();
+                    if (_index == *_max_index)
+                    {
+                        _ready_semaphore->wait();
+                    }
 
-                    if (_chunk->last())
+                    if (_chunk->last() && _index == *_max_index)
                     {
                         return *this = basic_iterator{};
                     }
@@ -839,7 +857,7 @@ namespace reaver
                 return std::move(tmp);
             }
 
-            basic_token<CharType> operator*()
+            basic_token<CharType> & operator*()
             {
                 return _chunk->get(_index % 4096);
             }
@@ -878,6 +896,7 @@ namespace reaver
             std::shared_ptr<_detail::_queue_chunk<CharType>> _chunk;
             std::shared_ptr<semaphore> _ready_semaphore;
             std::size_t _index;
+            std::shared_ptr<std::atomic<std::size_t>> _max_index;
 
             std::shared_ptr<std::thread> _worker_thread;
             std::shared_ptr<boost::optional<unexpected_characters>> _exception;

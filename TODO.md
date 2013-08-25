@@ -1,5 +1,3 @@
- * `reaver::lexer`: add `lexer::basic_iterator`. `tokenize` will no longer exist. The iterator will be an iterator into
-    a `std::deque`-ish thing, and the tokenization will happen in asynchronous manner.
  * `reaver::parser`: migrate to `lexer::basic_iterator`. Parametrize parsers on `CharType` (it's a must since `token`
     became `basic_token<CharType>`).
  * `reaver::parser`: add `literal`, as opposed to `rule`. `literal`s and `rule`s cannot be mixed in a single parser;
