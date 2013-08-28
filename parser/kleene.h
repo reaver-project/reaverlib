@@ -51,14 +51,14 @@ namespace reaver
             {
             }
 
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+            template<typename Iterator>
+            value_type match(Iterator & begin, Iterator end) const
             {
                 return match(begin, end, _detail::_def_skip{});
             }
 
-            template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end,
-                Skip skip) const
+            template<typename Skip, typename Iterator, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
+            value_type match(Iterator & begin, Iterator end, Skip skip) const
             {
                 while (skip.match(begin, end)) {}
 

@@ -60,30 +60,29 @@ int main()
         (5, "[ \n]")
         (op);
 
-    auto t = lex::tokenize("identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc);
-
-    for (auto elem : t)
+    for (lex::iterator t{ "identifier and then hexnumber 0x1000 \"quoted \\\"string\" new line\n and then decnumber 1000", desc };
+        t != lex::iterator{}; ++t)
     {
-        switch (elem.type())
+        switch (t->type())
         {
             case 1:
-                std::cout << "Type: `identifier`, value: " << elem.as<std::string>() << std::endl;
+                std::cout << "Type: `identifier`, value: " << t->as<std::string>() << std::endl;
                 break;
             case 2:
-                std::cout << "Type: `hex int`, value: " << elem.as<uint64_t>() << std::endl;
+                std::cout << "Type: `hex int`, value: " << t->as<uint64_t>() << std::endl;
                 break;
             case 3:
-                std::cout << "Type: `int`, value: " << elem.as<uint64_t>() << std::endl;
+                std::cout << "Type: `int`, value: " << t->as<uint64_t>() << std::endl;
                 break;
             case 4:
-                std::cout << "Type: `text`, value: " << elem.as<std::string>() << std::endl;
+                std::cout << "Type: `text`, value: " << t->as<std::string>() << std::endl;
                 break;
             case 5:
                 std::cout << "Type: `white space`" << std::endl;
         }
     }
 
-    auto ident_parser = par::token(ident);
+/*    auto ident_parser = par::token(ident);
     auto hex_parser = par::token(hex);
 
     {
@@ -92,14 +91,14 @@ int main()
         t = lex::tokenize("0x1000", desc);
 
         auto begin = t.cbegin();
-        auto x = alternative.match(begin, t.end());
+        auto x = alternative.match(begin, t.cend());
 
         std::cout << *x << std::endl;
 
         t = lex::tokenize("foobar1_", desc);
 
         begin = t.cbegin();
-        x = alternative.match(begin, t.end());
+        x = alternative.match(begin, t.cend());
 
         std::cout << *x << std::endl;
 
@@ -249,5 +248,5 @@ int main()
         {
             std::cout << "list test failed" << std::endl;
         }
-    }
+    }*/
 }

@@ -230,6 +230,8 @@ namespace reaver
         class basic_token
         {
         public:
+            using char_type = CharType;
+
             basic_token(uint64_t type = -1) : _type{ type }
             {
             }
@@ -275,6 +277,16 @@ namespace reaver
 
             template<typename, typename>
             friend class _detail::_as;
+        };
+
+        template<typename>
+        struct is_token : public std::false_type
+        {
+        };
+
+        template<typename CharType>
+        struct is_token<basic_token<CharType>> : public std::true_type
+        {
         };
 
         namespace _detail
@@ -768,10 +780,34 @@ namespace reaver
             }
         };
 
+        namespace _detail
+        {
+            using std::begin;
+            using std::end;
+
+            template<typename T>
+            auto _begin(const T & t) -> decltype(begin(t))
+            {
+                return begin(t);
+            }
+
+            template<typename T>
+            auto _end(const T & t) -> decltype(end(t))
+            {
+                return end(t);
+            }
+        }
+
         template<typename CharType>
         class basic_iterator
         {
         public:
+            template<typename T>
+            basic_iterator(const T & t, const basic_tokens_description<CharType> & def)
+                : basic_iterator{ _detail::_begin(t), _detail::_end(t), def }
+            {
+            }
+
             template<typename Iterator>
             basic_iterator(Iterator begin, Iterator end, const basic_tokens_description<CharType> & def) : _chunk{
                 std::make_shared<_detail::_queue_chunk<CharType>>() }, _ready_semaphore{ std::make_shared<semaphore>() },
@@ -913,3 +949,10 @@ namespace reaver
         using iterator = basic_iterator<char>;
     }
 }
+
+template<typename CharType>
+struct std::iterator_traits<reaver::lexer::basic_iterator<CharType>>
+{
+    using value_type = reaver::lexer::basic_token<CharType>;
+    using iterator_category = std::forward_iterator_tag;
+};

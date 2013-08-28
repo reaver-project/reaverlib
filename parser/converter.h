@@ -36,14 +36,13 @@ namespace reaver
     {
         namespace _detail
         {
-            template<typename Ret>
+            template<typename Ret, typename Iterator>
             class _converter
             {
             public:
                 virtual ~_converter() {}
 
-                virtual bool match(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator)
-                    const = 0;
+                virtual bool match(Iterator &, Iterator) const = 0;
                 virtual Ret get() const = 0;
 
                 template<typename T>
@@ -53,12 +52,12 @@ namespace reaver
                 }
 
             protected:
-                _skip_wrapper _skip;
+                _skip_wrapper<Iterator> _skip;
             };
 
-            template<typename Ret, typename Parserref, typename = typename std::enable_if<!std::is_same<typename
-                std::remove_reference<Parserref>::type::value_type, void>::value>::type>
-            class _converter_impl : public _converter<Ret>
+            template<typename Ret, typename Parserref, typename Iterator, typename = typename std::enable_if<!std::is_same<
+                typename std::remove_reference<Parserref>::type::value_type, void>::value>::type>
+            class _converter_impl : public _converter<Ret, Iterator>
             {
             public:
                 using Parser = typename std::remove_reference<Parserref>::type;
@@ -67,8 +66,7 @@ namespace reaver
                 {
                 }
 
-                virtual bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
-                    ::const_iterator end) const
+                virtual bool match(Iterator & begin, Iterator end) const
                 {
                     while (this->_skip.match(begin, end)) {}
 
@@ -88,8 +86,8 @@ namespace reaver
                 mutable typename Parser::value_type _value;
             };
 
-            template<typename Parserref>
-            class _converter_impl<void, Parserref> : public _converter<void>
+            template<typename Parserref, typename Iterator>
+            class _converter_impl<void, Parserref, Iterator> : public _converter<void, Iterator>
             {
             public:
                 using Parser = typename std::remove_reference<Parserref>::type;
@@ -98,8 +96,7 @@ namespace reaver
                 {
                 }
 
-                virtual bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
-                    ::const_iterator end) const
+                virtual bool match(Iterator & begin, Iterator end) const
                 {
                     while (this->_skip.match(begin, end)) {}
 

@@ -37,25 +37,24 @@ namespace reaver
     {
         namespace _detail
         {
+            template<typename Iterator>
             class _skip_wrapper_impl_base
             {
             public:
                 virtual ~_skip_wrapper_impl_base() {}
 
-                virtual bool match(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator)
-                    const = 0;
+                virtual bool match(Iterator &, Iterator) const = 0;
             };
 
-            template<typename T>
-            class _skip_wrapper_impl : public _skip_wrapper_impl_base
+            template<typename T, typename Iterator>
+            class _skip_wrapper_impl : public _skip_wrapper_impl_base<Iterator>
             {
             public:
                 _skip_wrapper_impl(const T & skip) : _skip_ref{ skip }
                 {
                 }
 
-                virtual bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>
-                    ::const_iterator end) const
+                virtual bool match(Iterator & begin, Iterator end) const
                 {
                     return _skip_ref.match(begin, end);
                 }
@@ -64,10 +63,11 @@ namespace reaver
                 T _skip_ref;
             };
 
+            template<typename Iterator>
             class _skip_wrapper : public parser
             {
             public:
-                bool match(std::vector<lexer::token>::const_iterator & begin, std::vector<lexer::token>::const_iterator end) const
+                bool match(Iterator & begin, Iterator end) const
                 {
                     return _skip->match(begin, end);
                 }
@@ -75,11 +75,11 @@ namespace reaver
                 template<typename T>
                 void set_skip(T && t)
                 {
-                    _skip = std::shared_ptr<_skip_wrapper_impl_base>{ new _skip_wrapper_impl<T>{ t } };
+                    _skip = std::shared_ptr<_skip_wrapper_impl_base<Iterator>>{ new _skip_wrapper_impl<T, Iterator>{ t } };
                 }
 
             private:
-                std::shared_ptr<_skip_wrapper_impl_base> _skip;
+                std::shared_ptr<_skip_wrapper_impl_base<Iterator>> _skip;
             };
 
             class _def_skip : public parser
@@ -87,7 +87,8 @@ namespace reaver
             public:
                 using value_type = bool;
 
-                bool match(std::vector<lexer::token>::const_iterator &, std::vector<lexer::token>::const_iterator) const
+                template<typename Iterator>
+                value_type match(Iterator &, Iterator) const
                 {
                     return false;
                 }
