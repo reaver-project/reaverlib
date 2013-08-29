@@ -85,10 +85,10 @@ namespace reaver
             class _def_skip : public parser
             {
             public:
-                using value_type = bool;
+                using value_type = void;
 
                 template<typename Iterator>
-                value_type match(Iterator &, Iterator) const
+                bool match(Iterator &, Iterator) const
                 {
                     return false;
                 }

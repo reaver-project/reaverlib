@@ -581,7 +581,7 @@ namespace reaver
         class unexpected_characters : public exception
         {
         public:
-            unexpected_characters() : exception{ crash }
+            unexpected_characters() : exception{ logger::crash }
             {
                 *this << "unexpected characters in tokenized string.";
             }
@@ -754,7 +754,7 @@ namespace reaver
         class incompatible_iterators : public exception
         {
         public:
-            incompatible_iterators() : exception{ crash }
+            incompatible_iterators() : exception{ logger::crash }
             {
                 *this << "incompatible lexer iterators compared.";
             }

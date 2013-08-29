@@ -8,6 +8,7 @@ void foo(const T &)
 
 namespace lex = reaver::lexer;
 namespace par = reaver::parser;
+using namespace reaver::logger;
 
 struct op_desc
 {
@@ -82,31 +83,30 @@ int main()
         }
     }
 
-/*    auto ident_parser = par::token(ident);
+    auto ident_parser = par::token(ident);
     auto hex_parser = par::token(hex);
+
+    lex::iterator it{ "0x1 foo 0x2 foo 0x3 bar 0x4 bar 0x5", desc };
 
     {
         auto alternative = ident_parser | hex_parser;
 
-        t = lex::tokenize("0x1000", desc);
+        it = lex::iterator{ "0x1000", desc };
+        auto x = alternative.match(it, lex::iterator{});
+        if (x)
+        {
+            std::cout << *x << std::endl;
+        }
 
-        auto begin = t.cbegin();
-        auto x = alternative.match(begin, t.cend());
-
-        std::cout << *x << std::endl;
-
-        t = lex::tokenize("foobar1_", desc);
-
-        begin = t.cbegin();
-        x = alternative.match(begin, t.cend());
-
-        std::cout << *x << std::endl;
+        it = lex::iterator{ "foobar1_", desc };
+        x = alternative.match(it, lex::iterator{});
+        if (x)
+        {
+            std::cout << *x << std::endl;
+        }
 
         auto sequence = +alternative;
-        t = lex::tokenize("0x1 foo 0x2 foo 0x3 bar 0x4 bar 0x5", desc);
-
-        begin = t.cbegin();
-        auto y = sequence.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto y = sequence.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         std::cout << " ---- " << std::endl;
         for (auto & val : *y)
@@ -115,10 +115,8 @@ int main()
         }
         std::cout << " ---- " << std::endl;
 
-        begin = t.cbegin();
         auto opt = -hex_parser >> ident_parser >> hex_parser;
-
-        auto z = opt.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto z = opt.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         if (z)
         {
@@ -127,8 +125,7 @@ int main()
 
         auto opt2 = -ident_parser >> hex_parser;
 
-        begin = t.cbegin();
-        auto w = opt2.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto w = opt2.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         if (w)
         {
@@ -137,8 +134,7 @@ int main()
 
         auto opt3 = hex_parser >> -hex_parser >> ident_parser;
 
-        begin = t.cbegin();
-        auto v = opt3.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto v = opt3.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         if (v)
         {
@@ -147,9 +143,8 @@ int main()
     }
 
     {
-        auto begin = t.cbegin();
         auto many_blocks = *(hex_parser >> ident_parser) >> hex_parser;
-        auto w = many_blocks.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto w = many_blocks.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         if (w)
         {
@@ -164,11 +159,10 @@ int main()
     }
 
     {
-        t = lex::tokenize("0x0 0x1", desc);
+        it = lex::iterator{ "0x0 0x1", desc };
         par::rule<std::vector<uint64_t>> seq = hex_parser >> hex_parser;
 
-        auto begin = t.cbegin();
-        auto vec = seq.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto vec = seq.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         std::cout << " ----" << std::endl;
         for (auto & elem : *vec)
@@ -177,18 +171,16 @@ int main()
         }
         std::cout << " ----" << std::endl;
 
-        t = tokenize("0x1 + 0x2", desc);
+        it = lex::iterator{ "0x1 + 0x2", desc };
         auto operation = par::token(op);
         par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
 
-        begin = t.cbegin();
-        auto foo = expression.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto foo = expression.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
 
-        begin = t.cbegin();
         par::rule<std::vector<uint64_t>> expr_with_discarded = hex_parser >> ~operation >> hex_parser;
-        auto bar = expr_with_discarded.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto bar = expr_with_discarded.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         std::cout << bar->at(0) << ", " << bar->at(1) << std::endl;
     }
@@ -208,14 +200,12 @@ int main()
         expr = term >> *plusop;
         term = hex_parser >> *timesop;
 
-        auto begin = t.cbegin();
-        auto bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        auto bar = expr.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         std::cout << *bar << std::endl;
 
-        t = lex::tokenize("0x1 + 0x2 * 0x3 + 0x4", desc);
-        begin = t.cbegin();
-        bar = expr.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        it = lex::iterator{ "0x1 + 0x2 * 0x3 + 0x4", desc };
+        bar = expr.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         if (bar)
         {
@@ -231,9 +221,8 @@ int main()
     {
         par::rule<std::vector<uint64_t>> r = hex_parser % par::token(op);
 
-        t = lex::tokenize("0x1 + 0x2 + 0x3 + 0x4", desc);
-        auto begin = t.cbegin();
-        auto ret = r.match(begin, t.cend(), par::token<std::string>(desc[5]));
+        it = lex::iterator{ "0x1 + 0x2 + 0x3 + 0x4", desc };
+        auto ret = r.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
         if (ret)
         {
@@ -248,5 +237,5 @@ int main()
         {
             std::cout << "list test failed" << std::endl;
         }
-    }*/
+    }
 }

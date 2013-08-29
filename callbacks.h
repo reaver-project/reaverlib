@@ -100,7 +100,7 @@ namespace reaver
     class incompatible_handle : public exception
     {
     public:
-        incompatible_handle() : exception{ crash }
+        incompatible_handle() : exception{ logger::crash }
         {
             *this << "incompatible callback handles used.";
         }
@@ -109,7 +109,7 @@ namespace reaver
     class handles_exhausted : public exception
     {
     public:
-        handles_exhausted() : exception{ crash }
+        handles_exhausted() : exception{ logger::crash }
         {
             *this << "callback handles exhausted.";
         }
@@ -118,7 +118,7 @@ namespace reaver
     class invalid_handle : public exception
     {
     public:
-        invalid_handle() : exception{ crash }
+        invalid_handle() : exception{ logger::crash }
         {
             *this << "invalid callback handle used.";
         }

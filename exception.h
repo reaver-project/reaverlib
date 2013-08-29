@@ -27,14 +27,12 @@
 
 #include "logger.h"
 
-using namespace reaver::logger;
-
 namespace reaver
 {
     class exception : public std::exception, public reaver::logger::logger_friend
     {
     public:
-        exception(level l = always) : _level { l }
+        exception(logger::level l = logger::always) : _level { l }
         {
             using reaver::style::style;
             using reaver::style::colors;
@@ -42,38 +40,38 @@ namespace reaver
 
             switch (l)
             {
-                case trace:
+                case logger::trace:
                     _strings = { std::make_pair(style(colors::bgray), "Trace: "), std::make_pair(style(), "") };
                     break;
-                case debug:
+                case logger::debug:
                     _strings = { std::make_pair(style(colors::gray), "Debug: "), std::make_pair(style(), "") };
                     break;
-                case note:
+                case logger::note:
                     _strings = { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note: ") };
                     break;
-                case info:
+                case logger::info:
                     _strings = { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info: ") };
                     break;
-                case warning:
+                case logger::warning:
                     _strings = { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
                         std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
-                case syntax:
+                case logger::syntax:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error: "),
                         std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
-                case error:
+                case logger::error:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
                         std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
-                case fatal:
+                case logger::fatal:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Fatal error: "),
                         std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
-                case crash:
+                case logger::crash:
                     _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Internal error: "),
                         std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
                     break;
-                case always:
+                case logger::always:
                     _strings = { std::make_pair(style(), "") };
             }
         }
@@ -135,13 +133,13 @@ namespace reaver
 
         friend reaver::logger::logger & operator<<(reaver::logger::logger &, const exception &);
 
-        ::level level() const
+        logger::level level() const
         {
             return _level;
         }
 
     private:
-        ::level _level;
+        logger::level _level;
 
         std::vector<std::pair<reaver::style::style, std::string>> _strings;
     };
@@ -149,7 +147,7 @@ namespace reaver
     class file_is_directory : public exception
     {
     public:
-        file_is_directory(const std::string & filename) : exception{ error }
+        file_is_directory(const std::string & filename) : exception{ logger::crash }
         {
             using reaver::style::style;
             using reaver::style::colors;
@@ -163,7 +161,7 @@ namespace reaver
     class file_not_found : public exception
     {
     public:
-        file_not_found(const std::string & filename) : exception{ error }
+        file_not_found(const std::string & filename) : exception{ logger::crash }
         {
             using reaver::style::style;
             using reaver::style::colors;
@@ -177,7 +175,7 @@ namespace reaver
     class file_failed_to_open : public exception
     {
     public:
-        file_failed_to_open(const std::string & filename) : exception{ error }
+        file_failed_to_open(const std::string & filename) : exception{ logger::crash }
         {
             using reaver::style::style;
             using reaver::style::colors;

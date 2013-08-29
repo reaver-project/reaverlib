@@ -57,6 +57,42 @@ namespace reaver
             elf
         };
 
+        class uninitialized_target : public exception
+        {
+        public:
+            uninitialized_target() : exception{ logger::crash }
+            {
+                *this << "unitialized reaver::target::triple object used.";
+            }
+        };
+
+        class unknown_architecture : public exception
+        {
+        public:
+            unknown_architecture() : exception{ logger::crash }
+            {
+                *this << "unknown architecture specified in target triple.";
+            }
+        };
+
+        class unknown_os : public exception
+        {
+        public:
+            unknown_os() : exception{ logger::crash }
+            {
+                *this << "unknown OS specified in target triple.";
+            }
+        };
+
+        class unknown_environment : public exception
+        {
+        public:
+            unknown_environment() : exception{ logger::crash }
+            {
+                *this << "unknown environment specified in target triple.";
+            }
+        };
+
         class triple
         {
         public:
@@ -75,7 +111,7 @@ namespace reaver
                 if (_arch == ::reaver::target::arch::uninitialized || _os == ::reaver::target::os::uninitialized
                     || _env == ::reaver::target::env::uninitialized)
                 {
-                    throw exception(crash) << "unitialized reaver::target::triple object used.";
+                    throw uninitialized_target{};
                 }
 
                 return _arch;
@@ -86,7 +122,7 @@ namespace reaver
                 if (_arch == ::reaver::target::arch::uninitialized || _os == ::reaver::target::os::uninitialized
                     || _env == ::reaver::target::env::uninitialized)
                 {
-                    throw exception(crash) << "unitialized reaver::target::triple object used.";
+                    throw uninitialized_target{};
                 }
 
                 return _os;
@@ -97,7 +133,7 @@ namespace reaver
                 if (_arch == ::reaver::target::arch::uninitialized || _os == ::reaver::target::os::uninitialized
                     || _env == ::reaver::target::env::uninitialized)
                 {
-                    throw exception(crash) << "unitialized reaver::target::triple object used.";
+                    throw uninitialized_target{};
                 }
 
                 return _env;

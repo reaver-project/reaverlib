@@ -72,7 +72,7 @@ reaver::target::triple::triple(std::string triple_string)
     }
     catch (...)
     {
-        throw exception(error) << "unknown architecture specified in target triple.";
+        throw unknown_architecture{};
     }
 
     try
@@ -81,7 +81,7 @@ reaver::target::triple::triple(std::string triple_string)
     }
     catch (...)
     {
-        throw exception(error) << "unknown OS specified in target triple.";
+        throw unknown_os{};
     }
 
     try
@@ -90,7 +90,7 @@ reaver::target::triple::triple(std::string triple_string)
     }
     catch (...)
     {
-        throw exception(error) << "unknown environment specified in target triple.";
+        throw unknown_environment{};
     }
 }
 

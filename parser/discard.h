@@ -42,20 +42,20 @@ namespace reaver
         public:
             using T = typename std::remove_reference<Tref>::type;
 
-            using value_type = bool;
+            using value_type = void;
 
             discard_parser(const T & discarded) : _discarded{ discarded }
             {
             }
 
             template<typename Iterator>
-            value_type match(Iterator & begin, Iterator end) const
+            bool match(Iterator & begin, Iterator end) const
             {
                 return match(begin, end, _detail::_def_skip{});
             }
 
             template<typename Skip, typename Iterator, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(Iterator & begin, Iterator end, Skip skip) const
+            bool match(Iterator & begin, Iterator end, Skip skip) const
             {
                 while (skip.match(begin, end)) {}
 

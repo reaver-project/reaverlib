@@ -75,7 +75,7 @@ namespace reaver
 
             // directly use lexer token *definition* as a parser
             // in *this* case, the type check is done at compile time - error messages are compile time
-            rule(const lexer::basic_token_definition<T, char_type> & def) : _type(def.type())
+            rule(const lexer::basic_token_definition<char_type, T> & def) : _type(def.type())
             {
             }
 
@@ -104,7 +104,7 @@ namespace reaver
 
             // directly use lexer token *definition* as a parser
             // in *this* case, the type check is done at compile time - error messages are compile time
-            rule & operator=(const lexer::basic_token_definition<T, char_type> & def)
+            rule & operator=(const lexer::basic_token_definition<char_type, T> & def)
             {
                 _type = def.type();
                 _converter.reset();
@@ -179,7 +179,7 @@ namespace reaver
         };
 
         template<typename T, typename CharType = char, typename Iterator = lexer::basic_iterator<CharType>>
-        rule<T, Iterator> token(const lexer::basic_token_definition<T, CharType> & def)
+        rule<T, Iterator> token(const lexer::basic_token_definition<CharType, T> & def)
         {
             return rule<T>{ def };
         }
@@ -195,7 +195,7 @@ namespace reaver
             Iterator> : public parser
         {
         public:
-            using value_type = bool;
+            using value_type = void;
             using char_type = typename std::iterator_traits<Iterator>::value_type::char_type;
 
             rule() : _type{ -1 }, _converter{}
@@ -218,7 +218,7 @@ namespace reaver
             }
 
             template<typename T>
-            rule(const lexer::basic_token_definition<T, char_type> & def) : _type(def.type())
+            rule(const lexer::basic_token_definition<char_type, T> & def) : _type(def.type())
             {
             }
 
@@ -240,20 +240,20 @@ namespace reaver
             }
 
             template<typename T>
-            rule & operator=(const lexer::basic_token_definition<T, char_type> & def)
+            rule & operator=(const lexer::basic_token_definition<char_type, T> & def)
             {
                 _type = def.type();
                 _converter.reset();
                 return *this;
             }
 
-            value_type match(Iterator & begin, Iterator end) const
+            bool match(Iterator & begin, Iterator end) const
             {
                 return match(begin, end, _detail::_def_skip{});
             }
 
             template<typename Skip, typename = typename std::enable_if<std::is_base_of<parser, Skip>::value>::type>
-            value_type match(Iterator & begin, Iterator end, Skip skip) const
+            bool match(Iterator & begin, Iterator end, Skip skip) const
             {
                 while (skip.match(begin, end)) {}
 
@@ -324,7 +324,7 @@ namespace reaver
 
             // directly use lexer token *definition* as a parser
             // in *this* case, the type check is done at compile time - error messages are compile time
-            limited_rule(const lexer::basic_token_definition<T, char_type> & def) : _type{ def.type() }
+            limited_rule(const lexer::basic_token_definition<char_type, T> & def) : _type{ def.type() }
             {
             }
 
@@ -344,7 +344,7 @@ namespace reaver
 
             // directly use lexer token *definition* as a parser
             // in *this* case, the type check is done at compile time - error messages are compile time
-            limited_rule & operator=(const lexer::basic_token_definition<T, char_type> & def)
+            limited_rule & operator=(const lexer::basic_token_definition<char_type, T> & def)
             {
                 _type = def.type();
                 return *this;
