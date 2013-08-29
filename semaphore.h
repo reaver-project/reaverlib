@@ -45,7 +45,10 @@ namespace reaver
 
             _count += i;
 
-            _condition.notify_one();
+            while (i--)
+            {
+                _condition.notify_one();
+            }
         }
 
         void wait()

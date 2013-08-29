@@ -95,6 +95,8 @@ namespace reaver
                 virtual void operator++() = 0;
                 virtual void operator+=(uint64_t i) = 0;
                 virtual bool operator==(_iterator_wrapper *) = 0;
+                virtual bool operator>(_iterator_wrapper *) = 0;
+                virtual bool operator>=(_iterator_wrapper *) = 0;
 
                 virtual std::shared_ptr<_iterator_wrapper<CharType>> clone() = 0;
             };
@@ -119,6 +121,11 @@ namespace reaver
                     ++_it;
                 }
 
+                virtual void operator+=(uint64_t i)
+                {
+                    std::advance(_it, i);
+                }
+
                 virtual bool operator==(_iterator_wrapper<CharType> * rhs)
                 {
                     auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
@@ -131,9 +138,28 @@ namespace reaver
                     return _it == orig->_it;
                 }
 
-                virtual void operator+=(uint64_t i)
+                virtual bool operator>(_iterator_wrapper<CharType> * rhs)
                 {
-                    std::advance(_it, i);
+                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
+
+                    if (!orig)
+                    {
+                        throw std::bad_cast{};
+                    }
+
+                    return _it > orig->_it;
+                }
+
+                virtual bool operator>=(_iterator_wrapper<CharType> * rhs)
+                {
+                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
+
+                    if (!orig)
+                    {
+                        throw std::bad_cast{};
+                    }
+
+                    return _it >= orig->_it;
                 }
 
                 virtual std::shared_ptr<_iterator_wrapper<CharType>> clone()
@@ -157,9 +183,16 @@ namespace reaver
 
             iterator_wrapper() = default;
 
-            template<typename T, typename = typename std::enable_if<std::is_same<typename std::iterator_traits<T>::value_type,
-                CharType>::value>::type>
+            template<typename T, typename = typename std::enable_if<std::is_same<typename std::remove_cv<typename
+                std::iterator_traits<T>::value_type>::type, CharType>::value>::type>
             iterator_wrapper(T iterator) : _it{ std::make_shared<_detail::_iterator_wrapper_impl<CharType, T>>(iterator) }
+            {
+            }
+
+            template<typename T, typename = typename std::enable_if<std::is_same<typename std::remove_cv<typename
+                std::iterator_traits<T>::value_type>::type, CharType>::value>::type>
+            iterator_wrapper(T iterator, iterator_wrapper end) : _it{ std::make_shared<_detail::_iterator_wrapper_impl<
+                CharType, T>>(iterator) }, _end{ end._it->clone() }
             {
             }
 
@@ -174,7 +207,11 @@ namespace reaver
 
             iterator_wrapper & operator++()
             {
-                _it->operator++();
+                if (!_end || !(*_it == &*_end))
+                {
+                    _it->operator++();
+                }
+
                 return *this;
             }
 
@@ -187,7 +224,16 @@ namespace reaver
 
             iterator_wrapper & operator+=(uint64_t i)
             {
-                *_it += i;
+                if (!_end || !(*_it == &*_end))
+                {
+                    *_it += i;
+                }
+
+                if (_end && *_it >= &*_end)
+                {
+                    *_it = *_end;
+                }
+
                 return *this;
             }
 
@@ -210,6 +256,7 @@ namespace reaver
 
         private:
             std::shared_ptr<_detail::_iterator_wrapper<CharType>> _it;
+            std::shared_ptr<_detail::_iterator_wrapper<CharType>> _end;
         };
     }
 }
@@ -625,7 +672,7 @@ namespace reaver
 
                 while (begin != end)
                 {
-                    for (auto e = begin + 1; ; ++e)
+                    for (auto e = begin + 100; ; e += 100)
                     {
                         auto defb = def.begin(), defe = def.end();
 
@@ -640,39 +687,38 @@ namespace reaver
 
                             auto _ = begin;
                             basic_token<CharType> matched = defb->second.match(_, e);
-                            matched.position(position);
 
                             if (matched.type() != -1)
                             {
-                                if (_ != e || e == end)
+                                basic_token<CharType> matched = defb->second.match(begin, end);
+                                matched.position(position);
+
+                                position += matched.template as<std::string>().length();
+
+                                chunk->push(std::move(matched));
+
+                                ++*index;
+                                if (!(*index % 4096) && *index != 0)
                                 {
-                                    begin = _;
-                                    position += matched.template as<std::string>().length();
-
-                                    chunk->push(std::move(matched));
-
-                                    ++*index;
-                                    if (!(*index % 4096) && *index != 0)
-                                    {
-                                        chunk = chunk->next();
-                                    }
-
-                                    sem->notify();
-
-                                    goto after;
+                                    chunk = chunk->next();
                                 }
+
+                                sem->notify();
+
+                                goto after;
                             }
                         }
 
                         if (e == end)
                         {
                             *exception = unexpected_characters{};
+                            sem->notify();
                             return;
                         }
                     }
 
                 after:
-                    if (*begin == '\0')
+                    if (*begin == '\0' && begin + 1 == end)
                     {
                         begin = end;
                     }
@@ -715,15 +761,17 @@ namespace reaver
             using std::end;
 
             template<typename T>
-            auto _begin(const T & t) -> decltype(begin(t))
+            auto _end(const T & t) -> iterator_wrapper<typename std::remove_cv<typename std::iterator_traits<decltype(begin(t))>
+                ::value_type>::type>
             {
-                return begin(t);
+                return { end(t) };
             }
 
             template<typename T>
-            auto _end(const T & t) -> decltype(end(t))
+            auto _begin(const T & t) -> iterator_wrapper<typename std::remove_cv<typename std::iterator_traits<decltype(begin(t))>
+                ::value_type>::type>
             {
-                return end(t);
+                return { begin(t), _end(t) };
             }
         }
 
@@ -740,10 +788,11 @@ namespace reaver
             template<typename Iterator>
             basic_iterator(Iterator begin, Iterator end, const basic_tokens_description<CharType> & def) : _chunk{
                 std::make_shared<_detail::_queue_chunk<CharType>>() }, _ready_semaphore{ std::make_shared<semaphore>() },
-                _index{}, _max_index{ std::make_shared<std::atomic<std::size_t>>(-1) }, _exception{ std::make_shared<
+                _index{ 0 }, _max_index{ std::make_shared<std::atomic<std::size_t>>(-1) }, _exception{ std::make_shared<
                 boost::optional<unexpected_characters>>() }, _end{ std::make_shared<std::atomic<bool>>(false) }
             {
-                static_assert(std::is_same<CharType, typename std::iterator_traits<Iterator>::value_type>::value,
+                static_assert(std::is_same<CharType, typename std::remove_cv<typename std::iterator_traits<Iterator>::value_type>
+                    ::type>::value,
                     "incompatible iterator type used in initialization of basic_lexer_iterator (value_type must be the "
                     "same as `basic_lexer_iterator`'s template parameter");
 
@@ -776,19 +825,19 @@ namespace reaver
                         throw std::move(**_exception);
                     }
 
-                    if (_index == *_max_index)
+                    while (_index == *_max_index)
                     {
                         _ready_semaphore->wait();
-                    }
 
-                    if (_chunk->last() && _index == *_max_index)
-                    {
-                        return *this = basic_iterator{};
-                    }
+                        if (_chunk->last() && _index == *_max_index)
+                        {
+                            return *this = basic_iterator{};
+                        }
 
-                    if (*_exception)
-                    {
-                        throw std::move(**_exception);
+                        if (*_exception)
+                        {
+                            throw std::move(**_exception);
+                        }
                     }
 
                     if (!(++_index % 4096))
