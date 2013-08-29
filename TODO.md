@@ -1,6 +1,3 @@
- * `reaver::parser`: migrate to `lexer::basic_iterator`. Parametrize parsers on `CharType` (it's a must since `token`
-    became `basic_token<CharType>`).
-    *Shouldn't it be "parametrize on iterator type"? That could be saner and allow additional side-features.*
  * `reaver::parser`: add `literal`, as opposed to `rule`. `literal`s and `rule`s cannot be mixed in a single parser;
     `rule`s use `basic_lexer_iterator`, while `literal`s will use iterators over a CharType to work; it's not really possible
     to allow mixing those.
@@ -27,3 +24,5 @@
  * `reaver::thread_pool`: testing, testing, testing!
  * `reaver::async`: write as a sane wrapper over a default `reaver::thread_pool`.
  * `README`: write `reaver::thread_pool` and `reaver::async` description
+ * `reaver::format::executable`: write as the first part of Reaver Format library, which will provide uniform interfaces
+    for loading and saving various types of file formats. For starters, executable file formats for use by the linker.
