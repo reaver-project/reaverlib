@@ -540,80 +540,6 @@ namespace reaver
             }
         };
 
-        template<typename CharType>
-        std::vector<basic_token<CharType>> tokenize(iterator_wrapper<CharType> begin, iterator_wrapper<CharType> end,
-            const basic_tokens_description<CharType> & def)
-        {
-            std::vector<basic_token<CharType>> ret;
-            std::size_t position = 0;
-
-            while (begin != end)
-            {
-                for (auto e = begin + 100; ; e += 100)
-                {
-                    auto defb = def.begin(), defe = def.end();
-
-                    for (; defb != defe; ++defb)
-                    {
-                        auto _ = begin;
-                        basic_token<CharType> matched = defb->second.match(_, e);
-                        matched.position(position);
-
-                        if (matched.type() != -1)
-                        {
-                            if (_ != e || e == end)
-                            {
-                                begin = _;
-                                position += matched.template as<std::string>().length();
-                                ret.emplace_back(std::move(matched));
-
-                                goto after;
-                            }
-                        }
-                    }
-
-                    if (e == end)
-                    {
-                        throw unexpected_characters{};
-                    }
-                }
-
-                after:
-                    ;
-            }
-
-            return ret;
-        }
-
-        template<typename CharType>
-        std::vector<basic_token<CharType>> tokenize(const std::basic_string<CharType> & str, const basic_tokens_description
-            <CharType> & def)
-        {
-            return tokenize(str.begin(), str.end(), def);
-        }
-
-        template<typename CharType>
-        std::vector<basic_token<CharType>> tokenize(const std::basic_istream<CharType> & str, const basic_tokens_description
-            <CharType> & def)
-        {
-            return tokenize(iterator_wrapper<CharType>{ std::istreambuf_iterator<CharType>{ str.rdbuf() } }, iterator_wrapper<
-                CharType>{ std::istreambuf_iterator<CharType>{} }, def);
-        }
-
-        template<typename CharType, uint64_t N>
-        std::vector<basic_token<CharType>> tokenize(const CharType (&str)[N], const basic_tokens_description<CharType> & def)
-        {
-            return tokenize(iterator_wrapper<CharType>{ str }, iterator_wrapper<CharType>{ str + N }, def);
-        }
-
-        template<typename Iterator>
-        std::vector<basic_token<typename std::iterator_traits<Iterator>::value_type>> tokenize(Iterator begin, Iterator end, const
-            basic_tokens_description<typename std::iterator_traits<Iterator>::value_type> & def)
-        {
-            return tokenize(iterator_wrapper<typename std::iterator_traits<Iterator>::value_type>{ begin }, iterator_wrapper<
-                typename std::iterator_traits<Iterator>::value_type>{ end }, def);
-        }
-
         namespace _detail
         {
             template<typename CharType>
@@ -699,7 +625,7 @@ namespace reaver
 
                 while (begin != end)
                 {
-                    for (auto e = begin + 100; ; e += 100)
+                    for (auto e = begin + 1; ; ++e)
                     {
                         auto defb = def.begin(), defe = def.end();
 
@@ -745,8 +671,11 @@ namespace reaver
                         }
                     }
 
-                    after:
-                        ;
+                after:
+                    if (*begin == '\0')
+                    {
+                        begin = end;
+                    }
                 }
 
                 chunk->end();
@@ -840,6 +769,11 @@ namespace reaver
                     if (_chunk->last() && _index == *_max_index)
                     {
                         return *this = basic_iterator{};
+                    }
+
+                    if (*_exception)
+                    {
+                        throw std::move(**_exception);
                     }
 
                     if (_index == *_max_index)

@@ -66,19 +66,19 @@ int main()
         switch (t->type())
         {
             case 1:
-                std::cout << "Type: `identifier`, value: " << t->as<std::string>() << std::endl;
+                dlog() << "Type: `identifier`, value: " << t->as<std::string>();
                 break;
             case 2:
-                std::cout << "Type: `hex int`, value: " << t->as<uint64_t>() << std::endl;
+                dlog() << "Type: `hex int`, value: " << t->as<uint64_t>();
                 break;
             case 3:
-                std::cout << "Type: `int`, value: " << t->as<uint64_t>() << std::endl;
+                dlog() << "Type: `int`, value: " << t->as<uint64_t>();
                 break;
             case 4:
-                std::cout << "Type: `text`, value: " << t->as<std::string>() << std::endl;
+                dlog() << "Type: `text`, value: " << t->as<std::string>();
                 break;
             case 5:
-                std::cout << "Type: `white space`" << std::endl;
+                dlog() << "Type: `white space`";
         }
     }
 

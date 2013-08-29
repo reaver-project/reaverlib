@@ -30,6 +30,6 @@ clean:
 
 test: all
 	$(CC) $(CFLAGS) tests/main.cpp -o tests/output -lc++abi -lreaver -lboost_system -lboost_filesystem -pthread
-	$(CC) $(CFLAGS) tests/calc.cpp -o tests/calc -lc++abi -lreaver -lboost_system -lboost_filesystem -pthread
+#	$(CC) $(CFLAGS) tests/calc.cpp -o tests/calc -lc++abi -lreaver -lboost_system -lboost_filesystem -pthread
 
 -include $(SOURCES:.cpp=.d)
