@@ -688,9 +688,14 @@ namespace reaver
                             auto _ = begin;
                             basic_token<CharType> matched = defb->second.match(_, e);
 
+                            if (matched.type() == -1)
+                            {
+                                matched = defb->second.match(_, e + 100);
+                            }
+
                             if (matched.type() != -1)
                             {
-                                basic_token<CharType> matched = defb->second.match(begin, end);
+                                matched = defb->second.match(begin, end);
                                 matched.position(position);
 
                                 position += matched.template as<std::string>().length();
