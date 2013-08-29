@@ -78,7 +78,7 @@ namespace reaver
                     while (skip.match(begin, end)) {}
                 } while (val = _plus.match(begin, end, skip));
 
-                return ret;
+                return { std::move(ret) };
             }
 
         private:

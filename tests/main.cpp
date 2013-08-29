@@ -86,7 +86,8 @@ int main()
     auto ident_parser = par::token(ident);
     auto hex_parser = par::token(hex);
 
-    lex::iterator it{ "0x1 foo 0x2 foo 0x3 bar 0x4 bar 0x5", desc };
+    lex::iterator it;
+    lex::iterator orig{ "0x1 foo 0x2 foo 0x3 bar 0x4 bar 0x5", desc };
 
     {
         auto alternative = ident_parser | hex_parser;
@@ -105,6 +106,7 @@ int main()
             std::cout << *x << std::endl;
         }
 
+        it = orig;
         auto sequence = +alternative;
         auto y = sequence.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
@@ -143,6 +145,8 @@ int main()
     }
 
     {
+        it = orig;
+
         auto many_blocks = *(hex_parser >> ident_parser) >> hex_parser;
         auto w = many_blocks.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
 
@@ -175,12 +179,14 @@ int main()
         auto operation = par::token(op);
         par::rule<op_desc> expression = hex_parser >> operation >> hex_parser;
 
-        auto foo = expression.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
+        auto i = it;
+        auto foo = expression.match(i, lex::iterator{}, par::token<std::string>(desc[5]));
 
         std::cout << "op_desc = { .first = " << foo->first << ", .op = " << foo->op << ", .second = " << foo->second << " }" << std::endl;
 
+        i = it;
         par::rule<std::vector<uint64_t>> expr_with_discarded = hex_parser >> ~operation >> hex_parser;
-        auto bar = expr_with_discarded.match(it, lex::iterator{}, par::token<std::string>(desc[5]));
+        auto bar = expr_with_discarded.match(i, lex::iterator{}, par::token<std::string>(desc[5]));
 
         std::cout << bar->at(0) << ", " << bar->at(1) << std::endl;
     }
