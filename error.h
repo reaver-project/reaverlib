@@ -33,7 +33,7 @@ namespace reaver
     class error_engine : public exception
     {
     public:
-        error_engine(uint64_t max_errors = 20, logger::level error_level = syntax) : _max_errors{ max_errors },
+        error_engine(uint64_t max_errors = 20, logger::level error_level = logger::level::syntax) : _max_errors{ max_errors },
             _error_level{ error_level }
         {
         }
@@ -63,31 +63,31 @@ namespace reaver
         {
             _errors.emplace_back(std::move(e));
 
-            if (_errors.back().level() >= _error_level && _errors.back().level() != always)
+            if (_errors.back().level() >= _error_level && _errors.back().level() != logger::level::always)
             {
                 ++_error_count;
             }
 
-            else if (_errors.back().level() == warning)
+            else if (_errors.back().level() == logger::level::warning)
             {
                 ++_warning_count;
             }
 
             if (_error_count == _max_errors)
             {
-                _errors.emplace_back(exception(fatal) << "too many errors emitted: " << _max_errors << ".");
+                _errors.emplace_back(exception(logger::level::fatal) << "too many errors emitted: " << _max_errors << ".");
 
                 // uh... I'm sorry, officer, I can't explain how this happened
                 throw std::move(*this);
             }
 
-            if (_errors.back().level() == crash || _errors.back().level() == fatal)
+            if (_errors.back().level() == logger::level::crash || _errors.back().level() == logger::level::fatal)
             {
                 throw std::move(*this);
             }
         }
 
-        void set_error_level(::level l)
+        void set_error_level(logger::level l)
         {
             _error_level = l;
         }
@@ -108,7 +108,7 @@ namespace reaver
 
             if (_error_count >= _max_errors)
             {
-                _errors.emplace_back(exception(fatal) << "too many errors emitted: " << _max_errors << ".");
+                _errors.emplace_back(exception(logger::level::fatal) << "too many errors emitted: " << _max_errors << ".");
 
                 throw std::move(*this);
             }

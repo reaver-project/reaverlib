@@ -1,7 +1,7 @@
  * `reaver::parser`: add `literal`, as opposed to `rule`. `literal`s and `rule`s cannot be mixed in a single parser;
     `rule`s use `basic_lexer_iterator`, while `literal`s will use iterators over a CharType to work; it's not really possible
     to allow mixing those.
- * `reaver::lexer`: (?) move `iterator_wrapper` out of `reaver::lexer`; put it in its own file and stuff. (?)
+ * `reaver::lexer`: split `lexer.h` into several files
  * `reaver::parser`: callback support
  * `reaver::logger`: file change on date, date based log file names
  * `README`: mention `logger::logger_friend`
