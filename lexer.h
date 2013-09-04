@@ -91,14 +91,14 @@ namespace reaver
             public:
                 virtual ~_iterator_wrapper() {}
 
-                virtual const CharType & operator*() = 0;
+                virtual const CharType & operator*() const = 0;
                 virtual void operator++() = 0;
                 virtual void operator+=(uint64_t i) = 0;
-                virtual bool operator==(_iterator_wrapper *) = 0;
-                virtual bool operator>(_iterator_wrapper *) = 0;
-                virtual bool operator>=(_iterator_wrapper *) = 0;
+                virtual bool operator==(const _iterator_wrapper *) const = 0;
+                virtual bool operator>(const _iterator_wrapper *) const = 0;
+                virtual bool operator>=(const _iterator_wrapper *) const = 0;
 
-                virtual std::shared_ptr<_iterator_wrapper<CharType>> clone() = 0;
+                virtual std::shared_ptr<_iterator_wrapper<CharType>> clone() const = 0;
             };
 
             template<typename CharType, typename Iterator>
@@ -111,7 +111,7 @@ namespace reaver
 
                 virtual ~_iterator_wrapper_impl() {}
 
-                virtual const CharType & operator*()
+                virtual const CharType & operator*() const
                 {
                     return *_it;
                 }
@@ -126,9 +126,9 @@ namespace reaver
                     std::advance(_it, i);
                 }
 
-                virtual bool operator==(_iterator_wrapper<CharType> * rhs)
+                virtual bool operator==(const _iterator_wrapper<CharType> * rhs) const
                 {
-                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
+                    auto orig = dynamic_cast<const _iterator_wrapper_impl<CharType, Iterator> *>(rhs);
 
                     if (!orig)
                     {
@@ -138,9 +138,9 @@ namespace reaver
                     return _it == orig->_it;
                 }
 
-                virtual bool operator>(_iterator_wrapper<CharType> * rhs)
+                virtual bool operator>(const _iterator_wrapper<CharType> * rhs) const
                 {
-                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
+                    auto orig = dynamic_cast<const _iterator_wrapper_impl<CharType, Iterator> *>(rhs);
 
                     if (!orig)
                     {
@@ -150,9 +150,9 @@ namespace reaver
                     return _it > orig->_it;
                 }
 
-                virtual bool operator>=(_iterator_wrapper<CharType> * rhs)
+                virtual bool operator>=(const _iterator_wrapper<CharType> * rhs) const
                 {
-                    auto orig = dynamic_cast<_iterator_wrapper_impl<CharType, Iterator> *>(rhs);
+                    auto orig = dynamic_cast<const _iterator_wrapper_impl<CharType, Iterator> *>(rhs);
 
                     if (!orig)
                     {
@@ -162,7 +162,7 @@ namespace reaver
                     return _it >= orig->_it;
                 }
 
-                virtual std::shared_ptr<_iterator_wrapper<CharType>> clone()
+                virtual std::shared_ptr<_iterator_wrapper<CharType>> clone() const
                 {
                     return std::make_shared<_iterator_wrapper_impl<CharType, Iterator>>(_it);
                 }
@@ -256,7 +256,7 @@ namespace reaver
 
         private:
             std::shared_ptr<_detail::_iterator_wrapper<CharType>> _it;
-            std::shared_ptr<_detail::_iterator_wrapper<CharType>> _end;
+            std::shared_ptr<const _detail::_iterator_wrapper<CharType>> _end;
         };
     }
 }
@@ -320,7 +320,7 @@ namespace reaver
         private:
             uint64_t _type;
             std::size_t _pos = 0;
-            std::shared_ptr<_detail::_token<CharType>> _token;
+            std::shared_ptr<const _detail::_token<CharType>> _token;
 
             template<typename, typename>
             friend class _detail::_as;
@@ -343,9 +343,9 @@ namespace reaver
             {
                 static T get(const basic_token<CharType> & token)
                 {
-                    if (dynamic_cast<_detail::_token_impl<T, CharType> *>(&*token._token))
+                    if (dynamic_cast<const _detail::_token_impl<T, CharType> *>(&*token._token))
                     {
-                        return dynamic_cast<_detail::_token_impl<T, CharType> *>(&*token._token)->match;
+                        return dynamic_cast<const _detail::_token_impl<T, CharType> *>(&*token._token)->match;
                     }
 
                     else
@@ -370,8 +370,8 @@ namespace reaver
             public:
                 virtual ~_token_description() {}
 
-                virtual basic_token<CharType> match(iterator_wrapper<CharType> &, iterator_wrapper<CharType>) = 0;
-                virtual uint64_t type() = 0;
+                virtual basic_token<CharType> match(iterator_wrapper<CharType> &, iterator_wrapper<CharType>) const = 0;
+                virtual uint64_t type() const = 0;
             };
 
             template<typename CharType, typename T>
@@ -384,7 +384,7 @@ namespace reaver
                 {
                 }
 
-                virtual basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end)
+                virtual basic_token<CharType> match(iterator_wrapper<CharType> & begin, iterator_wrapper<CharType> end) const
                 {
                     std::match_results<iterator_wrapper<CharType>> match;
 
@@ -400,7 +400,7 @@ namespace reaver
                     return basic_token<CharType>{ -1 };
                 }
 
-                virtual uint64_t type()
+                virtual uint64_t type() const
                 {
                     return _type;
                 }
@@ -447,7 +447,7 @@ namespace reaver
             }
 
         private:
-            std::shared_ptr<_detail::_token_description_impl<CharType, T>> _desc;
+            std::shared_ptr<const _detail::_token_description_impl<CharType, T>> _desc;
         };
 
         template<typename T>
@@ -495,7 +495,7 @@ namespace reaver
             }
 
         private:
-            std::shared_ptr<_detail::_token_description<CharType>> _desc;
+            std::shared_ptr<const _detail::_token_description<CharType>> _desc;
         };
 
         template<typename CharType>
