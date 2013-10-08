@@ -4,6 +4,24 @@ ReaverLib is a collection of libraries used throughout the project, that should
 also be useful for people from outside of it. This document briefly explains how
 to use each of the libraries.
 
+## Installation
+
+You will need the following tools installed in your system:
+
+ * POSIX shell
+ * make
+ * git
+ * clang++, libc++ (I have **no plans** of supporting GCC at any point in the future)
+ * Boost, built with clang++ and libc++ (most prebuilt Boost distributions for Linux are
+built with GCC and libstdc++ and they do not work properly with clang++ and libc++)   
+
+To install ReaverLib, enter the following commands in your console:
+
+    git clone git://github.com/griwes/ReaverLib
+    cd ReaverLib
+    make
+    sudo make install
+
 
 ## `reaver::style`
 
