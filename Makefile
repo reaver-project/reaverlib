@@ -1,6 +1,6 @@
 CC=clang++
 LD=clang++
-CFLAGS=-Os -Wall -Wextra -pedantic -Werror -std=c++11 -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC
+CFLAGS=-Os -Wall -Wextra -pedantic -Werror -std=c++1y -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC
 SOFLAGS=-stdlib=libc++ -shared
 SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/*")
 OBJECTS=$(SOURCES:.cpp=.o)
@@ -31,5 +31,6 @@ clean:
 test: all
 	$(CC) $(CFLAGS) tests/main.cpp -o tests/output -lc++abi -lreaver -lboost_system -lboost_filesystem -pthread
 #	$(CC) $(CFLAGS) tests/calc.cpp -o tests/calc -lc++abi -lreaver -lboost_system -lboost_filesystem -pthread
+	$(CC) $(CFLAGS) tests/elf.cpp -o tests/elf -lc++abi -lreaver -lboost_system -lboost_filesystem -pthread
 
 -include $(SOURCES:.cpp=.d)
