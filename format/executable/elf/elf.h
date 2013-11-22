@@ -35,6 +35,15 @@ namespace reaver
     {
         namespace executable
         {
+            class invalid_elf_file : public exception
+            {
+            public:
+                invalid_elf_file() : exception{ logger::error }
+                {
+                    *this << "tried to read an invalid ELF file.";
+                }
+            };
+
             class elf : public executable
             {
             public:

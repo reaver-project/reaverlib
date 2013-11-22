@@ -27,14 +27,14 @@
 #include "elf32.h"
 #include "elf64.h"
 
-std::unique_ptr< reaver::format::executable::executable > reaver::format::executable::elf::read(std::istream & in)
+std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::elf::read(std::istream & in)
 {
     auto p = in.tellg();
     char ident[16];
     in.read(ident, 16);
     in.seekg(p);
 
-    if (!(ident[0] == 0x7F && ident[1] == 'E' && ident[2] == 'L' && ident[3] == 'F'))
+    if (!(ident[0] == 0x7F && ident[1] == 'E' && ident[2] == 'L' && ident[3] == 'F') || ident[6] == 0)
     {
         return nullptr;
     }

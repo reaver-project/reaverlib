@@ -23,8 +23,6 @@
  *
  **/
 
-#include <fstream>
-
 #include "executable.h"
 #include "elf/elf.h"
 #include "rxf/rxf.h"
@@ -57,14 +55,18 @@ bool reaver::format::executable::possible(reaver::format::executable::format for
     }
 }
 
-std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::open(std::string filename)
+std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::read(const std::string & filename)
 {
-    std::ifstream in{ filename, std::ios::binary | std::ios::in };
-    return read(in);
+    return read(std::ifstream{ filename, std::ios::binary | std::ios::in });
 }
 
 std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::read(std::istream & in)
 {
+    if (!in)
+    {
+        throw invalid_istream{};
+    }
+
     std::unique_ptr<reaver::format::executable::executable> ret = elf::read(in);
 
     if (!ret)
@@ -78,4 +80,9 @@ std::unique_ptr<reaver::format::executable::executable> reaver::format::executab
     }
 
     return std::move(ret);
+}
+
+std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::read(std::istream && in)
+{
+    return read(in);
 }

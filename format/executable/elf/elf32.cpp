@@ -24,46 +24,91 @@
  **/
 
 #include "elf32.h"
+#include "i386.h"
 
-void reaver::format::executable::elf32::_read_header(std::istream & in)
+std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::elf32::read(std::istream & in)
 {
-    in.read(reinterpret_cast<char *>(_elf_header._ident), 16);
+    _header header = _read_header(in);
 
-    if (!(_elf_header._ident[_magic0_index] == 0x7F && _elf_header._ident[_magic1_index] == 'E' && _elf_header._ident[_magic2_index] == 'L'
-        && _elf_header._ident[_magic3_index] == 'F') || _elf_header._ident[_version_index] == _none_version)
+    if (header.machine == _machine::_386)
+    {
+        if (header.ident[_data_index] != _lsb)
+        {
+            throw invalid_elf_file{};
+        }
+
+        return elf32_i386::read(header, in);
+    }
+
+    return nullptr;
+}
+
+reaver::format::executable::elf32::_header reaver::format::executable::elf32::_read_header(std::istream & in)
+{
+    using reaver::format::utils::read;
+
+    _header header;
+    in.read(reinterpret_cast<char *>(header.ident), 16);
+
+    if (!(header.ident[_magic0_index] == 0x7F && header.ident[_magic1_index] == 'E' && header.ident[_magic2_index] == 'L'
+        && header.ident[_magic3_index] == 'F') || header.ident[_version_index] == _none_version)
     {
         throw reaver::format::executable::invalid_or_unsupported_file{};
     }
 
-    bool little = _elf_header._ident[_data_index] == _lsb;
-    using reaver::format::utils::read;
+    bool little = header.ident[_data_index] == _lsb;
 
-    read(_elf_header._type, in, little);
-    read(_elf_header._machine, in, little);
-    read(_elf_header._version, in, little);
-    read(_elf_header._entry, in, little);
-    read(_elf_header._program_header_offset, in, little);
-    read(_elf_header._section_header_offset, in, little);
-    read(_elf_header._flags, in, little);
-    read(_elf_header._header_size, in, little);
-    read(_elf_header._program_header_entry_size, in, little);
-    read(_elf_header._program_header_entry_count, in, little);
-    read(_elf_header._section_header_entry_size, in, little);
-    read(_elf_header._section_header_entry_count, in, little);
-    read(_elf_header._string_section_header_index, in, little);
+    read(header.type, in, little);
+    read(header.machine, in, little);
+    read(header.version, in, little);
+    read(header.entry, in, little);
+    read(header.program_header_offset, in, little);
+    read(header.section_header_offset, in, little);
+    read(header.flags, in, little);
+    read(header.header_size, in, little);
+    read(header.program_header_entry_size, in, little);
+    read(header.program_header_entry_count, in, little);
+    read(header.section_header_entry_size, in, little);
+    read(header.section_header_entry_count, in, little);
+    read(header.string_section_header_index, in, little);
+
+    return header;
 }
 
-std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::elf32::read(std::istream & in)
+void reaver::format::executable::elf32::_read_program_header(std::istream & in)
 {
-    std::unique_ptr<reaver::format::executable::elf32> ret{ new reaver::format::executable::elf32{} };
+    using reaver::format::utils::read;
 
-    ret->_read_header(in);
-    if (ret->_elf_header._ident[_class_index] != _machine::_386 || ret->_elf_header._ident[_data_index] != _lsb)
+    if (_elf_header.program_header_offset)
     {
-        throw invalid_or_unsupported_file{};
+        auto g = in.tellg();
+        bool little = _elf_header.ident[_data_index] == _lsb;
+        _prog_header = _program_header{};
+
+        in.seekg(_elf_header.program_header_offset);
+        read(_prog_header->type, in, little);
+        read(_prog_header->offset, in, little);
+        read(_prog_header->virtual_address, in, little);
+        read(_prog_header->physical_address, in, little);
+        read(_prog_header->file_size, in, little);
+        read(_prog_header->memory_size, in, little);
+        read(_prog_header->flags, in, little);
+        read(_prog_header->align, in, little);
+
+        std::cout << std::hex << _prog_header->virtual_address << std::endl;
+        std::cout << _prog_header->physical_address << std::endl;
+
+        in.seekg(g);
     }
+}
 
-    ret->_arch = target::arch::i386;
+std::vector<reaver::format::executable::elf32::_section_header> reaver::format::executable::elf32::_read_section_headers(
+    std::istream & in)
+{
+    return {};
+}
 
-    return std::move(ret);
+std::vector<uint8_t> reaver::format::executable::elf32::_read_section(std::istream & in, std::size_t index)
+{
+    return {};
 }

@@ -37,6 +37,8 @@ namespace reaver
             class section
             {
             public:
+                section() = default;
+
                 section(std::vector<std::uint8_t> blob) : _blob{ std::move(blob) }
                 {
                 }
@@ -49,6 +51,11 @@ namespace reaver
                 const std::vector<std::uint8_t> & blob() const
                 {
                     return _blob;
+                }
+
+                const std::uint8_t & operator[](std::size_t i) const
+                {
+                    return _blob.at(i);
                 }
 
             private:

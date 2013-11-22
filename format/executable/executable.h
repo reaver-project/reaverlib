@@ -45,9 +45,18 @@ namespace reaver
             class invalid_or_unsupported_file : public exception
             {
             public:
-                invalid_or_unsupported_file() : exception{ logger::crash }
+                invalid_or_unsupported_file() : exception{ logger::error }
                 {
                     *this << "invalid or unsupported executable file format.";
+                }
+            };
+
+            class invalid_istream : public exception
+            {
+            public:
+                invalid_istream() : exception{ logger::error }
+                {
+                    *this << "invalid istream passed to reaver::format::executable.";
                 }
             };
 
@@ -71,8 +80,9 @@ namespace reaver
 
             class executable;
 
-            std::unique_ptr<executable> open(std::string);
+            std::unique_ptr<executable> read(const std::string &);
             std::unique_ptr<executable> read(std::istream &);
+            std::unique_ptr<executable> read(std::istream &&);
             std::unique_ptr<executable> create(format, type, const std::map<std::string, section> &, const std::map<
                 std::string, symbol>, const std::vector<relocation> &, const std::vector<std::string> &);
 

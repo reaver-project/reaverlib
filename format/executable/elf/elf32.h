@@ -28,6 +28,8 @@
 #include <memory>
 #include <cstdint>
 
+#include <boost/optional.hpp>
+
 #include "elf.h"
 #include "../../utils.h"
 
@@ -42,10 +44,7 @@ namespace reaver
             public:
                 static std::unique_ptr<executable> read(std::istream &);
 
-                virtual bool save(std::string) const { return false; }
-                virtual bool save(std::ostream &) const { return false; }
-
-            private:
+            protected:
                 using _addr = std::uint32_t;
                 using _half = std::uint16_t;
                 using _off = std::uint32_t;
@@ -76,7 +75,7 @@ namespace reaver
                 enum _machine : _half
                 {
                     _none_machine,
-                    _386
+                    _386 = 3
                 };
 
                 enum _version : _word
@@ -94,25 +93,81 @@ namespace reaver
 
                 struct _header
                 {
-                    unsigned char _ident[_nident];
-                    enum _type _type;
-                    enum _machine _machine;
-                    enum _version _version;
-                    _addr _entry;
-                    _off _program_header_offset;
-                    _off _section_header_offset;
-                    _word _flags;
-                    _half _header_size;
-                    _half _program_header_entry_size;
-                    _half _program_header_entry_count;
-                    _half _section_header_entry_size;
-                    _half _section_header_entry_count;
-                    _half _string_section_header_index;
+                    unsigned char ident[_nident];
+                    _type type;
+                    _machine machine;
+                    _version version;
+                    _addr entry;
+                    _off program_header_offset;
+                    _off section_header_offset;
+                    _word flags;
+                    _half header_size;
+                    _half program_header_entry_size;
+                    _half program_header_entry_count;
+                    _half section_header_entry_size;
+                    _half section_header_entry_count;
+                    _half string_section_header_index;
                 };
 
-                void _read_header(std::istream &);
+                struct _program_header
+                {
+                    _word type;
+                    _off offset;
+                    _addr virtual_address;
+                    _addr physical_address;
+                    _word file_size;
+                    _word memory_size;
+                    _word flags;
+                    _word align;
+                };
+
+                enum class _section_type : _word
+                {
+                    _null,
+                    _progbits,
+                    _symtab,
+                    _strtab,
+                    _rela,
+                    _hash,
+                    _dynamic,
+                    _note,
+                    _nobits,
+                    _rel,
+                    _shlib,
+                    _dynsym
+                };
+
+                enum _section_flags : _word
+                {
+                    _write = 0x1,
+                    _alloc = 0x2,
+                    _exec = 0x4
+                };
+
+                struct _section_header
+                {
+                    _word name;
+                    _section_type type;
+                    _word flags;
+                    _addr address;
+                    _off offset;
+                    _word size;
+                    _word link;
+                    _word info;
+                    _word align;
+                    _word entry_size;
+                };
+
+                static _header _read_header(std::istream &);
+                void _read_program_header(std::istream &);
+                std::vector<_section_header> _read_section_headers(std::istream &);
+                std::vector<std::uint8_t> _read_section(std::istream &, std::size_t);
 
                 _header _elf_header;
+                boost::optional<_program_header> _prog_header;
+                section _section_names_string_table;
+                section _string_table;
+                std::vector<_section_header> _sections;
             };
         }
     }
