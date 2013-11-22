@@ -26,3 +26,4 @@
  * `README`: write `reaver::thread_pool` and `reaver::async` description
  * `reaver::format::executable`: write as the first part of Reaver Format library, which will provide uniform interfaces
     for loading and saving various types of file formats. For starters, executable file formats for use by the linker.
+ * `reaver::format::executable`: printing
