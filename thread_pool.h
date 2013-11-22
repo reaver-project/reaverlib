@@ -36,13 +36,14 @@
 #include <type_traits>
 
 #include "exception.h"
+#include "callbacks.h"
 
 namespace reaver
 {
     class thread_pool_closed : public exception
     {
     public:
-        thread_pool_closed() : exception{ crash }
+        thread_pool_closed() : exception{ logger::crash }
         {
             *this << "tried to insert a task into an already closed thread pool.";
         }
@@ -51,7 +52,7 @@ namespace reaver
     class free_affinities_exhausted : public exception
     {
     public:
-        free_affinities_exhausted() : exception{ crash }
+        free_affinities_exhausted() : exception{ logger::crash }
         {
             *this << "free affinities in a thread pool exhausted.";
         }
@@ -60,7 +61,7 @@ namespace reaver
     class invalid_affinity : public exception
     {
     public:
-        invalid_affinity() : exception{ crash }
+        invalid_affinity() : exception{ logger::crash }
         {
             *this << "invalid affinity passed to thread pool push().";
         }
@@ -79,6 +80,21 @@ namespace reaver
 
         ~thread_pool()
         {
+            _end = true;
+            _cond.notify_all();
+
+            for (auto & th : _threads)
+            {
+                th.second.join();
+            }
+        }
+
+        void abort()
+        {
+            std::unique_lock<std::mutex> lock{ _lock };
+
+            _queue = {};
+            _affinity_queues = {};
             _end = true;
             _cond.notify_all();
 
@@ -226,6 +242,12 @@ namespace reaver
     private:
         void _loop()
         {
+            if (_waiters)
+            {
+                std::unique_lock<std::mutex> lock{ _lock };
+                _waiters();
+            }
+
             while (!_end || _threads.size())
             {
                 {
@@ -288,6 +310,12 @@ namespace reaver
                 }
 
                 f();
+
+                if (_waiters)
+                {
+                    std::unique_lock<std::mutex> lock{ _lock };
+                    _waiters();
+                }
             }
         }
 
@@ -314,5 +342,7 @@ namespace reaver
         semaphore _die_semaphore;
 
         std::atomic<bool> _end;
+
+        callbacks<void (void)> _waiters;
     };
 }
