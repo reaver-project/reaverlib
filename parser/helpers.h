@@ -35,7 +35,7 @@
 
 #include "../tmp.h"
 #include "../callbacks.h"
-#include "../lexer.h"
+#include "../lexer/lexer.h"
 
 namespace reaver
 {

@@ -30,7 +30,7 @@
 
 #include "helpers.h"
 #include "skip.h"
-#include "../lexer.h"
+#include "../lexer/lexer.h"
 
 namespace reaver
 {

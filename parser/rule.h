@@ -35,7 +35,7 @@
 #include "skip.h"
 #include "helpers.h"
 #include "converter.h"
-#include "../lexer.h"
+#include "../lexer/lexer.h"
 
 namespace reaver
 {
