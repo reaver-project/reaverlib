@@ -33,6 +33,26 @@
 namespace reaver
 {
     template<typename>
+    struct is_char : public std::false_type
+    {
+    };
+
+    template<>
+    struct is_char<char> : public std::true_type
+    {
+    };
+
+    template<>
+    struct is_char<char16_t> : public std::true_type
+    {
+    };
+
+    template<>
+    struct is_char<char32_t> : public std::true_type
+    {
+    };
+
+    template<typename>
     struct is_vector : public std::false_type
     {
     };
