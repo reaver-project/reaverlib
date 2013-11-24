@@ -2,7 +2,7 @@ CC=clang++
 LD=clang++
 CFLAGS=-Os -Wall -Wextra -pedantic -Werror -std=c++1y -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC
 SOFLAGS=-stdlib=libc++ -shared
-SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/*")
+SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/* ! -wholename "*-old")
 OBJECTS=$(SOURCES:.cpp=.o)
 
 all: library
@@ -11,7 +11,7 @@ install: all
 	@cp libreaver.so /usr/local/lib/libreaver.so.1
 	@ln -sfn /usr/local/lib/libreaver.so.1 /usr/local/lib/libreaver.so
 	@mkdir -p /usr/local/include/reaver
-	@find -type f -name "*.h" -exec cp --parents {} /usr/local/include/reaver/ \;
+	@find -type f -name "*.h" ! -wholename "*-old" -exec cp --parents {} /usr/local/include/reaver/ \;
 
 library: $(OBJECTS)
 	$(LD) $(SOFLAGS) $(OBJECTS) -o libreaver.so -ldl
