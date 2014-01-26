@@ -1,8 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright (C) 2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2013 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -18,8 +17,6 @@
  * 2. Altered source versions must be plainly marked as such, and must not be
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
- *
- * Michał "Griwes" Dominiak
  *
  **/
 
@@ -52,6 +49,33 @@ bool reaver::format::executable::possible(reaver::format::executable::format for
                 default:
                     return false;
             }
+    }
+}
+
+reaver::format::executable::format reaver::format::executable::make_format(const std::string & str)
+{
+    if (str.substr(0, 3) == "elf")
+    {
+        return format::elf;
+    }
+
+    if (str.substr(0, 3) == "rxf")
+    {
+        return format::rxf;
+    }
+
+    throw unknown_format{ str };
+}
+
+std::size_t reaver::format::executable::get_bitness(const std::string & str)
+{
+    switch (make_format(str))
+    {
+        case format::elf:
+        return std::stoull(str.substr(3));
+
+        case format::rxf:
+        return 64;
     }
 }
 

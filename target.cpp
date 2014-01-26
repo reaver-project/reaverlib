@@ -1,8 +1,7 @@
 /**
- * Miranda License
+ * Reaver Library License
  *
- * Copyright (C) 2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2013-2014 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -18,8 +17,6 @@
  * 2. Altered source versions must be plainly marked as such, and must not be
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
- *
- * Michał "Griwes" Dominiak
  *
  **/
 
@@ -57,7 +54,7 @@ namespace
     }();
 }
 
-reaver::target::triple::triple(std::string triple_string)
+reaver::target::__v1::triple::triple(std::string triple_string)
 {
     auto first = triple_string.find('-');
     auto second = triple_string.find('-', first + 1);
@@ -70,41 +67,44 @@ reaver::target::triple::triple(std::string triple_string)
     {
         _arch = _arch_strings.right.at(arch);
     }
+
     catch (...)
     {
-        throw unknown_architecture{};
+        throw unknown_architecture{ arch };
     }
 
     try
     {
         _os = _os_strings.right.at(os);
     }
+
     catch (...)
     {
-        throw unknown_os{};
+        throw unknown_os{ os };
     }
 
     try
     {
         _env = _env_strings.right.at(env);
     }
+
     catch (...)
     {
-        throw unknown_environment{};
+        throw unknown_environment{ env };
     }
 }
 
-std::string triple::arch_string() const
+std::string reaver::target::__v1::triple::arch_string() const
 {
     return _arch_strings.left.at(_arch);
 }
 
-std::string triple::os_string() const
+std::string reaver::target::__v1::triple::os_string() const
 {
     return _os_strings.left.at(_os);
 }
 
-std::string triple::env_string() const
+std::string reaver::target::__v1::triple::env_string() const
 {
     return _env_strings.left.at(_env);
 }

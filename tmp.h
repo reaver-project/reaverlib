@@ -1,8 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright (C) 2012-2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2012-2013 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -19,8 +18,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Michał "Griwes" Dominiak
- *
  **/
 
 #include <type_traits>
@@ -31,6 +28,8 @@
 #include <boost/variant.hpp>
 
 namespace reaver
+{
+inline namespace __v1
 {
     template<typename>
     struct is_char : public std::false_type
@@ -261,4 +260,5 @@ namespace reaver
     {
         using type = std::tuple<Ts...>;
     };
+}
 }

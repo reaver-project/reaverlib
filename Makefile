@@ -2,7 +2,7 @@ CC=clang++
 LD=clang++
 CFLAGS=-Os -Wall -Wextra -pedantic -Werror -std=c++1y -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC
 SOFLAGS=-stdlib=libc++ -shared
-SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/* ! -wholename "*-old")
+SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/*" ! -wholename "*-old")
 OBJECTS=$(SOURCES:.cpp=.o)
 
 all: library

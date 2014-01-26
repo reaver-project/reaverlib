@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2013 Michał "Griwes" Dominiak
+ * Copyright © 2014 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,47 +22,35 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
-#include <vector>
+#include <istream>
 
 namespace reaver
 {
     namespace format
     {
-        namespace executable
+        namespace archive
         {
-            class section
+            enum class format
+            {
+                raf,
+                craf
+            };
+
+            class archive;
+
+            std::unique_ptr<archive> read(const std::string &);
+            std::unique_ptr<archive> read(std::istream &);
+            std::unique_ptr<archive> read(std::istream &&);
+            std::unique_ptr<archive> create(format, const std::vector<string> &);
+            std::unique_ptr<archive> create(format, const std::map<string, string> &);
+            std::unique_ptr<archive> create(format, const std::map<string, std::unique_ptr<std::istream>> &);
+
+            class archive
             {
             public:
-                section() = default;
-
-                section(std::vector<std::uint8_t> blob) : _blob{ std::move(blob) }
-                {
-                }
-
-                std::string name() const
-                {
-                    return _name;
-                }
-
-                const std::vector<std::uint8_t> & blob() const
-                {
-                    return _blob;
-                }
-
-                const std::uint8_t & operator[](std::size_t i) const
-                {
-                    return _blob.at(i);
-                }
-
-                std::size_t size() const
-                {
-                    return _blob.size();
-                }
-
-            private:
-                std::string _name;
-                std::vector<std::uint8_t> _blob;
+                virtual ~archive() {}
             };
         }
     }

@@ -1,8 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright (C) 2012-2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2012-2013 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -19,8 +18,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Michał "Griwes" Dominiak
- *
  **/
 
 #include "style.h"
@@ -30,7 +27,7 @@
 #endif
 
 // stdout and stderr only supported at the moment
-std::ostream & operator<<(std::ostream & stream, const reaver::style::style & style)
+std::ostream & operator<<(std::ostream & stream, const reaver::style::__v1::style & style)
 {
 #ifdef __unix__
     if ((&stream == &std::cout && isatty(STDOUT_FILENO)) || (&stream == &std::cerr && isatty(STDERR_FILENO)))

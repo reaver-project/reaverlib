@@ -1,8 +1,7 @@
 /**
  * Reaver Library License
  *
- * Copyright (C) 2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2013 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -19,8 +18,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Michał "Griwes" Dominiak
- *
  **/
 
 #pragma once
@@ -28,6 +25,8 @@
 #include "logger.h"
 
 namespace reaver
+{
+inline namespace __v1
 {
     class exception : public std::exception, public reaver::logger::logger_friend
     {
@@ -185,4 +184,5 @@ namespace reaver
                 << style::style() << ".";
         }
     };
+}
 }

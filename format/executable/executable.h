@@ -1,8 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright (C) 2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2013 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -19,8 +18,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Michał "Griwes" Dominiak
- *
  **/
 
 #pragma once
@@ -35,6 +32,7 @@
 #include "section.h"
 #include "symbol.h"
 #include "relocation.h"
+#include "../../error.h"
 
 namespace reaver
 {
@@ -60,6 +58,16 @@ namespace reaver
                 }
             };
 
+            class unknown_format : public exception
+            {
+            public:
+                unknown_format(const std::string & str) : exception{ logger::error }
+                {
+                    *this << "unknown format: `" << style::style(style::colors::bgray, style::colors::def, style::styles::bold)
+                        << str << style::style() << "`.";
+                }
+            };
+
             enum class format
             {
                 elf,
@@ -75,6 +83,9 @@ namespace reaver
                 dynamic_library,
                 chunk_package           // ReaverOS-specific approach to dynamic linking
             };
+
+            format make_format(const std::string &);
+            std::size_t get_bitness(const std::string &);
 
             bool possible(format, type);
 

@@ -1,8 +1,7 @@
 /**
- * Miranda License
+ * Reaver Library License
  *
- * Copyright (C) 2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2013-2014 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -19,8 +18,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Michał "Griwes" Dominiak
- *
  **/
 
 #pragma once
@@ -32,6 +29,8 @@
 namespace reaver
 {
     namespace target
+    {
+    inline namespace __v1
     {
         enum class arch
         {
@@ -69,27 +68,30 @@ namespace reaver
         class unknown_architecture : public exception
         {
         public:
-            unknown_architecture() : exception{ logger::crash }
+            unknown_architecture(const std::string & str) : exception{ logger::crash }
             {
-                *this << "unknown architecture specified in target triple.";
+                *this << "unknown architecture specified in target triple: `" << style::style(style::colors::bgray,
+                    style::colors::def, style::styles::bold) << str << style::style() << "`.";
             }
         };
 
         class unknown_os : public exception
         {
         public:
-            unknown_os() : exception{ logger::crash }
+            unknown_os(const std::string & str) : exception{ logger::crash }
             {
-                *this << "unknown OS specified in target triple.";
+                *this << "unknown OS specified in target triple: `" << style::style(style::colors::bgray,
+                    style::colors::def, style::styles::bold) << str << style::style() << "`.";
             }
         };
 
         class unknown_environment : public exception
         {
         public:
-            unknown_environment() : exception{ logger::crash }
+            unknown_environment(const std::string & str) : exception{ logger::crash }
             {
-                *this << "unknown environment specified in target triple.";
+                *this << "unknown environment specified in target triple: `" << style::style(style::colors::bgray,
+                    style::colors::def, style::styles::bold) << str << style::style() << "`.";
             }
         };
 
@@ -153,5 +155,6 @@ namespace reaver
         {
             return o << t.arch_string() << '-' << t.os_string() << '-' << t.env_string();
         }
+    }
     }
 }

@@ -1,8 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright (C) 2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2013 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -19,19 +18,17 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Michał "Griwes" Dominiak
- *
  **/
 
 #include "plugin.h"
 
 #include <boost/filesystem.hpp>
 
-std::unique_ptr<reaver::plugin> reaver::plugin::load(std::string name)
+std::unique_ptr<reaver::__v1::plugin> reaver::__v1::plugin::load(std::string name)
 {
     if (boost::filesystem::exists(boost::filesystem::current_path().string() + name))
     {
-        return std::unique_ptr<reaver::plugin>{ new plugin(name) };
+        return std::unique_ptr<reaver::__v1::plugin>{ new plugin(name) };
     }
 
     return {};
@@ -42,19 +39,19 @@ std::unique_ptr<reaver::plugin> reaver::plugin::load(std::string name)
 #include <unistd.h>
 #include <dlfcn.h>
 
-reaver::plugin::plugin(std::string name)
+reaver::__v1::plugin::plugin(std::string name)
 {
     _handle = dlopen(name.c_str(), RTLD_LAZY);
 }
 
-reaver::plugin::~plugin()
+reaver::__v1::plugin::~plugin()
 {
     _imported.clear();
     dlclose(_handle);
 }
 
 template<typename T>
-std::weak_ptr<std::function<T>> reaver::plugin::load_symbol(std::string name)
+std::weak_ptr<std::function<T>> reaver::__v1::plugin::load_symbol(std::string name)
 {
     if (!_handle)
     {

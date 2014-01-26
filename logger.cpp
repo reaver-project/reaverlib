@@ -1,8 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright (C) 2012-2013 Reaver Project Team:
- * 1. Michał "Griwes" Dominiak
+ * Copyright © 2012-2013 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -19,15 +18,13 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Michał "Griwes" Dominiak
- *
  **/
 
 #include "logger.h"
 
-reaver::logger::logger reaver::logger::dlog{ std::cout };
+reaver::logger::__v1::logger reaver::logger::__v1::dlog{ std::cout };
 
-reaver::logger::logger::logger(reaver::logger::level level) : _level{ level }, _worker{ [=]()
+reaver::logger::__v1::logger::logger(reaver::logger::__v1::level level) : _level{ level }, _worker{ [=]()
     {
         while (!_quit)
         {
@@ -50,23 +47,23 @@ reaver::logger::logger::logger(reaver::logger::level level) : _level{ level }, _
 {
 }
 
-reaver::logger::logger::logger(std::ostream & stream, reaver::logger::level level) : logger{ level }
+reaver::logger::__v1::logger::logger(std::ostream & stream, reaver::logger::__v1::level level) : logger{ level }
 {
     _streams.push_back({ stream });
 }
 
-reaver::logger::logger::~logger()
+reaver::logger::__v1::logger::~logger()
 {
-    _async([=](){ _quit = true; });
+    _async({ [=](){ _quit = true; } });
     _worker.join();
 }
 
-void reaver::logger::logger::add_stream(const reaver::logger::stream_wrapper & stream)
+void reaver::logger::__v1::logger::add_stream(const reaver::logger::__v1::stream_wrapper & stream)
 {
     _streams.push_back(stream);
 }
 
-void reaver::logger::logger::_async(std::function<void()> f)
+void reaver::logger::__v1::logger::_async(std::function<void()> f)
 {
     std::lock_guard<std::mutex> lock{ _lock };
 
@@ -75,12 +72,12 @@ void reaver::logger::logger::_async(std::function<void()> f)
     _semaphore.notify();
 }
 
-reaver::logger::action::action(logger & log, reaver::logger::level level, const std::vector<std::pair<reaver::style::style, std::string>> & init)
+reaver::logger::__v1::action::action(logger & log, reaver::logger::__v1::level level, const std::vector<std::pair<reaver::style::style, std::string>> & init)
     : _logger{ log }, _level{ level }, _strings{ init }
 {
 }
 
-reaver::logger::action::~action()
+reaver::logger::__v1::action::~action()
 {
     if (_level < logger_friend::_level(_logger))
     {
@@ -104,31 +101,31 @@ reaver::logger::action::~action()
     }
 }
 
-reaver::logger::stream_wrapper::stream_wrapper(std::ostream & stream) : _impl{ new _detail::_stream_ref_wrapper{ stream } }
+reaver::logger::__v1::stream_wrapper::stream_wrapper(std::ostream & stream) : _impl{ new _detail::_stream_ref_wrapper{ stream } }
 {
 }
 
-reaver::logger::stream_wrapper::stream_wrapper(const std::shared_ptr<std::fstream> & stream) : _impl{ new _detail::_stream_shptr_wrapper{ stream } }
+reaver::logger::__v1::stream_wrapper::stream_wrapper(const std::shared_ptr<std::fstream> & stream) : _impl{ new _detail::_stream_shptr_wrapper{ stream } }
 {
 }
 
-reaver::logger::stream_wrapper::~stream_wrapper()
+reaver::logger::__v1::stream_wrapper::~stream_wrapper()
 {
 }
 
-reaver::logger::stream_wrapper & reaver::logger::stream_wrapper::operator<<(const std::string & str)
+reaver::logger::__v1::stream_wrapper & reaver::logger::__v1::stream_wrapper::operator<<(const std::string & str)
 {
     _impl->get() << str;
     return *this;
 }
 
-reaver::logger::stream_wrapper & reaver::logger::stream_wrapper::operator<<(const reaver::style::style & style)
+reaver::logger::__v1::stream_wrapper & reaver::logger::__v1::stream_wrapper::operator<<(const reaver::style::style & style)
 {
     _impl->get() << style;
     return *this;
 }
 
-reaver::logger::action reaver::logger::logger::operator()(reaver::logger::level level)
+reaver::logger::__v1::action reaver::logger::__v1::logger::operator()(reaver::logger::__v1::level level)
 {
     using reaver::style::style;
     using reaver::style::colors;
@@ -164,17 +161,17 @@ reaver::logger::action reaver::logger::logger::operator()(reaver::logger::level 
     }
 }
 
-std::vector<reaver::logger::stream_wrapper> & reaver::logger::logger_friend::_streams(logger & l)
+std::vector<reaver::logger::__v1::stream_wrapper> & reaver::logger::__v1::logger_friend::_streams(logger & l)
 {
     return l._streams;
 }
 
-void reaver::logger::logger_friend::_async(logger & l, std::function<void()> f)
+void reaver::logger::__v1::logger_friend::_async(logger & l, std::function<void()> f)
 {
     l._async(f);
 }
 
-reaver::logger::level reaver::logger::logger_friend::_level(logger & l)
+reaver::logger::__v1::level reaver::logger::__v1::logger_friend::_level(logger & l)
 {
     return l._level;
 }
