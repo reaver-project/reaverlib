@@ -84,7 +84,14 @@ inline namespace __v1
 
             for (auto & th : _threads)
             {
-                th.second.join();
+                try
+                {
+                    th.second.join();
+                }
+
+                catch (...)
+                {
+                }
             }
         }
 
@@ -99,7 +106,14 @@ inline namespace __v1
 
             for (auto & th : _threads)
             {
-                th.second.join();
+                try
+                {
+                    th.second.join();
+                }
+
+                catch (...)
+                {
+                }
             }
         }
 
@@ -160,8 +174,8 @@ inline namespace __v1
         }
 
         template<typename Container, typename F, typename... Args>
-        std::future<typename std::enable_if<std::is_same<typename Container::value_type, std::thread::it>::value,
-            std::result_of<F (Args...)>::type>::type> push(const Container & affinities, F && f, Args &&... args)
+        std::future<typename std::enable_if<std::is_same<typename Container::value_type, std::thread::id>::value,
+            typename std::result_of<F (Args...)>::type>::type> push(const Container & affinities, F && f, Args &&... args)
         {
             std::size_t smallest_size = -1;
             std::thread::id smallest_id;
@@ -340,7 +354,7 @@ inline namespace __v1
 
         semaphore _die_semaphore;
 
-        std::atomic<bool> _end;
+        std::atomic<bool> _end{ false };
 
         callbacks<void (void)> _waiters;
     };

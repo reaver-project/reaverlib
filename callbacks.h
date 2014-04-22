@@ -262,6 +262,11 @@ namespace reaver
             return _handle;
         }
 
+        explicit operator bool() const
+        {
+            return !_callbacks.empty();
+        }
+
     private:
         std::map<handle, std::function<Ret (Args...)>> _callbacks;
         handle _handle;

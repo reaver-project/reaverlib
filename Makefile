@@ -1,6 +1,6 @@
 CC=clang++
 LD=clang++
-CFLAGS=-Os -Wall -Wextra -pedantic -Werror -std=c++1y -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC
+CFLAGS=-Os -Wall -Wextra -pedantic -Werror -std=c++1y -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC -pthread
 SOFLAGS=-stdlib=libc++ -shared
 SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/*" ! -wholename "*-old")
 OBJECTS=$(SOURCES:.cpp=.o)
@@ -14,7 +14,7 @@ install: all
 	@find -type f -name "*.h" ! -wholename "*-old" -exec cp --parents {} /usr/local/include/reaver/ \;
 
 library: $(OBJECTS)
-	$(LD) $(SOFLAGS) $(OBJECTS) -o libreaver.so -ldl
+	$(LD) $(SOFLAGS) $(OBJECTS) -o libreaver.so -ldl -lboost_system -lboost_filesystem -pthread -lpthread
 
 uninstall:
 	@rm -rf /usr/local/include/reaver

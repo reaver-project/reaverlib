@@ -72,10 +72,10 @@ std::size_t reaver::format::executable::get_bitness(const std::string & str)
     switch (make_format(str))
     {
         case format::elf:
-        return std::stoull(str.substr(3));
+            return std::stoull(str.substr(3));
 
         case format::rxf:
-        return 64;
+            return 64;
     }
 }
 
@@ -103,7 +103,7 @@ std::unique_ptr<reaver::format::executable::executable> reaver::format::executab
         throw invalid_or_unsupported_file{};
     }
 
-    return std::move(ret);
+    return ret;
 }
 
 std::unique_ptr<reaver::format::executable::executable> reaver::format::executable::read(std::istream && in)

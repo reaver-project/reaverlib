@@ -86,6 +86,37 @@ inline namespace __v1
             }
         }
 
+        void push(std::vector<exception> ve)
+        {
+            for (auto && elem : ve)
+            {
+                _errors.emplace_back(std::move(elem));
+
+                if (_errors.back().level() >= _error_level && _errors.back().level() != logger::level::always)
+                {
+                    ++_error_count;
+                }
+
+                else if (_errors.back().level() == logger::level::warning)
+                {
+                    ++_warning_count;
+                }
+            }
+
+            if (_error_count == _max_errors)
+            {
+                _errors.emplace_back(exception(logger::level::fatal) << "too many errors emitted: " << _max_errors << ".");
+
+                // uh... I'm sorry, officer, I can't explain how this happened
+                throw std::move(*this);
+            }
+
+            if (_errors.back().level() == logger::level::crash || _errors.back().level() == logger::level::fatal)
+            {
+                throw std::move(*this);
+            }
+        }
+
         void set_error_level(logger::level l)
         {
             _error_level = l;
