@@ -40,7 +40,7 @@ std::unique_ptr<reaver::format::archive::archive> reaver::format::archive::read(
 {
     if (!in)
     {
-        throw invalid_istream{};
+        throw invalid_stream{};
     }
 
     std::unique_ptr<reaver::format::archive::archive> ret = raf::read(in);

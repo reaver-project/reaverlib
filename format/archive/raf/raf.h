@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include "../archive.h"
 
 namespace reaver
@@ -42,6 +44,9 @@ namespace reaver
                 virtual void save(std::ostream &) const override;
                 virtual void unpack(const std::string &) const override;
                 virtual void add(const std::string &, std::istream &) override;
+
+            private:
+                std::unordered_map<std::string, std::vector<char>> _files;
             };
         }
     }

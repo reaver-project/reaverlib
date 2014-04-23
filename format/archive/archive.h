@@ -47,12 +47,12 @@ namespace reaver
                 }
             };
 
-            class invalid_istream : public exception
+            class invalid_stream : public exception
             {
             public:
-                invalid_istream() : exception{ logger::error }
+                invalid_stream() : exception{ logger::error }
                 {
-                    *this << "invalid istream passed to reaver::format::archive.";
+                    *this << "invalid stream passed to reaver::format::archive.";
                 }
             };
 
@@ -63,6 +63,16 @@ namespace reaver
                 {
                     *this << "unknown format: `" << style::style(style::colors::bgray, style::colors::def, style::styles::bold)
                         << str << style::style() << "`.";
+                }
+            };
+
+            class file_already_present : public exception
+            {
+            public:
+                file_already_present(const std::string & str) : exception{ logger::error }
+                {
+                    *this << "file `" << style::style(style::colors::bgray, style::colors::def, style::styles::bold) << str
+                        << style::style() << "` already present in the archive.";
                 }
             };
 
