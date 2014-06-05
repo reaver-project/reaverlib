@@ -39,12 +39,6 @@ inline namespace __v1
 
             switch (l)
             {
-                case logger::trace:
-                    _strings = { std::make_pair(style(colors::bgray), "Trace: "), std::make_pair(style(), "") };
-                    break;
-                case logger::debug:
-                    _strings = { std::make_pair(style(colors::gray), "Debug: "), std::make_pair(style(), "") };
-                    break;
                 case logger::note:
                     _strings = { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note: ") };
                     break;
@@ -72,6 +66,10 @@ inline namespace __v1
                     break;
                 case logger::always:
                     _strings = { std::make_pair(style(), "") };
+                    break;
+
+                default:
+                    throw invalid_exception_level{};
             }
         }
 

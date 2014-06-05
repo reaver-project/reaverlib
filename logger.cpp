@@ -141,6 +141,9 @@ reaver::logger::__v1::action reaver::logger::__v1::logger::operator()(reaver::lo
             return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note: ") });
         case info:
             return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info: ") });
+        case success:
+            return action(*this, level, { std::make_pair(style(colors::green, colors::def, styles::bold), "Success: "),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
         case warning:
             return action(*this, level, { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
                 std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
