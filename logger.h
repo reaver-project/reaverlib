@@ -196,6 +196,11 @@ namespace reaver
 
             void add_stream(const stream_wrapper &);
 
+            void set_level(level l = info)
+            {
+                _level = l;
+            }
+
             action operator()(level = always);
 
             friend class logger_friend;
