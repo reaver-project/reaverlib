@@ -28,6 +28,14 @@ namespace reaver
 {
 inline namespace __v1
 {
+    class invalid_exception_level : public std::runtime_error
+    {
+    public:
+        invalid_exception_level() : std::runtime_error{ "a logger level below `warning` used as an exception level" }
+        {
+        }
+    };
+
     class exception : public std::exception, public reaver::logger::logger_friend
     {
     public:
