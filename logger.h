@@ -140,7 +140,7 @@ namespace reaver
             class _stream_ref_wrapper : public _stream_wrapper_impl
             {
             public:
-                _stream_ref_wrapper(std::ostream & stream) : _stream(stream)
+                _stream_ref_wrapper(std::ostream & stream) : _stream{ stream }
                 {
                 }
 
@@ -156,7 +156,7 @@ namespace reaver
             class _stream_shptr_wrapper : public _stream_wrapper_impl
             {
             public:
-                _stream_shptr_wrapper(const std::shared_ptr<std::fstream> & stream) : _stream{stream}
+                _stream_shptr_wrapper(const std::shared_ptr<std::fstream> & stream) : _stream{ stream }
                 {
                 }
 
@@ -194,7 +194,7 @@ namespace reaver
             logger(std::ostream &, level = info);
             ~logger();
 
-            void add_stream(const stream_wrapper &);
+            void add_stream(stream_wrapper);
 
             void set_level(level l = info)
             {

@@ -58,9 +58,9 @@ reaver::logger::__v1::logger::~logger()
     _worker.join();
 }
 
-void reaver::logger::__v1::logger::add_stream(const reaver::logger::__v1::stream_wrapper & stream)
+void reaver::logger::__v1::logger::add_stream(reaver::logger::__v1::stream_wrapper stream)
 {
-    _streams.push_back(stream);
+    _streams.push_back(std::move(stream));
 }
 
 void reaver::logger::__v1::logger::_async(std::function<void()> f)
