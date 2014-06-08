@@ -24,12 +24,12 @@
 #include "elf/elf.h"
 #include "rxf/rxf.h"
 
-bool reaver::format::executable::possible(reaver::format::executable::format format, reaver::format::executable::type type)
+bool reaver::format::executable::possible(reaver::format::executable::format fmt, reaver::format::executable::type t)
 {
-    switch (format)
+    switch (fmt)
     {
         case format::elf:
-            switch (type)
+            switch (t)
             {
                 case type::object_file:
                 case type::executable:
@@ -40,7 +40,7 @@ bool reaver::format::executable::possible(reaver::format::executable::format for
             }
 
         case format::rxf:
-            switch (type)
+            switch (t)
             {
                 case type::object_file:
                 case type::executable:
@@ -49,6 +49,9 @@ bool reaver::format::executable::possible(reaver::format::executable::format for
                 default:
                     return false;
             }
+
+        default:
+            return false;
     }
 }
 
@@ -76,6 +79,9 @@ std::size_t reaver::format::executable::get_bitness(const std::string & str)
 
         case format::rxf:
             return 64;
+
+        default:
+            return 0;
     }
 }
 

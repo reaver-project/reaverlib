@@ -158,7 +158,7 @@ inline namespace __v1
             using reaver::style::colors;
             using reaver::style::styles;
 
-            *this << "file " << style::style(colors::bgray, colors::def, styles::bold) << filename << style::style()
+            *this << "file " << style(colors::bgray, colors::def, styles::bold) << filename << style()
                 << " is a directory.";
         }
     };
@@ -172,8 +172,8 @@ inline namespace __v1
             using reaver::style::colors;
             using reaver::style::styles;
 
-            *this << "couldn't find file " << style::style(colors::bgray, colors::def, styles::bold) << filename
-                << style::style() << ".";
+            *this << "couldn't find file " << style(colors::bgray, colors::def, styles::bold) << filename
+                << style() << ".";
         }
     };
 
@@ -186,8 +186,8 @@ inline namespace __v1
             using reaver::style::colors;
             using reaver::style::styles;
 
-            *this << "couldn't open file " << style::style(colors::bgray, colors::def, styles::bold) << filename
-                << style::style() << ".";
+            *this << "couldn't open file " << style(colors::bgray, colors::def, styles::bold) << filename
+                << style() << ".";
         }
     };
 }

@@ -11,9 +11,12 @@ You will need the following tools installed in your system:
  * POSIX shell
  * make
  * git
- * clang++, libc++ (I have **no plans** of supporting GCC at any point in the future)
+ * clang++, libc++
  * Boost, built with clang++ and libc++ (most prebuilt Boost distributions for Linux are
-built with GCC and libstdc++ and they do not work properly with clang++ and libc++)   
+built with GCC and libstdc++ and they do not work properly with clang++ and libc++)
+
+GCC will be tested somewhen in the future, when I get 4.9 out of the box with my Linux
+distribution; I don't care about it enough to build it and set up in a working environment.
 
 To install ReaverLib, enter the following commands in your console:
 
@@ -74,80 +77,3 @@ An example:
 
 Support for more fancy features, like changing output filenames at certain time
 points and similar are planned.
-
-
-## `reaver::lexer`
-
-`reaver::lexer` is a simple and dumb lexer, based on `<regex>`, so it needs an environment
-with implemented and working implementation of standard C++ regular expressions.
-
-[ - **Note**: every type described in this section is a typedef for `CharType = char`. This
-library follows C++ Standard Library convention, i.e. for example `token` is a typedef for
-`basic_token<char>`. - ]
-
-To use `reaver::lexer`, you must first define allowed tokens. They are then contained in
-class resembling `boost::program_options::options_description`, and passed to the
-`reaver::lexer::tokenize()` function. Upon encountering string not matching any of the
-defined tokens, `reaver::lexer::tokenize()` throws `reaver::lexer::unexpected_characters`.
-
-There are two ways to define a token:
-
-  1. Define a `token_description`, or
-  2. Define a `token_definition`.
-
-`token_description` is a template, which carries its type information with it; it will be
-mostly useful when writing `reaver::parser`-based parser, which can automatically infer
-the `reaver::parser::rule` return type from `token_definition`'s template parameter.
-Let's see how to declare a `token_definition`, which will use a default conversion into
-`uint64_t` from string representing unsigned integer.
-
-    reaver::lexer::token_definition<uint64_t> integer{
-        0,                  // (1)
-        "[1-9][0-9]*"       // (2)
-    };
-
-  1. Type identifier, also used as a priority, i.e., token descriptions are internally
-evaluated starting with identifier of type 0, then 1, up to `(uint64_t)-2`; `(uint64_t)-1`
-means *invalid type*.
-  2. Regular expression used to match this token.
-
-`reaver::lexer` uses `boost::lexical_cast` to cast `std::string` into other types by
-default. You can define own conversion in two ways:
-
-  1. By specializing function `template<typename Out, typename In> Out convert(const In &)`
-in namespace `reaver::lexer` for given type to change the conversion globally, or
-  2. By providing a conversion function to the `token_definition`.
-
-Here's an example for (2).
-
-    reaver::lexer::token_definition<uint64_t> hex{
-        2,                                                                      // (1)
-        "0x[0-9a-fA-F]+",                                                       // (2)
-        [](const std::string & str)                                             // (3)
-        {
-            uint64_t a; std::stringstream{ str } >> std::hex >> a; return a;
-        }
-    };
-
-(1) and (2) are the same as before, (3) is a function object or pointer that takes apropriate
-string type ane returns type of `token_definition`'s template parameter.
-
-`token_definition` is not a template, it doesn't carry compile-time information about type.
-It is used internally as a polymorphic wrapper for internal token description. You should
-have no interest in declaring `token_description` by yourself; here's short description of its
-constructors, which will be helpful when talking about `tokens_description`. This is essentially
-the same thing as last `token_definition` example, just not carrying type information.
-
-    reaver::lexer::token_description hex{
-        2,
-        "0x[0-9a-fA-F]+",
-        reaver::lexer::match_type<uint64_t>{},
-        [](const std::string & str)
-        {
-            uint64_t a; std::stringstream{ str } >> std::hex >> a; return a;
-        }
-    };
-
-**TODO**: adding `token_description` and `token_definition` to the `tokens_description`, using
-`lexer::tokenize()`, getting lexed tokens out from vector of `token`s, using `tokens_description::operator[]`,
-using token aliases.

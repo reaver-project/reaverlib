@@ -164,6 +164,8 @@ reaver::logger::__v1::action reaver::logger::__v1::logger::operator()(reaver::lo
         case always:
             return action(*this, level);
     }
+
+    return action(*this, level, { std::make_pair(style(), "") });
 }
 
 std::vector<reaver::logger::__v1::stream_wrapper> & reaver::logger::__v1::logger_friend::_streams(logger & l)
