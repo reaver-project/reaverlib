@@ -99,7 +99,7 @@ inline namespace __v1
         {
             std::unique_lock<std::mutex> lock{ _lock };
 
-            _queue = {};
+            _queue = decltype(_queue){};
             _affinity_queues = {};
             _end = true;
             _cond.notify_all();
@@ -337,7 +337,7 @@ inline namespace __v1
             std::thread t{ &thread_pool::_loop, this };
             _threads.emplace(std::make_pair(t.get_id(), std::move(t)));
             _affinities.push_back(t.get_id());
-            _affinity_queues[t.get_id()] = {};
+            _affinity_queues[t.get_id()];
             ++_size;
         }
 
