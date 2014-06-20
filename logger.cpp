@@ -43,6 +43,11 @@ reaver::logger::__v1::logger::logger(reaver::logger::__v1::level level) : _level
                 q.pop();
             }
         }
+
+        for (auto & stream : _streams)
+        {
+            stream << style::style();
+        }
     } }, _streams{}
 {
 }
