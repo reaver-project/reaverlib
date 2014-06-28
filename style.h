@@ -89,6 +89,7 @@ namespace reaver
             styles _style;
         };
     }
+    }
 
     inline std::string spaces(const std::string & str, std::size_t count)
     {
@@ -134,5 +135,17 @@ namespace reaver
 
         return ret;
     }
+
+    template<typename T>
+    std::string to_string_width(const T & t, std::size_t w)
+    {
+        std::string ret = std::to_string(t);
+
+        if (ret.length() < w)
+        {
+            ret = std::string(w - ret.length(), ' ') + ret;
+        }
+
+        return ret;
     }
 }
