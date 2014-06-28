@@ -97,12 +97,14 @@ inline namespace __v1
 
         void abort()
         {
-            std::unique_lock<std::mutex> lock{ _lock };
+            {
+                std::unique_lock<std::mutex> lock{ _lock };
 
-            _queue = decltype(_queue){};
-            _affinity_queues = {};
-            _end = true;
-            _cond.notify_all();
+                _queue = decltype(_queue){};
+                _affinity_queues = {};
+                _end = true;
+                _cond.notify_all();
+            }
 
             for (auto & th : _threads)
             {
