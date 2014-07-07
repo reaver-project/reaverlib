@@ -35,9 +35,7 @@
 #include "exception.h"
 #include "callbacks.h"
 
-namespace reaver
-{
-inline namespace __v1
+namespace reaver { inline namespace _v1
 {
     class thread_pool_closed : public exception
     {
@@ -360,5 +358,4 @@ inline namespace __v1
 
         callbacks<void (void)> _waiters;
     };
-}
-}
+}}
