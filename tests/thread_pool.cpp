@@ -58,7 +58,7 @@ MAYFLY_ADD_TESTCASE("handling aborted pools", []
     MAYFLY_REQUIRE_THROWS_TYPE(reaver::thread_pool_closed, pool.push([]{}));
 });
 
-MAYFLY_ADD_TESTCASE("thread affinities", []
+MAYFLY_ADD_TESTCASE("affinities", []
 {
     {
         reaver::thread_pool pool{ 1 };

@@ -31,7 +31,7 @@ clean:
 	@find . -name "*.d" -delete
 	@find . -name "*.so" -delete
 
-test: install $(TESTOBJ)
+test: $(TESTOBJ)
 	$(LD) $(TESTOBJ) $(LDFLAGS) -o reaverlib-test -lreaver -lboost_program_options -lboost_system -lboost_iostreams -pthread
 
 -include $(SOURCES:.cpp=.d)

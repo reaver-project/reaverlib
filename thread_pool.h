@@ -244,8 +244,8 @@ namespace reaver { inline namespace _v1
 
             if (_affinities.size())
             {
-                auto ret = _affinities.front();
-                _affinities.pop_front();
+                auto ret = _affinities.back();
+                _affinities.pop_back();
                 return ret;
             }
 
@@ -335,19 +335,20 @@ namespace reaver { inline namespace _v1
         void _spawn()
         {
             std::thread t{ &thread_pool::_loop, this };
-            _threads.emplace(std::make_pair(t.get_id(), std::move(t)));
-            _affinities.push_back(t.get_id());
-            _affinity_queues[t.get_id()];
+            auto id = t.get_id();
+            _threads.emplace(std::make_pair(id, std::move(t)));
+            _affinities.push_back(id);
+            _affinity_queues[id];
             ++_size;
         }
 
-        std::atomic<std::size_t> _size;
+        std::atomic<std::size_t> _size{ 0 };
 
         std::map<std::thread::id, std::thread> _threads;
         std::unordered_map<std::thread::id, std::queue<std::function<void ()>>> _affinity_queues;
         std::queue<std::function<void ()>> _queue;
 
-        std::deque<std::thread::id> _affinities;
+        std::vector<std::thread::id> _affinities;
 
         std::condition_variable _cond;
         std::mutex _lock;
