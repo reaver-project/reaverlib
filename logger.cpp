@@ -139,38 +139,38 @@ reaver::logger::__v1::action reaver::logger::__v1::logger::operator()(reaver::lo
     switch (level)
     {
         case trace:
-            return action(*this, level, { std::make_pair(style(colors::bgray), "Trace: "), std::make_pair(style(), "") });
+            return action(*this, level, { std::make_pair(style(colors::bgray), "Trace"), std::make_pair(style(), ": ") });
         case debug:
-            return action(*this, level, { std::make_pair(style(colors::gray), "Debug: "), std::make_pair(style(), "") });
+            return action(*this, level, { std::make_pair(style(colors::gray), "Debug"), std::make_pair(style(), ": ") });
         case note:
-            return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note: "),
-                std::make_pair(style(), "") });
+            return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note"),
+                std::make_pair(style(), ": ") });
         case info:
-            return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info: "),
-                std::make_pair(style(), "") });
+            return action(*this, level, { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info"),
+                std::make_pair(style(), ": ") });
         case success:
-            return action(*this, level, { std::make_pair(style(colors::green, colors::def, styles::bold), "Success: "),
-                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
+            return action(*this, level, { std::make_pair(style(colors::green, colors::def, styles::bold), "Success"),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), ": ") });
         case warning:
-            return action(*this, level, { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
-                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
+            return action(*this, level, { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning"),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), ": ") });
         case syntax:
-            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error: "),
-                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error"),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), ": ") });
         case error:
-            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
-                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error"),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), ": ") });
         case fatal:
-            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Fatal error: "),
-                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Fatal error"),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), ": ") });
         case crash:
-            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Internal error: "),
-                std::make_pair(style(colors::bgray, colors::def, styles::bold), "") });
+            return action(*this, level, { std::make_pair(style(colors::bred, colors::def, styles::bold), "Internal error"),
+                std::make_pair(style(colors::bgray, colors::def, styles::bold), ": ") });
         case always:
             return action(*this, level);
+        default:
+            return action(*this, level, { std::make_pair(style(), "") });
     }
-
-    return action(*this, level, { std::make_pair(style(), "") });
 }
 
 std::vector<reaver::logger::__v1::stream_wrapper> & reaver::logger::__v1::logger_friend::_streams(logger & l)
