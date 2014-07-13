@@ -91,11 +91,15 @@ MAYFLY_ADD_TESTCASE("resizing", []
     {
         reaver::thread_pool pool{ 4 };
         pool.resize(2);
-        std::this_thread::yield();
-        MAYFLY_REQUIRE(pool.size() == 2);
+        while (pool.size() != 2)
+        {
+            std::this_thread::yield();
+        }
         pool.resize(6);
-        std::this_thread::yield();
-        MAYFLY_REQUIRE(pool.size() == 6);
+        while (pool.size() != 6)
+        {
+            std::this_thread::yield();
+        }
     }
 
     {
