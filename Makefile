@@ -24,7 +24,7 @@ uninstall:
 	@rm -rf /usr/lib/libreaver.a
 
 %.o: %.cpp
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@ -g
 
 clean:
 	@find . -name "*.o" -delete

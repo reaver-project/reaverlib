@@ -34,6 +34,7 @@
 
 #include "exception.h"
 #include "callbacks.h"
+#include "thread.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -84,7 +85,10 @@ namespace reaver { inline namespace _v1
             {
                 try
                 {
-                    th.second.join();
+                    if (th.second.joinable())
+                    {
+                        th.second.join();
+                    }
                 }
 
                 catch (...)
@@ -224,13 +228,13 @@ namespace reaver { inline namespace _v1
                 {
                     _spawn();
                 }
+
+                return;
             }
 
-            else
-            {
-                _die_semaphore.notify(_size - new_size);
-                _size = new_size;
-            }
+            _die_semaphore.notify(_size - new_size);
+            _cond.notify_all();
+            _size = new_size;
         }
 
         std::thread::id allocate_affinity(bool insert = false)
@@ -266,23 +270,8 @@ namespace reaver { inline namespace _v1
                 {
                     std::unique_lock<std::mutex> lock{ _lock };
 
-                    if (_die_semaphore.try_wait())
+                    if (_try_die())
                     {
-                        auto this_thread_id = std::this_thread::get_id();
-
-                        if (!_affinity_queues[this_thread_id].empty())
-                        {
-                            _die_semaphore.notify();
-                        }
-
-                        _affinities.erase(std::find(_affinities.begin(), _affinities.end(), this_thread_id));
-                        _affinity_queues.erase(_affinity_queues.find(this_thread_id));
-                        push([this_thread_id, this]() mutable {
-                            std::unique_lock<std::mutex> lock{ _lock };
-                            _threads.erase(_threads.find(this_thread_id));
-                            --_size;
-                        });
-
                         return;
                     }
                 }
@@ -296,6 +285,11 @@ namespace reaver { inline namespace _v1
 
                     while (!_end && this_queue.empty() && _queue.empty())
                     {
+                        if (_try_die())
+                        {
+                            return;
+                        }
+
                         _cond.wait(lock);
                     }
 
@@ -332,11 +326,35 @@ namespace reaver { inline namespace _v1
             }
         }
 
+        bool _try_die()
+        {
+            if (_die_semaphore.try_wait())
+            {
+                auto this_thread_id = std::this_thread::get_id();
+
+                if (!_affinity_queues[this_thread_id].empty())
+                {
+                    _die_semaphore.notify();
+                    return false;
+                }
+
+                _affinities.erase(std::find(_affinities.begin(), _affinities.end(), this_thread_id));
+                _affinity_queues.erase(_affinity_queues.find(this_thread_id));
+
+                _threads.erase(_threads.find(this_thread_id));
+                --_size;
+
+                return true;
+            }
+
+            return false;
+        }
+
         void _spawn()
         {
-            std::thread t{ &thread_pool::_loop, this };
+            detaching_thread t{ &thread_pool::_loop, this };
             auto id = t.get_id();
-            _threads.emplace(std::make_pair(id, std::move(t)));
+            _threads[id] = std::move(t);
             _affinities.push_back(id);
             _affinity_queues[id];
             ++_size;
@@ -344,7 +362,7 @@ namespace reaver { inline namespace _v1
 
         std::atomic<std::size_t> _size{ 0 };
 
-        std::map<std::thread::id, std::thread> _threads;
+        std::map<std::thread::id, detaching_thread> _threads;
         std::unordered_map<std::thread::id, std::queue<std::function<void ()>>> _affinity_queues;
         std::queue<std::function<void ()>> _queue;
 
