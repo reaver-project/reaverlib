@@ -26,23 +26,10 @@
 
 namespace reaver
 {
-    namespace style
-    {
-    inline namespace __v1
+    namespace style { inline namespace _v1
     {
         class style;
-    }
-    }
-}
 
-std::ostream & operator<<(std::ostream &, const reaver::style::__v1::style &);
-
-namespace reaver
-{
-    namespace style
-    {
-    inline namespace __v1
-    {
         enum class colors
         {
             black = 30,
@@ -81,16 +68,18 @@ namespace reaver
             {
             }
 
-            friend std::ostream & ::operator<<(std::ostream &, const style &);
+            friend std::ostream & operator<<(std::ostream &, const style &);
 
         private:
             colors _forecolor;
             colors _backcolor;
             styles _style;
         };
-    }
-    }
+    }}
+}
 
+namespace reaver { inline namespace _v1
+{
     inline std::string spaces(const std::string & str, std::size_t count)
     {
         std::string ret;
@@ -148,4 +137,4 @@ namespace reaver
 
         return ret;
     }
-}
+}}

@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <set>
+
 #include "logger.h"
 
 namespace reaver
@@ -39,76 +41,35 @@ inline namespace __v1
     class exception : public std::exception, public reaver::logger::logger_friend
     {
     public:
-        exception(logger::level l = logger::always) : _level { l }
+        template<typename Level = logger::always_type>
+        exception(Level = {}) : _level { Level{} }
         {
-            using reaver::style::style;
-            using reaver::style::colors;
-            using reaver::style::styles;
+            static std::set<logger::base_level> allowed_levels = {
+                logger::always,
+                logger::note,
+                logger::info,
+                logger::warning,
+                logger::error,
+                logger::fatal,
+                logger::crash
+            };
 
-            switch (l)
+            if (allowed_levels.find(Level{}) == allowed_levels.end())
             {
-                case logger::note:
-                    _strings = { std::make_pair(style(colors::gray, colors::def, styles::bold), "Note: ") };
-                    break;
-                case logger::info:
-                    _strings = { std::make_pair(style(colors::gray, colors::def, styles::bold), "Info: ") };
-                    break;
-                case logger::warning:
-                    _strings = { std::make_pair(style(colors::bbrown, colors::def, styles::bold), "Warning: "),
-                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
-                    break;
-                case logger::syntax:
-                    _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Syntax error: "),
-                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
-                case logger::error:
-                    _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Error: "),
-                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
-                    break;
-                case logger::fatal:
-                    _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Fatal error: "),
-                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
-                    break;
-                case logger::crash:
-                    _strings = { std::make_pair(style(colors::bred, colors::def, styles::bold), "Internal error: "),
-                        std::make_pair(style(colors::bgray, colors::def, styles::bold), "") };
-                    break;
-                case logger::always:
-                    _strings = { std::make_pair(style(), "") };
-                    break;
-
-                default:
-                    throw invalid_exception_level{};
+                throw invalid_exception_level{};
             }
+
+            _streamables = logger::default_level_registry()[Level{}];
         }
 
         ~exception()
         {
         }
 
-        exception & operator<<(const char * str)
-        {
-            _strings.back().second.append(str);
-            return *this;
-        }
-
-        exception & operator<<(const std::string & str)
-        {
-            _strings.back().second.append(str);
-            return *this;
-        }
-
         template<typename T>
-        exception & operator<<(const T & rhs)
+        exception & operator<<(T && rhs)
         {
-            std::stringstream ss;
-            ss << rhs;
-            _strings.back().second.append(std::move(ss.str()));
-            return *this;
-        }
-
-        exception & operator<<(const reaver::style::style & style)
-        {
-            _strings.push_back(std::make_pair(style, ""));
+            _streamables.emplace_back(std::forward<T>(rhs));
             return *this;
         }
 
@@ -119,34 +80,23 @@ inline namespace __v1
 
         virtual void print(reaver::logger::logger & l) const noexcept
         {
-            auto strings = _strings;
+            auto streamables = _streamables;
+            streamables.emplace_back('\n');
 
-            for (auto & stream : _streams(l))
-            {
-                _async(l, [=]() mutable
-                {
-                    for (auto x : strings)
-                    {
-                        stream << x.first;
-                        stream << x.second;
-                    }
-
-                    stream << "\n";
-                });
-            }
+            logger_friend::_write(l, std::move(streamables));
         }
 
         friend reaver::logger::logger & operator<<(reaver::logger::logger &, const exception &);
 
-        logger::level level() const
+        logger::base_level level() const
         {
             return _level;
         }
 
     private:
-        logger::level _level;
+        logger::base_level _level;
 
-        std::vector<std::pair<reaver::style::style, std::string>> _strings;
+        std::vector<logger::streamable> _streamables;
     };
 
     class file_is_directory : public exception

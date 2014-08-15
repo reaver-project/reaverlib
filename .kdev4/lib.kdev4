@@ -1,42 +1,19 @@
 [Buildset]
 BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
 
+[CustomDefinesAndIncludes][ProjectPath0]
+Defines=\x00\x00\x00\x00
+Includes=\x00\x00\x00\x01\x00\x00\x00(\x00/\x00u\x00s\x00r\x00/\x00i\x00n\x00c\x00l\x00u\x00d\x00e\x00/\x00c\x00+\x00+\x00/\x004\x00.\x009
+Path=.
+
 [Defines And Includes]
 compiler=GCC
 compilerPath=gcc
 
-[Filters]
-size=6
-
-[Filters][0]
-inclusive=0
-pattern=*.o
-targets=3
-
-[Filters][1]
-inclusive=0
-pattern=*.d
-targets=3
-
-[Filters][2]
-inclusive=0
-pattern=*~
-targets=3
-
-[Filters][3]
-inclusive=0
-pattern=*.so
-targets=3
-
-[Filters][4]
-inclusive=0
-pattern=.git
-targets=3
-
-[Filters][5]
-inclusive=0
-pattern=*.kate-swp
-targets=3
+[Defines And Includes][Compiler]
+Name=GCC
+Path=gcc
+Type=GCC
 
 [Project]
 VersionControlSupport=kdevgit

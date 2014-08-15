@@ -20,6 +20,38 @@
  *
  **/
 
-#pragma once
+#include <reaver/mayfly.h>
 
-#include "logger/logger.h"
+#include <reaver/configuration.h>
+
+namespace
+{
+    struct simple_tag
+    {
+        using type = int;
+    };
+
+    struct another_tag
+    {
+        using type = int;
+    };
+}
+
+MAYFLY_BEGIN_SUITE("configuration");
+
+MAYFLY_ADD_TESTCASE("storing data", []
+{
+    reaver::configuration config;
+
+    config.set<simple_tag>(1);
+    MAYFLY_REQUIRE(config.get<simple_tag>() == 1);
+
+    config.set<simple_tag>(2);
+    MAYFLY_REQUIRE(config.get<simple_tag>() == 2);
+
+    config.set<another_tag>(3);
+    MAYFLY_REQUIRE(config.get<simple_tag>() == 2);
+    MAYFLY_REQUIRE(config.get<another_tag>() == 3);
+});
+
+MAYFLY_END_SUITE;

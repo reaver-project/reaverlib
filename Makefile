@@ -1,6 +1,6 @@
 CC=clang++
 LD=clang++
-CFLAGS=-Os -Wall -Wextra -pedantic -Werror -std=c++1y -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC -pthread
+CFLAGS=-O0 -Wall -Wextra -pedantic -Werror -std=c++1y -Wno-unused-parameter -Wno-unused-variable -stdlib=libc++ -MD -fPIC -pthread
 SOFLAGS=-stdlib=libc++ -shared
 LDFLAGS=-stdlib=libc++ -lc++abi
 SOURCES=$(shell find . -name "*.cpp" ! -wholename "./tests/*" ! -wholename "*-old")

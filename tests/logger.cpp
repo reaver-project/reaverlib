@@ -20,6 +20,26 @@
  *
  **/
 
-#pragma once
+#include <reaver/mayfly.h>
 
-#include "logger/logger.h"
+#include <reaver/logger.h>
+
+#include <sstream>
+
+MAYFLY_BEGIN_SUITE("logger");
+
+MAYFLY_ADD_TESTCASE("basic printing to stringstream", []
+{
+    std::ostringstream stream;
+
+    {
+        reaver::logger::logger logger;
+        logger.add_stream(stream);
+
+        logger() << "hello world! " << 1 << std::boolalpha << false;
+    }
+
+    MAYFLY_REQUIRE(stream.str() == "hello world! 1false\n");
+});
+
+MAYFLY_END_SUITE;

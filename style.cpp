@@ -27,7 +27,7 @@
 #endif
 
 // stdout and stderr only supported at the moment
-std::ostream & operator<<(std::ostream & stream, const reaver::style::__v1::style & style)
+std::ostream & reaver::style::_v1::operator<<(std::ostream & stream, const reaver::style::style & style)
 {
 #ifdef __unix__
     if ((&stream == &std::cout && isatty(STDOUT_FILENO)) || (&stream == &std::cerr && isatty(STDERR_FILENO)))

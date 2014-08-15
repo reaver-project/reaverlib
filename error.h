@@ -32,7 +32,7 @@ inline namespace __v1
     class error_engine : public exception
     {
     public:
-        error_engine(uint64_t max_errors = 20, logger::level error_level = logger::level::syntax) : _max_errors{ max_errors },
+        error_engine(uint64_t max_errors = 20, logger::base_level error_level = logger::base_level::error) : _max_errors{ max_errors },
             _error_level{ error_level }
         {
         }
@@ -62,25 +62,25 @@ inline namespace __v1
         {
             _errors.emplace_back(std::move(e));
 
-            if (_errors.back().level() >= _error_level && _errors.back().level() != logger::level::always)
+            if (_errors.back().level() >= _error_level && _errors.back().level() != logger::base_level::always)
             {
                 ++_error_count;
             }
 
-            else if (_errors.back().level() == logger::level::warning)
+            else if (_errors.back().level() == logger::base_level::warning)
             {
                 ++_warning_count;
             }
 
             if (_error_count == _max_errors)
             {
-                _errors.emplace_back(exception(logger::level::fatal) << "too many errors emitted: " << _max_errors << ".");
+                _errors.emplace_back(exception(logger::fatal) << "too many errors emitted: " << _max_errors << ".");
 
                 // uh... I'm sorry, officer, I can't explain how this happened
                 throw std::move(*this);
             }
 
-            if (_errors.back().level() == logger::level::crash || _errors.back().level() == logger::level::fatal)
+            if (_errors.back().level() == logger::base_level::crash || _errors.back().level() == logger::base_level::fatal)
             {
                 throw std::move(*this);
             }
@@ -92,12 +92,12 @@ inline namespace __v1
             {
                 _errors.emplace_back(std::move(elem));
 
-                if (_errors.back().level() >= _error_level && _errors.back().level() != logger::level::always)
+                if (_errors.back().level() >= _error_level && _errors.back().level() != logger::base_level::always)
                 {
                     ++_error_count;
                 }
 
-                else if (_errors.back().level() == logger::level::warning)
+                else if (_errors.back().level() == logger::base_level::warning)
                 {
                     ++_warning_count;
                 }
@@ -105,19 +105,19 @@ inline namespace __v1
 
             if (_error_count == _max_errors)
             {
-                _errors.emplace_back(exception(logger::level::fatal) << "too many errors emitted: " << _max_errors << ".");
+                _errors.emplace_back(exception(logger::fatal) << "too many errors emitted: " << _max_errors << ".");
 
                 // uh... I'm sorry, officer, I can't explain how this happened
                 throw std::move(*this);
             }
 
-            if (_errors.back().level() == logger::level::crash || _errors.back().level() == logger::level::fatal)
+            if (_errors.back().level() == logger::base_level::crash || _errors.back().level() == logger::base_level::fatal)
             {
                 throw std::move(*this);
             }
         }
 
-        void set_error_level(logger::level l)
+        void set_error_level(logger::base_level l)
         {
             _error_level = l;
         }
@@ -138,7 +138,7 @@ inline namespace __v1
 
             if (_error_count >= _max_errors)
             {
-                _errors.emplace_back(exception(logger::level::fatal) << "too many errors emitted: " << _max_errors << ".");
+                _errors.emplace_back(exception(logger::fatal) << "too many errors emitted: " << _max_errors << ".");
 
                 throw std::move(*this);
             }
@@ -183,7 +183,7 @@ inline namespace __v1
         uint64_t _error_count = 0;
         uint64_t _warning_count = 0;
         uint64_t _max_errors;
-        logger::level _error_level;
+        logger::base_level _error_level;
         mutable bool _printed_in_handler = false;
     };
 }

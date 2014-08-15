@@ -34,15 +34,17 @@ inline namespace __v1
     class semaphore
     {
     public:
-        semaphore() : _count()
+        semaphore() : _count{ 0 }
         {
         }
 
         void notify(std::size_t i = 1)
         {
-            std::unique_lock<std::mutex> lock{ _mutex };
+            {
+                std::unique_lock<std::mutex> lock{ _mutex };
 
-            _count += i;
+                _count += i;
+            }
 
             while (i--)
             {

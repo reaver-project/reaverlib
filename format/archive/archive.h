@@ -27,6 +27,7 @@
 #include <istream>
 #include <vector>
 #include <map>
+#include <fstream>
 
 #include <boost/filesystem.hpp>
 

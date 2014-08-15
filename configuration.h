@@ -22,4 +22,35 @@
 
 #pragma once
 
-#include "logger/logger.h"
+#include <map>
+
+#include <boost/type_index.hpp>
+#include <boost/any.hpp>
+
+namespace reaver { inline namespace _v1
+{
+    class configuration
+    {
+    public:
+        template<typename T, typename... Args>
+        void set(Args &&... args)
+        {
+            _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<Args>(args)... };
+        }
+
+        template<typename T>
+        typename T::type & get()
+        {
+            return boost::any_cast<typename T::type &>(_map.at(boost::typeindex::type_id<T>()));
+        }
+
+        template<typename T>
+        const typename T::type & get() const
+        {
+            return boost::any_cast<const typename T::type &>(_map.at(boost::typeindex::type_id<T>()));
+        }
+
+    private:
+        std::map<boost::typeindex::type_index, boost::any> _map;
+    };
+}}
