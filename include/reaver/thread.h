@@ -24,7 +24,7 @@
 
 #include <thread>
 
-#include <reaver/exception.h>
+#include "exception.h"
 
 namespace reaver { inline namespace _v1
 {

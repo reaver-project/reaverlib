@@ -30,6 +30,8 @@ namespace reaver
     {
         class style;
 
+        std::ostream & operator<<(std::ostream &, const style &);
+
         enum class colors
         {
             black = 30,
@@ -75,6 +77,29 @@ namespace reaver
             colors _backcolor;
             styles _style;
         };
+
+#ifdef __unix__
+        namespace unix_details
+        {
+            extern "C" int isatty(int);
+            constexpr int stdout_fileno = 1;
+            constexpr int stderr_fileno = 2;
+        }
+#endif
+
+        // stdout and stderr only supported at the moment
+        inline std::ostream & operator<<(std::ostream & stream, const reaver::style::style & style)
+        {
+#ifdef __unix__
+            if ((&stream == &std::cout && unix_details::isatty(unix_details::stdout_fileno)) || (&stream == &std::cerr && unix_details::isatty(unix_details::stderr_fileno)))
+            {
+                stream << "\033[" << static_cast<std::uint16_t>(style._style) << ';' << static_cast<std::uint16_t>(style._forecolor) << ';'
+                    << static_cast<std::uint16_t>(style._backcolor) + 10 << 'm';
+            }
+#endif
+
+            return stream;
+        }
     }}
 }
 

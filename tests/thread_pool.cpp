@@ -22,20 +22,33 @@
 
 #include <reaver/mayfly.h>
 
-#include <reaver/thread_pool.h>
+//#include <thread>
+//#include <functional>
+//#include <unordered_map>
+//#include <map>
+//#include <queue>
+//#include <atomic>
+//#include <mutex>
+#include <future>
+//#include <type_traits>
+
+namespace test
+{
+#   include "thread_pool.h"
+}
 
 MAYFLY_BEGIN_SUITE("thread pool");
 
 MAYFLY_ADD_TESTCASE("running tasks", []
 {
     {
-        reaver::thread_pool pool{ 1 };
+        test::reaver::thread_pool pool{ 1 };
         auto future = pool.push([]{ return 1; });
         MAYFLY_REQUIRE(future.get() == 1);
     }
 
     {
-        reaver::thread_pool pool{ 1 };
+        test::reaver::thread_pool pool{ 1 };
         auto future1 = pool.push([]{ return 1; });
         auto future2 = pool.push([]{ return 2; });
         MAYFLY_REQUIRE(future1.get() == 1);
@@ -43,7 +56,7 @@ MAYFLY_ADD_TESTCASE("running tasks", []
     }
 
     {
-        reaver::thread_pool pool{ 2 };
+        test::reaver::thread_pool pool{ 2 };
         auto future1 = pool.push([]{ return 1; });
         auto future2 = pool.push([]{ return 2; });
         MAYFLY_REQUIRE(future1.get() == 1);
@@ -53,21 +66,21 @@ MAYFLY_ADD_TESTCASE("running tasks", []
 
 MAYFLY_ADD_TESTCASE("handling aborted pools", []
 {
-    reaver::thread_pool pool{ 1 };
+    test::reaver::thread_pool pool{ 1 };
     pool.abort();
-    MAYFLY_REQUIRE_THROWS_TYPE(reaver::thread_pool_closed, pool.push([]{}));
+    MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::thread_pool_closed, pool.push([]{}));
 });
 
 MAYFLY_ADD_TESTCASE("affinities", []
 {
     {
-        reaver::thread_pool pool{ 1 };
+        test::reaver::thread_pool pool{ 1 };
         pool.allocate_affinity();
-        MAYFLY_REQUIRE_THROWS_TYPE(reaver::free_affinities_exhausted, pool.allocate_affinity());
+        MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::free_affinities_exhausted, pool.allocate_affinity());
     }
 
     {
-        reaver::thread_pool pool{ 2 };
+        test::reaver::thread_pool pool{ 2 };
         auto affinity1 = pool.allocate_affinity();
         auto affinity2 = pool.allocate_affinity();
 
@@ -79,7 +92,7 @@ MAYFLY_ADD_TESTCASE("affinities", []
     }
 
     {
-        reaver::thread_pool pool{ 1 };
+        test::reaver::thread_pool pool{ 1 };
         pool.allocate_affinity();
         pool.allocate_affinity(true);
         MAYFLY_REQUIRE(pool.size() == 2);
@@ -89,7 +102,7 @@ MAYFLY_ADD_TESTCASE("affinities", []
 MAYFLY_ADD_TESTCASE("resizing", []
 {
     {
-        reaver::thread_pool pool{ 4 };
+        test::reaver::thread_pool pool{ 4 };
         pool.resize(2);
         while (pool.size() != 2)
         {
@@ -103,7 +116,7 @@ MAYFLY_ADD_TESTCASE("resizing", []
     }
 
     {
-        reaver::thread_pool pool{ 1 };
+        test::reaver::thread_pool pool{ 1 };
         pool.allocate_affinity();
         pool.resize(2);
         pool.allocate_affinity();

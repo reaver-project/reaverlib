@@ -23,7 +23,7 @@
 #include <fstream>
 #include <regex>
 
-#include "archive.h"
+#include "format/archive.h"
 #include "raf/raf.h"
 
 std::unique_ptr<reaver::format::archive::archive> reaver::format::archive::read(const std::string & name)

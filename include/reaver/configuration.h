@@ -55,6 +55,24 @@ namespace reaver { inline namespace _v1
 
         template<typename... Args>
         using _has_construct = std::is_void<decltype(_existence_test<Args...>(0))>;
+
+        template<typename T, typename Arg>
+        auto _nonnarrowing_test(int) -> decltype(typename T::type{ Arg{} }, void());
+
+        template<typename...>
+        char _nonnarrowing_test(long);
+
+        template<typename... Args>
+        using _has_nonnarrowing_conversion = std::is_void<decltype(_nonnarrowing_test<Args...>(0))>;
+
+        template<typename T, typename Arg>
+        auto _static_cast_test(int) -> decltype(static_cast<typename T::type>(Arg{}), void());
+
+        template<typename...>
+        char _static_cast_test(long);
+
+        template<typename... Args>
+        using _has_static_cast = std::is_void<decltype(_static_cast_test<Args...>(0))>;
     }
 
     class configuration
@@ -66,9 +84,20 @@ namespace reaver { inline namespace _v1
             _map[boost::typeindex::type_id<T>()] = std::move(value);
         }
 
+        template<typename T, typename Arg>
+        auto set(Arg && arg) -> typename std::enable_if<_detail::_has_static_cast<T, Arg>::value && !_detail::_has_construct<T, Arg>::value>::type
+        {
+            _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(std::forward<Arg>(arg));
+        }
+
+        template<typename T, typename Arg>
+        auto set(Arg && arg) -> typename std::enable_if<_detail::_has_nonnarrowing_conversion<typename T::type,  Arg>::value && !_detail::_has_construct<T, Arg>::value>::value
+        {
+            _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<Arg>(arg) };
+        }
+
         template<typename T, typename... Args>
-        auto set(Args &&... args) -> typename std::enable_if<std::is_same<decltype(typename T::type{ std::forward<Args>(args)... }), typename T::type>::value
-            && !_detail::_is_same_with_pack<T, Args...>::value && !_detail::_has_construct<T, Args...>::value>::type
+        auto set(Args &&... args) -> typename std::enable_if<!_detail::_is_same_with_pack<T, Args...>::value && !_detail::_has_construct<T, Args...>::value>::type
         {
             _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<Args>(args)... };
         }

@@ -22,7 +22,10 @@
 
 #include <reaver/mayfly.h>
 
-#include <reaver/configuration.h>
+namespace test
+{
+#   include "configuration.h"
+}
 
 namespace
 {
@@ -69,7 +72,7 @@ MAYFLY_BEGIN_SUITE("configuration");
 
 MAYFLY_ADD_TESTCASE("storing data", []
 {
-    reaver::configuration config;
+    test::reaver::configuration config;
 
     config.set<simple_tag>(1);
     MAYFLY_CHECK(config.get<simple_tag>() == 1);
@@ -84,7 +87,7 @@ MAYFLY_ADD_TESTCASE("storing data", []
 
 MAYFLY_ADD_TESTCASE("automatic conversions", []
 {
-    reaver::configuration config;
+    test::reaver::configuration config;
 
     config.set<automatically_constructing_tag>(1);
     MAYFLY_CHECK(config.get<automatically_constructing_tag>() == true);
@@ -98,7 +101,7 @@ MAYFLY_ADD_TESTCASE("automatic conversions", []
 
 MAYFLY_ADD_TESTCASE("object construction", []
 {
-    reaver::configuration config;
+    test::reaver::configuration config;
 
     config.set<explicitly_constructing_tag>("foobar");
     MAYFLY_CHECK(config.get<explicitly_constructing_tag>() == "foobar");

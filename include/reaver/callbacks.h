@@ -28,7 +28,7 @@
 
 #include "exception.h"
 
-namespace reaver
+namespace reaver { inline namespace _v1
 {
     namespace _detail
     {
@@ -271,4 +271,4 @@ namespace reaver
         std::map<handle, std::function<Ret (Args...)>> _callbacks;
         handle _handle;
     };
-}
+}}

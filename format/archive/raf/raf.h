@@ -24,7 +24,7 @@
 
 #include <unordered_map>
 
-#include "../archive.h"
+#include "format/archive.h"
 
 namespace reaver
 {
