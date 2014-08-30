@@ -60,10 +60,16 @@ namespace
         {
             return b ? "true" : "false";
         }
+    };
 
-        static type construct(const char * string)
+    struct identity_constructing_tag
+    {
+        using type = std::string;
+
+        static type construct(std::string s)
         {
-            return string;
+            s += " buzz";
+            return s;
         }
     };
 }
@@ -103,14 +109,20 @@ MAYFLY_ADD_TESTCASE("object construction", []
 {
     test::reaver::configuration config;
 
-    config.set<explicitly_constructing_tag>("foobar");
+    config.set<explicitly_constructing_tag>(std::string{ "foobar" });
     MAYFLY_CHECK(config.get<explicitly_constructing_tag>() == "foobar");
+
+    config.set<explicitly_constructing_tag>("bazbuzz");
+    MAYFLY_CHECK(config.get<explicitly_constructing_tag>() == "bazbuzz");
 
     config.set<explicitly_constructing_tag>(1234);
     MAYFLY_CHECK(config.get<explicitly_constructing_tag>() == "1234");
 
     config.set<explicitly_constructing_tag>(false);
     MAYFLY_CHECK(config.get<explicitly_constructing_tag>() == "false");
+
+    config.set<identity_constructing_tag>(std::string{ "fizz" });
+    MAYFLY_CHECK(config.get<identity_constructing_tag>() == "fizz buzz");
 });
 
 MAYFLY_END_SUITE;
