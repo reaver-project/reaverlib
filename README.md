@@ -1,8 +1,7 @@
 # ReaverLib
 
 ReaverLib is a collection of libraries used throughout the project, that should
-also be useful for people from outside of it. This document briefly explains how
-to use each of the libraries.
+also be useful for people from outside of it.
 
 ## Supported compilers
 
