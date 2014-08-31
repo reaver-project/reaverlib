@@ -10,7 +10,7 @@ and libc++.
 
 CI status:
 
- * Clang: <a href="http://ci.reaver-project.org/viewType.html?buildTypeId=reaverlib_TestBuildWithClan">
+ * Clang: <a href="http://ci.reaver-project.org/viewType.html?buildTypeId=reaverlib_TestBuildWithClan&guest=1">
     <img src="http://ci.reaver-project.org/app/rest/builds/buildType:(id:reaverlib_TestBuildWithClan)/statusIcon"></a>
- * GCC: <a href="http://ci.reaver-project.org/viewType.html?buildTypeId=reaverlib_TestBuildWithGcc">
+ * GCC: <a href="http://ci.reaver-project.org/viewType.html?buildTypeId=reaverlib_TestBuildWithGcc&guest=1">
     <img src="http://ci.reaver-project.org/app/rest/builds/buildType:(id:reaverlib_TestBuildWithGcc)/statusIcon"></a>
