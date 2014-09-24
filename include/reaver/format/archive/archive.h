@@ -31,7 +31,8 @@
 
 #include <boost/filesystem.hpp>
 
-#include "error.h"
+#include "../../error.h"
+#include "../../style.h"
 
 namespace reaver
 {
