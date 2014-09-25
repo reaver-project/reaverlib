@@ -128,15 +128,25 @@ namespace reaver
             };
         }
 
-        template<typename K, typename... Args>
+        template<typename K, typename... Args, typename std::enable_if<_detail::_count<K, Args...>::value != 0, int>::type = 0>
         relaxed_constexpr auto get_all(Args &&... args)
         {
-            std::array<typename K::value_type, _detail::_count<K, Args...>::value> array;
+            constexpr auto count = _detail::_count<K, Args...>::value;
+            std::array<typename K::value_type, count> array;
 
-            for (std::size_t i = 0; i < array.size(); ++i)
+            for (std::size_t i = 0; i < count; ++i)
             {
                 array[i] = get_nth<K>(i, std::forward<Args>(args)...);
             }
+
+            return array;
+        }
+
+        template<typename K, typename... Args, typename std::enable_if<_detail::_count<K, Args...>::value == 0, int>::type = 0>
+        relaxed_constexpr auto get_all(Args &&... args)
+        {
+            constexpr auto count = _detail::_count<K, Args...>::value;
+            std::array<typename K::value_type, count> array;
 
             return array;
         }
