@@ -37,7 +37,7 @@ namespace reaver
             using value_type = T;
 
             template<typename... Args>
-            constexpr kwarg(Args &&... args) : value{ std::forward<Args>(args)... }
+            explicit constexpr kwarg(Args &&... args) : value{ std::forward<Args>(args)... }
             {
             }
 
