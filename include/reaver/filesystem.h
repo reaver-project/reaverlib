@@ -28,7 +28,7 @@ namespace reaver
 {
     namespace filesystem { inline namespace _v1
     {
-        inline boost::filesystem::path make_relative(const boost::filesystem::path & base, const boost::filesystem::path & path)
+        inline boost::filesystem::path make_relative(const boost::filesystem::path & path, const boost::filesystem::path & base = boost::filesystem::current_path())
         {
             auto absolute_base = boost::filesystem::absolute(base);
             auto absolute_path = boost::filesystem::absolute(path);
