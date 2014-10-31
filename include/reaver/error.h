@@ -24,6 +24,7 @@
 
 #include "logger.h"
 #include "exception.h"
+#include "swallow.h"
 
 namespace reaver
 {
@@ -86,6 +87,15 @@ inline namespace __v1
             {
                 throw std::move(*this);
             }
+        }
+
+        template<typename... Ts>
+        void push(Ts &&... ts)
+        {
+            std::vector<exception> vec;
+            vec.reserve(sizeof...(Ts));
+            swallow{ (vec.push_back(std::forward<Ts>(ts)), 0)... };
+            push(std::move(vec));
         }
 
         void push(std::vector<exception> ve)
