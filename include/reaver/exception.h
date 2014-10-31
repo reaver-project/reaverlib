@@ -41,8 +41,8 @@ inline namespace __v1
     class exception : public std::exception, public reaver::logger::logger_friend
     {
     public:
-        template<typename Level = logger::always_type>
-        exception(Level = {}) : _level { Level{} }
+        template<typename Level = logger::always_type, typename std::enable_if<logger::is_logger_level<Level>::value, int>::type = 0>
+        exception(Level l = {}) : _level{ l }
         {
             static std::set<logger::base_level> allowed_levels = {
                 logger::always,
@@ -61,6 +61,9 @@ inline namespace __v1
 
             _streamables = logger::default_level_registry()[Level{}];
         }
+
+        exception(const exception &) = default;
+        exception(exception &&) = default;
 
         ~exception()
         {

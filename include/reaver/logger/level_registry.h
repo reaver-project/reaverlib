@@ -71,6 +71,11 @@ namespace reaver
 
 #undef REAVER_LEVEL_TYPE
 
+        template<typename T>
+        struct is_logger_level : std::is_base_of<level_type, T>
+        {
+        };
+
         class invalid_logger_level : public std::runtime_error
         {
         public:
