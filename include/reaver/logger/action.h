@@ -23,6 +23,7 @@
 #pragma once
 
 #include <vector>
+#include <atomic>
 
 #include "level_registry.h"
 #include "streamable.h"
@@ -58,6 +59,12 @@ namespace reaver
             {
                 _streamables.emplace_back(std::forward<T>(rhs));
                 return *this;
+            }
+
+            template<typename T>
+            action & operator<<(const std::atomic<T> & atomic)
+            {
+                return *this << atomic.load();
             }
 
             friend class logger;

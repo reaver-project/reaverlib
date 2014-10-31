@@ -32,18 +32,20 @@ inline namespace __v1
     class error_engine : public exception
     {
     public:
-        error_engine(uint64_t max_errors = 20, logger::base_level error_level = logger::base_level::error) : _max_errors{ max_errors },
+        error_engine(std::size_t max_errors = 20, logger::base_level error_level = logger::base_level::error) : _max_errors{ max_errors },
             _error_level{ error_level }
         {
         }
+
+        error_engine(const error_engine &) = delete;
 
         error_engine(error_engine && moved_out)
         {
             using std::swap;
 
             swap(_errors, moved_out._errors);
-            swap(_error_count, moved_out._error_count);
-            swap(_warning_count, moved_out._warning_count);
+            _error_count.exchange(moved_out._error_count);
+            _warning_count.exchange(moved_out._warning_count);
             swap(_max_errors, moved_out._max_errors);
             swap(_error_level, moved_out._error_level);
             _printed_in_handler = moved_out._printed_in_handler;
@@ -132,7 +134,7 @@ inline namespace __v1
             return exception::what();
         }
 
-        void set_error_limit(uint64_t i)
+        void set_error_limit(std::size_t i)
         {
             _max_errors = i;
 
@@ -180,9 +182,9 @@ inline namespace __v1
 
     private:
         std::vector<exception> _errors;
-        uint64_t _error_count = 0;
-        uint64_t _warning_count = 0;
-        uint64_t _max_errors;
+        std::atomic<std::size_t> _error_count{ 0 };
+        std::atomic<std::size_t> _warning_count{ 0 };
+        std::size_t _max_errors;
         logger::base_level _error_level;
         mutable bool _printed_in_handler = false;
     };
