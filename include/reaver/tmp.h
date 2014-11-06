@@ -260,5 +260,23 @@ inline namespace __v1
     {
         using type = std::tuple<Ts...>;
     };
+
+    template<bool... Bools>
+    struct all;
+
+    template<>
+    struct all<> : std::true_type
+    {
+    };
+
+    template<bool... Rest>
+    struct all<true, Rest...> : std::integral_constant<bool, all<Rest...>::value>
+    {
+    };
+
+    template<bool... Rest>
+    struct all<false, Rest...> : std::false_type
+    {
+    };
 }
 }
