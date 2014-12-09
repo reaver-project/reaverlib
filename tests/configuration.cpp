@@ -123,6 +123,9 @@ MAYFLY_ADD_TESTCASE("object construction", []
 
     config.set<identity_constructing_tag>(std::string{ "fizz" });
     MAYFLY_CHECK(config.get<identity_constructing_tag>() == "fizz buzz");
+
+    config.set(identity_constructing_tag{}, std::string{ "fizz" });
+    MAYFLY_CHECK(config.get(identity_constructing_tag{}) == "fizz buzz");
 });
 
 MAYFLY_END_SUITE;

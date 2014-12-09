@@ -150,14 +150,20 @@ namespace reaver { inline namespace _v1
             _set<T, std::tuple<Args...>>(_detail::_select_overload{})(std::forward<Args>(args)...);
         }
 
+        template<typename T, typename... Args>
+        void set(T, Args &&... args)
+        {
+            set<T>(std::forward<Args>(args)...);
+        }
+
         template<typename T>
-        typename T::type & get()
+        auto & get(T = {})
         {
             return boost::any_cast<typename T::type &>(_map.at(boost::typeindex::type_id<T>()));
         }
 
         template<typename T>
-        const typename T::type & get() const
+        auto & get(T = {}) const
         {
             return boost::any_cast<const typename T::type &>(_map.at(boost::typeindex::type_id<T>()));
         }
