@@ -75,7 +75,7 @@ namespace reaver { inline namespace _v1
         using result_type = typename _detail::_filtered_common_type<void, decltype(std::declval<_detail::_call_forwarder<Lambda>>()(std::declval<Variants>()))...>::type;
 
         template<typename Arg>
-        auto operator()(Arg && arg) const
+        decltype(auto) operator()(Arg && arg) const
         {
             return lambda(std::forward<Arg>(arg));
         }
