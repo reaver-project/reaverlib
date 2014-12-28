@@ -75,21 +75,17 @@ namespace reaver { inline namespace _v1
         using result_type = typename _detail::_filtered_common_type<void, decltype(std::declval<_detail::_call_forwarder<Lambda>>()(std::declval<Variants>()))...>::type;
 
         template<typename Arg>
-        decltype(auto) operator()(Arg && arg) const
+        decltype(auto) operator()(Arg && arg)
         {
             return lambda(std::forward<Arg>(arg));
-        }
-
-        const boost::detail::variant::void_ & operator()(const boost::detail::variant::void_ & v) const
-        {
-            return v;
         }
     };
 
     template<typename Lambda, typename... Variants>
-    auto visit(Lambda && lambda, const boost::variant<Variants...> & variant)
+    decltype(auto) visit(Lambda && lambda, const boost::variant<Variants...> & variant)
     {
-        return boost::apply_visitor(visitor<Lambda, Variants...>{ std::forward<Lambda>(lambda) }, variant);
+        auto v = visitor<Lambda, Variants...>{ std::forward<Lambda>(lambda) };
+        return boost::apply_visitor(v, variant);
     }
 
     namespace _detail
@@ -115,7 +111,7 @@ namespace reaver { inline namespace _v1
         template<typename U>
         struct _match_type_specification_impl<U, true, true>
         {
-            using type = std::remove_reference_t<std::remove_cv_t<U>>;
+            using type = std::remove_cv_t<std::remove_reference_t<U>>;
         };
 
         template<typename T, typename U>
