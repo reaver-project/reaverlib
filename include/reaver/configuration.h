@@ -181,7 +181,7 @@ namespace reaver { inline namespace _v1
             && _detail::_has_identity_construct<T>::value, int>::type = 0>
         auto _set(_detail::_choice<0>)
         {
-            return [&](typename T::type value){ _map[boost::typeindex::type_id<T>()] = T::construct(std::move(value)); };
+            return [&](typename T::type value){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::move(value))); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_same, typename T::type, TypeList>::value, int>::type = 0>
@@ -193,7 +193,7 @@ namespace reaver { inline namespace _v1
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_exact_match, T, TypeList>::value, int>::type = 0>
         auto _set(_detail::_choice<2>)
         {
-            return [&](auto && arg){ _map[boost::typeindex::type_id<T>()] = T::construct(std::forward<decltype(arg)>(arg)); };
+            return [&](auto && arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg))); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_static_cast, T, TypeList>::value, int>::type = 0>
@@ -205,7 +205,7 @@ namespace reaver { inline namespace _v1
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_callable, T, TypeList>::value, int>::type = 0>
         auto _set(_detail::_choice<4>)
         {
-            return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = T::construct(std::forward<decltype(args)>(args)...); };
+            return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(args)>(args)...)); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_constructible, T, TypeList>::value, int>::type = 0>

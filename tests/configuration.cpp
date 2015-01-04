@@ -72,6 +72,17 @@ namespace
             return s;
         }
     };
+
+    struct naughty_tag
+    {
+        using type = bool;
+
+        template<typename... Args>
+        static int construct(Args &&...)
+        {
+            return 0;
+        }
+    };
 }
 
 MAYFLY_BEGIN_SUITE("configuration");
@@ -126,6 +137,20 @@ MAYFLY_ADD_TESTCASE("object construction", []
 
     config.set(identity_constructing_tag{}, std::string{ "fizz" });
     MAYFLY_CHECK(config.get(identity_constructing_tag{}) == "fizz buzz");
+});
+
+MAYFLY_ADD_TESTCASE("naughty tag", []
+{
+    test::reaver::configuration config;
+
+    config.set<naughty_tag>(false);
+    MAYFLY_REQUIRE_NOTHROW(config.get<naughty_tag>());
+
+    config.set<naughty_tag>(1);
+    MAYFLY_REQUIRE_NOTHROW(config.get<naughty_tag>());
+
+    config.set<naughty_tag>();
+    MAYFLY_REQUIRE_NOTHROW(config.get<naughty_tag>());
 });
 
 MAYFLY_END_SUITE;
