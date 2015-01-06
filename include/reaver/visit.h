@@ -154,7 +154,7 @@ namespace reaver { inline namespace _v1
 
     struct default_id {};
 
-    auto make_visitor()
+    inline auto make_visitor()
     {
         return [](){ return unit{}; };
     }
