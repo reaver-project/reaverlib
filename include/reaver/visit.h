@@ -90,6 +90,18 @@ namespace reaver { inline namespace _v1
 
     namespace _detail
     {
+        template<typename U>
+        struct _remove_recursive_wrapper
+        {
+            using type = U;
+        };
+
+        template<typename U>
+        struct _remove_recursive_wrapper<boost::recursive_wrapper<U>>
+        {
+            using type = U;
+        };
+
         template<typename U, bool IsNotReference, bool IsNotCv>
         struct _match_type_specification_impl
         {
@@ -117,7 +129,11 @@ namespace reaver { inline namespace _v1
         template<typename T, typename U>
         struct _match_type_specification
         {
-            using type = typename _match_type_specification_impl<U, std::is_same<T, std::remove_reference_t<T>>::value, std::is_same<T, std::remove_cv_t<T>>::value>::type;
+            using type = typename _match_type_specification_impl<
+                typename _remove_recursive_wrapper<U>::type,
+                std::is_same<T, std::remove_reference_t<T>>::value,
+                std::is_same<T, std::remove_cv_t<T>>::value
+            >::type;
         };
 
         template<typename T, typename Lambda, typename Default>
