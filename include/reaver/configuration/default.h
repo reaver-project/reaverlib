@@ -20,6 +20,16 @@
  *
  **/
 
-#include "configuration/configuration.h"
-#include "configuration/default.h"
+#pragma once
+
+#include "configuration.h"
+
+namespace reaver { inline namespace _v1
+{
+    inline configuration & default_configuration()
+    {
+        static configuration config;
+        return config;
+    }
+}}
 

@@ -83,6 +83,12 @@ namespace
             return 0;
         }
     };
+
+    struct tag_with_default
+    {
+        using type = int;
+        static constexpr int default_value = 1;
+    };
 }
 
 MAYFLY_BEGIN_SUITE("configuration");
@@ -151,6 +157,16 @@ MAYFLY_ADD_TESTCASE("naughty tag", []
 
     config.set<naughty_tag>();
     MAYFLY_REQUIRE_NOTHROW(config.get<naughty_tag>());
+});
+
+MAYFLY_ADD_TESTCASE("tag with default value", []
+{
+    test::reaver::configuration config;
+
+    MAYFLY_REQUIRE(config.get<tag_with_default>() == tag_with_default::default_value);
+
+    config.set<tag_with_default>(tag_with_default::default_value + 1);
+    MAYFLY_REQUIRE(config.get<tag_with_default>() == tag_with_default::default_value + 1);
 });
 
 MAYFLY_END_SUITE;
