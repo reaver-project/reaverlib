@@ -27,7 +27,7 @@ namespace reaver { inline namespace _v1
     struct swallow
     {
         template<typename... Args>
-        swallow(Args &&...)
+        constexpr swallow(Args &&...)
         {
         }
     };
