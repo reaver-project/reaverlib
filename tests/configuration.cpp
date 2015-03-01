@@ -169,4 +169,86 @@ MAYFLY_ADD_TESTCASE("tag with default value", []
     MAYFLY_REQUIRE(config.get<tag_with_default>() == tag_with_default::default_value + 1);
 });
 
+MAYFLY_BEGIN_SUITE("bound");
+
+namespace
+{
+    template<typename Tag, typename Config, typename std::enable_if<std::is_void<decltype(
+        std::declval<Config>().template set<Tag>(std::declval<typename Tag::type>()),
+        void()
+    )>::value, int>::type = 0>
+    bool check_invalid_set(reaver::_detail::_choice<0>)
+    {
+        return false;
+    }
+
+    template<typename Tag, typename Config>
+    bool check_invalid_set(reaver::_detail::_choice<1>)
+    {
+        return true;
+    }
+
+    template<typename Tag, typename Config, typename std::enable_if<std::is_void<decltype(
+        std::declval<Config>().template get<Tag>(std::declval<typename Tag::type>()),
+        void()
+    )>::value, int>::type = 0>
+    bool check_invalid_get(reaver::_detail::_choice<0>)
+    {
+        return false;
+    }
+
+    template<typename Tag, typename Config>
+    bool check_invalid_get(reaver::_detail::_choice<1>)
+    {
+        return true;
+    }
+
+    template<typename Tag, typename Config, typename std::enable_if<std::is_void<decltype(
+        std::declval<Config>().template add<Tag>(std::declval<typename Tag::type>()),
+        void()
+    )>::value, int>::type = 0>
+    bool check_invalid_add(reaver::_detail::_choice<0>)
+    {
+        return false;
+    }
+
+    template<typename Tag, typename Config>
+    bool check_invalid_add(reaver::_detail::_choice<1>)
+    {
+        return true;
+    }
+}
+
+MAYFLY_ADD_TESTCASE("invalid set", []
+{
+    MAYFLY_REQUIRE(check_invalid_set<simple_tag, test::reaver::bound_configuration<>>(reaver::_detail::_select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_set<another_tag, test::reaver::bound_configuration<simple_tag>>(reaver::_detail::_select_overload{}));
+});
+
+MAYFLY_ADD_TESTCASE("invalid get", []
+{
+    MAYFLY_REQUIRE(check_invalid_get<simple_tag, test::reaver::bound_configuration<>>(reaver::_detail::_select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_get<another_tag, test::reaver::bound_configuration<simple_tag>>(reaver::_detail::_select_overload{}));
+});
+
+MAYFLY_ADD_TESTCASE("add to bound configuration", []
+{
+    test::reaver::bound_configuration<> config;
+    auto extended_config = config.add<simple_tag>(1);
+
+    MAYFLY_REQUIRE(std::is_same<decltype(extended_config), test::reaver::bound_configuration<simple_tag>>::value);
+    MAYFLY_REQUIRE(extended_config.get<simple_tag>() == 1);
+
+    auto more_extended = extended_config.add<another_tag>(2);
+    MAYFLY_REQUIRE(std::is_same<decltype(more_extended), test::reaver::bound_configuration<simple_tag, another_tag>>::value);
+    MAYFLY_REQUIRE(more_extended.get<simple_tag>() == 1);
+    MAYFLY_REQUIRE(more_extended.get<another_tag>() == 2);
+});
+
+MAYFLY_ADD_TESTCASE("invalid add", []
+{
+    MAYFLY_REQUIRE(check_invalid_add<simple_tag, test::reaver::bound_configuration<simple_tag>>(reaver::_detail::_select_overload{}));
+});
+
+MAYFLY_END_SUITE;
 MAYFLY_END_SUITE;
