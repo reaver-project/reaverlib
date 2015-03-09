@@ -20,23 +20,28 @@
  *
  **/
 
+#include <boost/variant.hpp>
+
 #include <reaver/mayfly.h>
 
-#include "visit.h"
+namespace test
+{
+#   include "visit.h"
+}
 
 MAYFLY_BEGIN_SUITE("visit");
 
 MAYFLY_ADD_TESTCASE("default id", []()
 {
-    MAYFLY_REQUIRE(reaver::make_visitor(reaver::default_id(), [](auto &&){ return "foo"; })(0) == std::string("foo"));
+    MAYFLY_REQUIRE(test::reaver::make_visitor(test::reaver::default_id(), [](auto &&){ return "foo"; })(0) == std::string("foo"));
 });
 
 MAYFLY_ADD_TESTCASE("basic type specifications", []()
 {
-    auto visitor = reaver::make_visitor(
-        reaver::id<int>(), [](auto &&){ return "foo"; },
-        reaver::id<bool>(), [](auto &&){ return "bar"; },
-        reaver::default_id(), [](auto &&){ return "baz"; }
+    auto visitor = test::reaver::make_visitor(
+        test::reaver::id<int>(), [](auto &&){ return "foo"; },
+        test::reaver::id<bool>(), [](auto &&){ return "bar"; },
+        test::reaver::default_id(), [](auto &&){ return "baz"; }
     );
 
     MAYFLY_REQUIRE(visitor(1) == std::string("foo"));
@@ -46,9 +51,9 @@ MAYFLY_ADD_TESTCASE("basic type specifications", []()
 
 MAYFLY_ADD_TESTCASE("reference type specifications", []()
 {
-    auto visitor = reaver::make_visitor(
-        reaver::id<int &>(), [](auto &&){ return 1; },
-        reaver::id<int>(), [](auto &&){ return 2; }
+    auto visitor = test::reaver::make_visitor(
+        test::reaver::id<int &>(), [](auto &&){ return 1; },
+        test::reaver::id<int>(), [](auto &&){ return 2; }
     );
 
     int i;
@@ -58,11 +63,11 @@ MAYFLY_ADD_TESTCASE("reference type specifications", []()
 
 MAYFLY_ADD_TESTCASE("cv type specifications", []()
 {
-    auto visitor = reaver::make_visitor(
-        reaver::id<const volatile int>(), [](auto &&){ return 1; },
-        reaver::id<const int>(), [](auto &&){ return 2; },
-        reaver::id<volatile int>(), [](auto &&){ return 3; },
-        reaver::id<int>(), [](auto &&){ return 4; }
+    auto visitor = test::reaver::make_visitor(
+        test::reaver::id<const volatile int>(), [](auto &&){ return 1; },
+        test::reaver::id<const int>(), [](auto &&){ return 2; },
+        test::reaver::id<volatile int>(), [](auto &&){ return 3; },
+        test::reaver::id<int>(), [](auto &&){ return 4; }
     );
 
     const volatile int i = 0;
@@ -78,10 +83,10 @@ MAYFLY_ADD_TESTCASE("cv type specifications", []()
 
 MAYFLY_ADD_TESTCASE("cvref type specifications", []()
 {
-    auto visitor = reaver::make_visitor(
-        reaver::id<const int &>(), [](auto &&){ return 1; },
-        reaver::id<int &>(), [](auto &&){ return 2; },
-        reaver::id<int>(), [](auto &&){ return 3; }
+    auto visitor = test::reaver::make_visitor(
+        test::reaver::id<const int &>(), [](auto &&){ return 1; },
+        test::reaver::id<int &>(), [](auto &&){ return 2; },
+        test::reaver::id<int>(), [](auto &&){ return 3; }
     );
 
     const int i = 0;
