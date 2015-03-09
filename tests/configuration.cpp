@@ -250,5 +250,53 @@ MAYFLY_ADD_TESTCASE("invalid add", []
     MAYFLY_REQUIRE(check_invalid_add<simple_tag, test::reaver::bound_configuration<simple_tag>>(reaver::_detail::_select_overload{}));
 });
 
+MAYFLY_ADD_TESTCASE("construct from unbound", []
+{
+    test::reaver::configuration config;
+    MAYFLY_REQUIRE_NOTHROW(test::reaver::bound_configuration<> bound = config);
+
+    config.set<simple_tag>(1);
+    MAYFLY_REQUIRE_NOTHROW(test::reaver::bound_configuration<simple_tag> bound = config);
+    MAYFLY_REQUIRE_THROWS_TYPE(std::out_of_range, test::reaver::bound_configuration<simple_tag, another_tag> bound = config);
+});
+
+MAYFLY_ADD_TESTCASE("construct from bound", []
+{
+    test::reaver::bound_configuration<> empty;
+    auto one = empty.add<simple_tag>(1);
+    auto two = one.add<another_tag>(2);
+
+    test::reaver::bound_configuration<simple_tag> simple = two;
+    MAYFLY_CHECK(simple.get<simple_tag>() == 1);
+
+    test::reaver::bound_configuration<another_tag> another = two;
+    MAYFLY_CHECK(another.get<another_tag>() == 2);
+
+    test::reaver::bound_configuration<> other_empty = two;
+});
+
+namespace
+{
+    template<typename BoundType, typename Argument, typename std::enable_if<std::is_void<decltype(BoundType{ std::declval<Argument>() }, void())>::value, int>::type = 0>
+    bool check_invalid_construct(reaver::_detail::_choice<0>)
+    {
+        return false;
+    }
+
+    template<typename...>
+    bool check_invalid_construct(reaver::_detail::_choice<1>)
+    {
+        return true;
+    }
+}
+
+MAYFLY_ADD_TESTCASE("invalid construct from bound", []
+{
+    test::reaver::bound_configuration<> empty;
+    auto one = empty.add<simple_tag>(1);
+
+    MAYFLY_REQUIRE(check_invalid_construct<test::reaver::bound_configuration<another_tag>, decltype(one)>(reaver::_detail::_select_overload{}));
+});
+
 MAYFLY_END_SUITE;
 MAYFLY_END_SUITE;

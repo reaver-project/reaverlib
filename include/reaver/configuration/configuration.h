@@ -28,6 +28,7 @@
 #include <boost/type_index.hpp>
 #include <boost/any.hpp>
 
+#include "../unit.h"
 #include "../swallow.h"
 
 namespace reaver { inline namespace _v1
@@ -147,15 +148,17 @@ namespace reaver { inline namespace _v1
     {
     public:
         template<typename T, typename... Args>
-        void set(Args &&... args)
+        unit set(Args &&... args)
         {
             _set<T, std::tuple<Args...>>(_detail::_select_overload{})(std::forward<Args>(args)...);
+            return {};
         }
 
         template<typename T, typename... Args>
-        void set(T, Args &&... args)
+        unit set(T, Args &&... args)
         {
             set<T>(std::forward<Args>(args)...);
+            return {};
         }
 
         template<typename T>
@@ -324,7 +327,19 @@ namespace reaver { inline namespace _v1
         }
 
     public:
-        template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value, int>::type = 0>
+        template<typename... Other, typename std::enable_if<
+            !_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value &&
+            !_detail::_is_a_subset<std::tuple<Other...>, std::tuple<Allowed...>>::value,
+        int>::type = 0>
+        bound_configuration(const bound_configuration<Other...> & other) = delete;
+
+        template<typename... Other, typename std::enable_if<
+            !_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value &&
+            !_detail::_is_a_subset<std::tuple<Other...>, std::tuple<Allowed...>>::value,
+        int>::type = 0>
+        bound_configuration(bound_configuration<Other...> && other) = delete;
+
+       template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value, int>::type = 0>
         bound_configuration(const bound_configuration<Other...> & other)
         {
             swallow{ set<Allowed>(other.template get<Allowed>())... };
@@ -336,16 +351,26 @@ namespace reaver { inline namespace _v1
             swallow{ set<Allowed>(std::move(other.template get<Allowed>()))... };
         }
 
-        template<typename T, typename... Args, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
-        void set(Args &&... args)
+        bound_configuration(const configuration & config)
         {
-            configuration::set<T>(std::forward<Args>(args)...);
+            swallow{ set<Allowed>(config.get<Allowed>())... };
+        }
+
+        bound_configuration(configuration && config)
+        {
+            swallow{ set<Allowed>(std::move(config.get<Allowed>()))... };
         }
 
         template<typename T, typename... Args, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
-        void set(T, Args &&... args)
+        unit set(Args &&... args)
         {
-            configuration::set(T{}, std::forward<Args>(args)...);
+            return configuration::set<T>(std::forward<Args>(args)...);
+        }
+
+        template<typename T, typename... Args, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        unit set(T, Args &&... args)
+        {
+            return configuration::set(T{}, std::forward<Args>(args)...);
         }
 
         template<typename T, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
@@ -384,6 +409,18 @@ namespace reaver { inline namespace _v1
     class bound_configuration<> : public configuration
     {
     public:
+        bound_configuration() = default;
+        bound_configuration(const bound_configuration &) = default;
+        bound_configuration(bound_configuration &&) = default;
+
+        bound_configuration(const configuration &)
+        {
+        }
+
+        bound_configuration(configuration &&)
+        {
+        }
+
         template<typename T, typename... Args>
         auto add(Args &&... args) const
         {
@@ -394,7 +431,7 @@ namespace reaver { inline namespace _v1
 
     private:
         template<typename... Args>
-        void set(Args &&...);
+        unit set(Args &&...);
         template<typename... Args>
         void get(Args &&...) const;
     };
