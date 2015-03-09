@@ -51,6 +51,9 @@ namespace reaver { inline namespace _v1
         using std::thread::thread;
         thread() = default;
         thread(thread &&) = default;
+        thread(std::thread && t) : std::thread{ std::move(t) }
+        {
+        }
         thread & operator=(thread &&) = default;
 
         ~thread();
