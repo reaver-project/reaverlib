@@ -339,7 +339,7 @@ namespace reaver { inline namespace _v1
         int>::type = 0>
         bound_configuration(bound_configuration<Other...> && other) = delete;
 
-       template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value, int>::type = 0>
+        template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value, int>::type = 0>
         bound_configuration(const bound_configuration<Other...> & other)
         {
             swallow{ set<Allowed>(other.template get<Allowed>())... };
