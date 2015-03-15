@@ -33,101 +33,70 @@
 
 namespace reaver { inline namespace _v1
 {
+    template<typename...>
+    struct voider { using type = void; };
+
+    template<typename... Args>
+    using void_t = typename voider<Args...>::type;
+
     namespace _detail
     {
+        template<typename Tag, typename = void>
+        struct _has_identity_construct : public std::false_type {};
+
         template<typename T>
-        struct _has_identity_construct
-        {
-        private:
-            template<typename U>
-            static auto _test(int) -> decltype(U::construct(std::declval<typename U::type>()), void());
+        struct _has_identity_construct<T, void_t<decltype(T::construct(std::declval<typename T::type>()))>> : public std::true_type {};
 
-            template<typename U>
-            static char _test(long);
-
-        public:
-            static constexpr bool value = std::is_void<decltype(_test<T>(0))>::value;
-        };
-
-        template<typename... Args>
-        struct _has_construct
-        {
-        private:
-            template<typename T, typename U>
-            static auto _test(int) -> decltype(T::construct(std::declval<U>()), void());
-
-            template<typename T, typename...>
-            static char _test(long);
-
-        public:
-            static constexpr bool value = std::is_void<decltype(_test<Args...>(0))>::value;
-        };
-
-        template<typename... Args>
-        struct _has_static_cast
-        {
-        private:
-            template<typename T, typename Arg>
-            static auto _test(int) -> decltype(static_cast<typename T::type>(std::declval<Arg>()), void());
-
-            template<typename...>
-            static char _test(long);
-
-        public:
-            static constexpr bool value = std::is_void<decltype(_test<Args...>(0))>::value;
-        };
-
-        template<typename... Args>
-        struct _has_exact_match
-        {
-        private:
-            template<typename T, typename... Ts>
-            static auto _test(int) -> decltype(static_cast<decltype(T::construct(std::declval<Ts>()...)) (*)(Args...)>(&T::construct), void());
-
-            template<typename...>
-            static char _test(long);
-
-        public:
-            static constexpr bool value = std::is_void<decltype(_test<typename std::remove_reference<Args>::type...>(0))>::value;
-        };
-
-        template<typename... Args>
-        struct _is_callable
-        {
-        private:
-            template<typename T, typename... Ts>
-            static auto _test(int) -> decltype(T::construct(std::declval<Ts>()...), void());
-
-            template<typename...>
-            static char _test(long);
-
-        public:
-            static constexpr bool value = std::is_void<decltype(_test<Args...>(0))>::value;
-        };
-
-        template<typename... Args>
-        struct _is_constructible
-        {
-        private:
-            template<typename T, typename... Ts>
-            static auto _test(int) -> decltype(typename T::type{ std::declval<Ts>()... }, void());
-
-            template<typename...>
-            static char _test(long);
-
-        public:
-            static constexpr bool value = std::is_void<decltype(_test<Args...>(0))>::value;
-        };
-
-        template<typename... Args>
-        struct _is_same : std::false_type
-        {
-        };
+        template<typename Tag, typename From, typename = void>
+        struct _has_construct : public std::false_type {};
 
         template<typename T, typename U>
-        struct _is_same<T, U> : public std::is_same<typename std::remove_reference<typename std::remove_cv<T>::type>::type, typename std::remove_reference<typename std::remove_cv<U>::type>::type>
-        {
-        };
+        struct _has_construct<T, U, void_t<decltype(T::construct(std::declval<U>()))>> : public std::true_type {};
+
+        template<typename... Args>
+        struct _has_static_cast_impl : public std::false_type {};
+
+        template<typename T, typename U>
+        struct _has_static_cast_impl<void_t<decltype(static_cast<typename T::type>(std::declval<U>()))>, T, U> : public std::true_type {};
+
+        template<typename Tag, typename... From>
+        struct _has_static_cast : _has_static_cast_impl<void, Tag, From...> {};
+
+        template<typename... Args>
+        struct _has_exact_match_impl : public std::false_type {};
+
+        template<typename T, typename... Args>
+        struct _has_exact_match_impl<void_t<decltype(static_cast<decltype(T::construct(std::declval<Args>()...)) (*)(Args...)>(&T::construct))>, T, Args...> : public std::true_type {};
+
+        template<typename Tag, typename... From>
+        struct _has_exact_match : _has_exact_match_impl<void, Tag, std::remove_reference_t<From>...> {};
+
+        template<typename... Args>
+        struct _is_callable_impl : public std::false_type {};
+
+        template<typename T, typename... Args>
+        struct _is_callable_impl<void_t<decltype(T::construct(std::declval<Args>()...))>, T, Args...> : public std::true_type {};
+
+        template<typename Tag, typename... Args>
+        struct _is_callable : public _is_callable_impl<void, Tag, Args...> {};
+
+        template<typename... Args>
+        struct _is_constructible_impl : public std::false_type {};
+
+        template<typename T, typename... Args>
+        struct _is_constructible_impl<void_t<decltype(typename T::type{ std::declval<Args>()... })>, T, Args...> : public std::true_type {};
+
+        template<typename Tag, typename... Args>
+        struct _is_constructible : public _is_constructible_impl<void, Tag, Args...> {};
+
+        template<typename... Args>
+        struct _is_same : std::false_type {};
+
+        template<typename T, typename U>
+        struct _is_same<T, U> : public std::is_same<
+            typename std::remove_reference<typename std::remove_cv<T>::type>::type,
+            typename std::remove_reference<typename std::remove_cv<U>::type>::type
+        > {};
 
         template<template<typename...> class Trait, typename T, typename TypeList>
         struct _apply_on_type_list;
@@ -217,7 +186,7 @@ namespace reaver { inline namespace _v1
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_exact_match, T, TypeList>::value, int>::type = 0>
         auto _set(_detail::_choice<2>)
         {
-            return [&](auto && arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg))); };
+            return [&](auto &&... arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg)...)); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_static_cast, T, TypeList>::value, int>::type = 0>
