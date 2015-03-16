@@ -134,6 +134,18 @@ namespace reaver
                 return desc;
             }
 
+            boost::program_options::positional_options_description generate_positional() const
+            {
+                boost::program_options::positional_options_description desc;
+
+                for (const auto & opt : _positional_options)
+                {
+                    opt->generate(desc);
+                }
+
+                return desc;
+            }
+
         private:
             class _base
             {
@@ -300,10 +312,18 @@ namespace reaver
 
             using type = ValueType;
             static const char * const name;
+            static constexpr const char * description = "";
             static constexpr std::size_t count = 1;
             static constexpr option_set options = {};
+            static constexpr bool is_void = false;
         private:
             static _detail::_option_registrar<CRTP, Register> _registrar;
+        };
+
+        template<typename CRTP, bool Register>
+        struct option<CRTP, void, Register> : option<CRTP, bool, Register>
+        {
+            static constexpr bool is_void = true;
         };
 
         template<typename CRTP, typename ValueType>
@@ -315,14 +335,114 @@ namespace reaver
         template<typename CRTP, typename ValueType, bool Register>
         _detail::_option_registrar<CRTP, Register> option<CRTP, ValueType, Register>::_registrar;
 
-        inline void feed_argv(configuration & config, int argc, char ** argv, const option_registry & registry = default_option_registry())
+        inline auto parse_argv(int argc, char ** argv, const option_registry & registry = default_option_registry())
         {
+            assert(false);
+            // TODO: not implemented yet
 
+            configuration ret;
+
+            auto visible = registry.generate_visible();
+            auto hidden = registry.generate_hidden();
+            auto positional = registry.generate_positional();
+
+            return ret;
         }
 
-        template<typename First, typename... Args>
-        void feed_argv(configuration & config, int argc, char ** argv, id<First>, id<Args>...)
+        namespace _detail
         {
+            std::string _name(const char * full_name)
+            {
+                std::string buf{ full_name };
+                return buf.substr(0, buf.find(','));
+            }
+
+            template<typename T, typename std::enable_if<T::is_void, int>::type = 0>
+            unit _handle(boost::program_options::options_description & desc)
+            {
+                desc.add_options()(T::name, T::description);
+
+                return {};
+            }
+
+            template<typename T, typename std::enable_if<!T::is_void, int>::type = 0>
+            unit _handle(boost::program_options::options_description & desc)
+            {
+                desc.add_options()(T::name, boost::program_options::value<typename T::type>(), T::description);
+
+                return {};
+            }
+
+            template<typename... Args>
+            auto _handle_visible(id<Args>...)
+            {
+                boost::program_options::options_description desc;
+                swallow{ (Args::options.is_visible ? _handle<Args>(desc) : unit{})... };
+                return desc;
+            }
+
+            template<typename... Args>
+            auto _handle_hidden(id<Args>...)
+            {
+                boost::program_options::options_description desc;
+                swallow{ (!Args::options.is_visible ? _handle<Args>(desc) : unit{})... };
+                return desc;
+            }
+
+            template<typename T>
+            unit _handle_positional(boost::program_options::positional_options_description & desc)
+            {
+                return {};
+            }
+
+            template<typename... Args>
+            auto _handle_positional(id<Args>...)
+            {
+                boost::program_options::positional_options_description desc;
+                swallow{ _handle_positional<Args>(desc)... };
+                return desc;
+            }
+
+            template<typename Config>
+            auto _get(boost::program_options::variables_map & map, Config && config)
+            {
+                return std::forward<Config>(config);
+            }
+
+            template<typename Head, typename... Tail, typename Config, typename std::enable_if<Head::is_void, int>::type = 0>
+            auto _get(boost::program_options::variables_map & map, Config && config)
+            {
+                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map.count(_name(Head::name))));
+            }
+
+            template<typename Head, typename... Tail, typename Config, typename std::enable_if<!Head::is_void, int>::type = 0>
+            auto _get(boost::program_options::variables_map & map, Config && config)
+            {
+                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<typename Head::type>()));
+            }
+        }
+
+        template<typename... Args>
+        auto parse_argv(int argc, const char ** argv, id<Args>... args)
+        {
+            auto visible = _detail::_handle_visible(args...);
+            auto hidden = _detail::_handle_hidden(args...);
+            auto positional = _detail::_handle_positional(args...);
+
+            boost::program_options::options_description all;
+            all.add(visible).add(hidden);
+
+            boost::program_options::variables_map variables;
+            boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(all)
+                .style(boost::program_options::command_line_style::allow_short
+                    | boost::program_options::command_line_style::allow_long
+                    | boost::program_options::command_line_style::allow_sticky
+                    | boost::program_options::command_line_style::allow_dash_for_short
+                    | boost::program_options::command_line_style::long_allow_next
+                    | boost::program_options::command_line_style::short_allow_next
+                    | boost::program_options::command_line_style::allow_long_disguise).run(), variables);
+
+            return _detail::_get<Args...>(variables, bound_configuration<>{});
         }
     }}
 }
