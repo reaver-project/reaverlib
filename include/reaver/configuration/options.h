@@ -36,12 +36,14 @@
 #include "../id.h"
 #include "../logger.h"
 #include "../exception.h"
+#include "../tpl/sort.h"
+#include "../tpl/filter.h"
 
 namespace reaver
 {
     namespace options { inline namespace _v1
     {
-        static struct positional_type
+        static constexpr struct positional_type
         {
             constexpr positional_type()
             {
@@ -58,6 +60,7 @@ namespace reaver
 
             bool position_specified = false;
             std::size_t required_position = 0;
+            std::size_t count = 1;
         } positional;
 
         static struct required_type
@@ -275,7 +278,7 @@ namespace reaver
                 swallow{ initialize(std::forward<Args>(args))... };
             }
 
-            constexpr unit initialize(positional_type && pos)
+            constexpr unit initialize(positional_type pos)
             {
                 position_specified = true;
                 position = pos;
@@ -292,6 +295,7 @@ namespace reaver
             unit initialize(T &&)
             {
                 static_assert(_detail::_false_type<T>(), "tried to use an unknown reaver::configuration option");
+                return {};
             }
 
             bool position_specified = false;
@@ -392,14 +396,36 @@ namespace reaver
             template<typename T>
             unit _handle_positional(boost::program_options::positional_options_description & desc)
             {
+                desc.add(T::name, T::options.position.count);
                 return {};
             }
+
+            template<typename T>
+            struct _is_positional : std::integral_constant<bool, T::options.position_specified>
+            {
+            };
+
+            template<typename T, typename U>
+            struct _compare_positionals
+            {
+                static_assert(!(T::options.position.required_position < U::options.position.required_position
+                        && T::options.position.required_position + T::options.position.count > U::options.position.required_position)
+                    && !(U::options.position.required_position < T::options.position.required_position
+                        && U::options.position.required_position + U::options.position.count > T::options.position.required_position));
+                static constexpr bool value = T::options.position.required_position < U::options.position.required_position;
+            };
 
             template<typename... Args>
             auto _handle_positional(id<Args>...)
             {
                 boost::program_options::positional_options_description desc;
-                swallow{ _handle_positional<Args>(desc)... };
+                tpl::sort<
+                    tpl::filter<
+                        tpl::vector<Args...>,
+                        _is_positional
+                    >,
+                    _compare_positionals
+                >::map([&](auto tpl_id){ _handle_positional<typename decltype(tpl_id)::type>(desc);  });
                 return desc;
             }
 
@@ -433,7 +459,7 @@ namespace reaver
             all.add(visible).add(hidden);
 
             boost::program_options::variables_map variables;
-            boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(all)
+            boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(all).positional(positional)
                 .style(boost::program_options::command_line_style::allow_short
                     | boost::program_options::command_line_style::allow_long
                     | boost::program_options::command_line_style::allow_sticky

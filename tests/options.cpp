@@ -62,6 +62,11 @@ namespace
     {
         static constexpr test::reaver::options::option_set options = { test::reaver::options::positional };
     };
+
+    struct value : test::reaver::options::opt<value, std::size_t>
+    {
+        static constexpr test::reaver::options::option_set options = { test::reaver::options::positional(1) };
+    };
 }
 
 MAYFLY_BEGIN_SUITE("configuration");
@@ -113,7 +118,19 @@ MAYFLY_ADD_TESTCASE("positional", []
     const char * argv[] = { "", "install" };
     auto parsed = test::reaver::options::parse_argv(2, argv, test::reaver::id<command>{});
     MAYFLY_REQUIRE(std::is_same<decltype(parsed), test::reaver::bound_configuration<command>>::value);
+    MAYFLY_REQUIRE(parsed.get<command>() == "install");
 });
+
+MAYFLY_ADD_TESTCASE("multiple positional", []
+{
+    const char * argv[] = { "", "upgrade", "123" };
+    auto parsed = test::reaver::options::parse_argv(3, argv, test::reaver::id<value>{}, test::reaver::id<command>{});
+    MAYFLY_REQUIRE(std::is_same<decltype(parsed), test::reaver::bound_configuration<value, command>>::value);
+    MAYFLY_REQUIRE(parsed.get<command>() == "upgrade");
+    MAYFLY_REQUIRE(parsed.get<value>() == 123);
+});
+
+// TODO: need checks for static asserts in positional comparator (checking for overlapping "regions" of positional arguments)
 
 MAYFLY_END_SUITE;
 MAYFLY_END_SUITE;
