@@ -37,10 +37,30 @@ namespace
         static constexpr const char * name = "version,v";
     };
 
+    struct help : test::reaver::options::opt<help, void>
+    {
+        static constexpr const char * name = "help,h";
+    };
+
+    struct other_void : test::reaver::options::opt<other_void, void>
+    {
+        static constexpr const char * name = "other-void";
+    };
+
     struct count : test::reaver::options::opt<count, int>
     {
         static constexpr const char * name = "count,c";
         static constexpr const char * description = "this option controls the count of some random thing";
+    };
+
+    struct output : test::reaver::options::opt<output, std::string>
+    {
+        static constexpr const char * name = "output,o";
+    };
+
+    struct command : test::reaver::options::opt<command, std::string>
+    {
+        static constexpr test::reaver::options::option_set options = { test::reaver::options::positional };
     };
 }
 
@@ -67,6 +87,32 @@ MAYFLY_ADD_TESTCASE("regular", []
     auto parsed = test::reaver::options::parse_argv(3, argv, test::reaver::id<count>{});
     MAYFLY_REQUIRE(std::is_same<decltype(parsed), test::reaver::bound_configuration<count>>::value);
     MAYFLY_REQUIRE(parsed.get<count>() == 2);
+});
+
+MAYFLY_ADD_TESTCASE("multiple regular", []
+{
+    const char * argv[] = { "", "--count", "2", "--output", "foo" };
+    auto parsed = test::reaver::options::parse_argv(5, argv, test::reaver::id<count>{}, test::reaver::id<output>{});
+    MAYFLY_REQUIRE(std::is_same<decltype(parsed), test::reaver::bound_configuration<count, output>>::value);
+    MAYFLY_REQUIRE(parsed.get<count>() == 2);
+    MAYFLY_REQUIRE(parsed.get<output>() == "foo");
+});
+
+MAYFLY_ADD_TESTCASE("multiple void", []
+{
+    const char * argv[] = { "", "--version", "--help" };
+    auto parsed = test::reaver::options::parse_argv(3, argv, test::reaver::id<version>{}, test::reaver::id<help>{}, test::reaver::id<other_void>{});
+    MAYFLY_REQUIRE(std::is_same<decltype(parsed), test::reaver::bound_configuration<version, help, other_void>>::value);
+    MAYFLY_REQUIRE(parsed.get<version>());
+    MAYFLY_REQUIRE(parsed.get<help>());
+    MAYFLY_REQUIRE(!parsed.get<other_void>());
+});
+
+MAYFLY_ADD_TESTCASE("positional", []
+{
+    const char * argv[] = { "", "install" };
+    auto parsed = test::reaver::options::parse_argv(2, argv, test::reaver::id<command>{});
+    MAYFLY_REQUIRE(std::is_same<decltype(parsed), test::reaver::bound_configuration<command>>::value);
 });
 
 MAYFLY_END_SUITE;

@@ -1,6 +1,6 @@
 CXX = g++
 LD = g++
-CXXFLAGS += -Os -Wall -std=c++1y -MD -fPIC -Wno-unused-parameter -g
+CXXFLAGS += -Os -Wall -std=c++1z -MD -fPIC -Wno-unused-parameter -Wno-unused-const-variable -Wno-undefined-internal -g
 SOFLAGS += -shared
 LDFLAGS +=
 LIBRARIES +=
