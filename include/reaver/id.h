@@ -25,5 +25,8 @@
 namespace reaver
 {
     template<typename T>
-    struct id {};
+    struct id
+    {
+        using type = T;
+    };
 }
