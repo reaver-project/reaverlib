@@ -138,10 +138,10 @@ MAYFLY_ADD_TESTCASE("mixed arguments", []
     auto parsed = test::reaver::options::parse_argv(9, argv, test::reaver::id<command>{}, test::reaver::id<value>{}, test::reaver::id<help>{}, test::reaver::id<version>{},
         test::reaver::id<output>{}, test::reaver::id<count>{});
     MAYFLY_REQUIRE(parsed.get<command>() == "upgrade");
-    MAYFLY_REQUIRE(parsed.get<value>() == 456);
     MAYFLY_REQUIRE(parsed.get<help>());
     MAYFLY_REQUIRE(parsed.get<version>());
     MAYFLY_REQUIRE(parsed.get<output>() == "foo");
+    MAYFLY_REQUIRE(parsed.get<value>() == 456);
     MAYFLY_REQUIRE(parsed.get<count>() == 5);
 });
 
