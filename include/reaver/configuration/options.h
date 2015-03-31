@@ -358,6 +358,18 @@ namespace reaver
 
         namespace _detail
         {
+            template<typename T, typename = void>
+            struct _po_type
+            {
+                using type = typename T::type;
+            };
+
+            template<typename T>
+            struct _po_type<T, void_t<typename T::parsed_type>>
+            {
+                using type = typename T::parsed_type;
+            };
+
             template<typename T>
             struct _remove_optional
             {
@@ -396,7 +408,7 @@ namespace reaver
                 return [](Value value){ return value; };
             }
 
-            template<typename T, typename Value, typename std::enable_if<_is_vector<typename T::type>::value && T::options.allows_composing, int>::type = 0>
+            template<typename T, typename Value, typename std::enable_if<_is_vector<typename _po_type<T>::type>::value && T::options.allows_composing, int>::type = 0>
             auto _handle_vector_impl(choice<1>)
             {
                 return [](Value value){ return value->composing(); };
@@ -411,7 +423,7 @@ namespace reaver
             template<typename T, typename std::enable_if<!T::is_void, int>::type = 0>
             unit _handle(boost::program_options::options_description & desc)
             {
-                desc.add_options()(T::name, _handle_vector<T>(boost::program_options::value<typename _remove_optional<typename T::type>::type>()), T::description);
+                desc.add_options()(T::name, _handle_vector<T>(boost::program_options::value<typename _remove_optional<typename _po_type<T>::type>::type>()), T::description);
 
                 return {};
             }
@@ -494,14 +506,37 @@ namespace reaver
             {
                 return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(
                     map.count(_name(Head::name))
-                        ? map[_name(Head::name)].template as<typename _remove_optional<typename Head::type>::type>()
+                        ? map[_name(Head::name)].template as<typename _remove_optional<typename _po_type<Head>::type>::type>()
                         : typename Head::type{}));
             }
 
-            template<typename Head, typename... Tail, typename Config, typename std::enable_if<!Head::is_void && !_is_optional<typename Head::type>::value, int>::type = 0>
+            template<typename T, typename = void>
+            struct _has_default : std::false_type {};
+
+            template<typename T>
+            struct _has_default<T, void_t<decltype(T::default_value)>> : std::true_type {};
+
+            template<typename Head, typename... Tail, typename Config, typename std::enable_if<_has_default<Head>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
-                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<typename Head::type>()));
+                if (map.count(_name(Head::name)))
+                {
+                    return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<
+                        typename _remove_optional<typename _po_type<Head>::type>::type>()));
+                }
+
+                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(decltype(Head::default_value){ Head::default_value }));
+            }
+
+            // TODO: convert all these to choice<N>/select_overload somehow
+            // right now it's getting ridiculous
+            template<typename Head, typename... Tail, typename Config, typename std::enable_if<
+                !Head::is_void
+                && !_is_optional<typename Head::type>::value
+                && !_has_default<Head>::value, int>::type = 0>
+            auto _get_impl(boost::program_options::variables_map & map, Config && config)
+            {
+                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<typename _po_type<Head>::type>()));
             }
 
             template<typename... Args, typename Config>

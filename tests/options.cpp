@@ -177,6 +177,9 @@ MAYFLY_ADD_TESTCASE("mixed arguments", []
     MAYFLY_REQUIRE(parsed.get<count>() == 5);
 });
 
+// TODO: tests regarding tag::parsed_type
+// TODO: tests regarding tag::default_value
+
 MAYFLY_END_SUITE;
 MAYFLY_END_SUITE;
 
