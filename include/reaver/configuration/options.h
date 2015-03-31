@@ -39,6 +39,7 @@
 #include "../exception.h"
 #include "../tpl/sort.h"
 #include "../tpl/filter.h"
+#include "../overloads.h"
 
 namespace reaver
 {
@@ -305,6 +306,7 @@ namespace reaver
             bool is_visible = true;
             bool has_section = false;
             const char * section = nullptr;
+            bool allows_composing = true;
         };
 
         template<typename CRTP, typename ValueType, bool Register = true>
@@ -382,10 +384,34 @@ namespace reaver
                 return {};
             }
 
+            template<typename T>
+            struct _is_vector : std::false_type {};
+
+            template<typename T>
+            struct _is_vector<std::vector<T>> : std::true_type {};
+
+            template<typename T, typename Value>
+            auto _handle_vector_impl(choice<0>)
+            {
+                return [](Value value){ return value; };
+            }
+
+            template<typename T, typename Value, typename std::enable_if<_is_vector<typename T::type>::value && T::options.allows_composing, int>::type = 0>
+            auto _handle_vector_impl(choice<1>)
+            {
+                return [](Value value){ return value->composing(); };
+            }
+
+            template<typename T, typename Value>
+            auto _handle_vector(Value value)
+            {
+                return _handle_vector_impl<T, Value>(select_overload{})(value);
+            }
+
             template<typename T, typename std::enable_if<!T::is_void, int>::type = 0>
             unit _handle(boost::program_options::options_description & desc)
             {
-                desc.add_options()(T::name, boost::program_options::value<typename _remove_optional<typename T::type>::type>(), T::description);
+                desc.add_options()(T::name, _handle_vector<T>(boost::program_options::value<typename _remove_optional<typename T::type>::type>()), T::description);
 
                 return {};
             }

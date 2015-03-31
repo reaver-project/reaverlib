@@ -72,6 +72,11 @@ namespace
     {
         static constexpr const char * name = "optional,o";
     };
+
+    struct path : test::reaver::options::opt<path, std::vector<std::string>>
+    {
+        static constexpr const char * name = "path";
+    };
 }
 
 MAYFLY_BEGIN_SUITE("configuration");
@@ -150,6 +155,13 @@ MAYFLY_ADD_TESTCASE("optional", []
         auto parsed = test::reaver::options::parse_argv(1, argv, test::reaver::id<optional>{});
         MAYFLY_REQUIRE(!parsed.get<optional>());
     }
+});
+
+MAYFLY_ADD_TESTCASE("vector", []
+{
+    const char * argv[] = { "", "--path", "a", "--path", "b" };
+    auto parsed = test::reaver::options::parse_argv(5, argv, test::reaver::id<path>{});
+    MAYFLY_REQUIRE(parsed.get<path>() == std::vector<std::string>{ "a", "b" });
 });
 
 MAYFLY_ADD_TESTCASE("mixed arguments", []
