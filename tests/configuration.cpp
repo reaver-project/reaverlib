@@ -177,13 +177,13 @@ namespace
         std::declval<Config>().template set<Tag>(std::declval<typename Tag::type>()),
         void()
     )>::value, int>::type = 0>
-    bool check_invalid_set(reaver::_detail::_choice<0>)
+    bool check_invalid_set(test::reaver::choice<0>)
     {
         return false;
     }
 
     template<typename Tag, typename Config>
-    bool check_invalid_set(reaver::_detail::_choice<1>)
+    bool check_invalid_set(test::reaver::choice<1>)
     {
         return true;
     }
@@ -192,13 +192,13 @@ namespace
         std::declval<Config>().template get<Tag>(std::declval<typename Tag::type>()),
         void()
     )>::value, int>::type = 0>
-    bool check_invalid_get(reaver::_detail::_choice<0>)
+    bool check_invalid_get(test::reaver::choice<0>)
     {
         return false;
     }
 
     template<typename Tag, typename Config>
-    bool check_invalid_get(reaver::_detail::_choice<1>)
+    bool check_invalid_get(test::reaver::choice<1>)
     {
         return true;
     }
@@ -207,13 +207,13 @@ namespace
         std::declval<Config>().template add<Tag>(std::declval<typename Tag::type>()),
         void()
     )>::value, int>::type = 0>
-    bool check_invalid_add(reaver::_detail::_choice<0>)
+    bool check_invalid_add(test::reaver::choice<0>)
     {
         return false;
     }
 
     template<typename Tag, typename Config>
-    bool check_invalid_add(reaver::_detail::_choice<1>)
+    bool check_invalid_add(test::reaver::choice<1>)
     {
         return true;
     }
@@ -221,14 +221,14 @@ namespace
 
 MAYFLY_ADD_TESTCASE("invalid set", []
 {
-    MAYFLY_REQUIRE(check_invalid_set<simple_tag, test::reaver::bound_configuration<>>(reaver::_detail::_select_overload{}));
-    MAYFLY_REQUIRE(check_invalid_set<another_tag, test::reaver::bound_configuration<simple_tag>>(reaver::_detail::_select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_set<simple_tag, test::reaver::bound_configuration<>>(test::reaver::select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_set<another_tag, test::reaver::bound_configuration<simple_tag>>(test::reaver::select_overload{}));
 });
 
 MAYFLY_ADD_TESTCASE("invalid get", []
 {
-    MAYFLY_REQUIRE(check_invalid_get<simple_tag, test::reaver::bound_configuration<>>(reaver::_detail::_select_overload{}));
-    MAYFLY_REQUIRE(check_invalid_get<another_tag, test::reaver::bound_configuration<simple_tag>>(reaver::_detail::_select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_get<simple_tag, test::reaver::bound_configuration<>>(test::reaver::select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_get<another_tag, test::reaver::bound_configuration<simple_tag>>(test::reaver::select_overload{}));
 });
 
 MAYFLY_ADD_TESTCASE("add to bound configuration", []
@@ -247,7 +247,7 @@ MAYFLY_ADD_TESTCASE("add to bound configuration", []
 
 MAYFLY_ADD_TESTCASE("invalid add", []
 {
-    MAYFLY_REQUIRE(check_invalid_add<simple_tag, test::reaver::bound_configuration<simple_tag>>(reaver::_detail::_select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_add<simple_tag, test::reaver::bound_configuration<simple_tag>>(test::reaver::select_overload{}));
 });
 
 MAYFLY_ADD_TESTCASE("construct from unbound", []
@@ -278,13 +278,13 @@ MAYFLY_ADD_TESTCASE("construct from bound", []
 namespace
 {
     template<typename BoundType, typename Argument, typename std::enable_if<std::is_void<decltype(BoundType{ std::declval<Argument>() }, void())>::value, int>::type = 0>
-    bool check_invalid_construct(reaver::_detail::_choice<0>)
+    bool check_invalid_construct(test::reaver::choice<0>)
     {
         return false;
     }
 
     template<typename...>
-    bool check_invalid_construct(reaver::_detail::_choice<1>)
+    bool check_invalid_construct(test::reaver::choice<1>)
     {
         return true;
     }
@@ -295,7 +295,7 @@ MAYFLY_ADD_TESTCASE("invalid construct from bound", []
     test::reaver::bound_configuration<> empty;
     auto one = empty.add<simple_tag>(1);
 
-    MAYFLY_REQUIRE(check_invalid_construct<test::reaver::bound_configuration<another_tag>, decltype(one)>(reaver::_detail::_select_overload{}));
+    MAYFLY_REQUIRE(check_invalid_construct<test::reaver::bound_configuration<another_tag>, decltype(one)>(test::reaver::select_overload{}));
 });
 
 MAYFLY_END_SUITE;

@@ -30,6 +30,7 @@
 
 #include "../unit.h"
 #include "../swallow.h"
+#include "../overloads.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -103,14 +104,6 @@ namespace reaver { inline namespace _v1
 
         template<template<typename...> class Trait, typename T, typename... Types>
         struct _apply_on_type_list<Trait, T, std::tuple<Types...>> : Trait<T, Types...> {};
-
-        template<unsigned I>
-        struct _choice : _choice<I + 1> {};
-
-        template<>
-        struct _choice<10> {};
-
-        struct _select_overload : _choice<0> {};
     }
 
     class configuration
@@ -119,7 +112,7 @@ namespace reaver { inline namespace _v1
         template<typename T, typename... Args>
         unit set(Args &&... args)
         {
-            _set<T, std::tuple<Args...>>(_detail::_select_overload{})(std::forward<Args>(args)...);
+            _set<T, std::tuple<Args...>>(select_overload{})(std::forward<Args>(args)...);
             return {};
         }
 
@@ -133,7 +126,7 @@ namespace reaver { inline namespace _v1
         template<typename T>
         auto & get(T = {})
         {
-            return _get<T>(_detail::_select_overload{})();
+            return _get<T>(select_overload{})();
         }
 
         template<typename T>
@@ -144,7 +137,7 @@ namespace reaver { inline namespace _v1
 
     private:
         template<typename T, typename std::enable_if<std::is_void<decltype(T::default_value, void())>::value, int>::type = 0>
-        auto _get(_detail::_choice<0>)
+        auto _get(choice<0>)
         {
             return [&]() -> decltype(auto)
             {
@@ -157,7 +150,7 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename T>
-        auto _get(_detail::_choice<1>)
+        auto _get(choice<1>)
         {
             return [&]() -> decltype(auto) { return boost::any_cast<typename T::type &>(_map.at(boost::typeindex::type_id<T>())); };
         }
@@ -172,37 +165,37 @@ namespace reaver { inline namespace _v1
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_same, typename T::type, TypeList>::value
             && _detail::_has_identity_construct<T>::value, int>::type = 0>
-        auto _set(_detail::_choice<0>)
+        auto _set(choice<0>)
         {
             return [&](typename T::type value){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::move(value))); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_same, typename T::type, TypeList>::value, int>::type = 0>
-        auto _set(_detail::_choice<1>)
+        auto _set(choice<1>)
         {
             return [&](typename T::type value){ _map[boost::typeindex::type_id<T>()] = std::move(value); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_exact_match, T, TypeList>::value, int>::type = 0>
-        auto _set(_detail::_choice<2>)
+        auto _set(choice<2>)
         {
             return [&](auto &&... arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg)...)); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_static_cast, T, TypeList>::value, int>::type = 0>
-        auto _set(_detail::_choice<3>)
+        auto _set(choice<3>)
         {
             return [&](auto && arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(std::forward<decltype(arg)>(arg)); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_callable, T, TypeList>::value, int>::type = 0>
-        auto _set(_detail::_choice<4>)
+        auto _set(choice<4>)
         {
             return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(args)>(args)...)); };
         }
 
         template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_constructible, T, TypeList>::value, int>::type = 0>
-        auto _set(_detail::_choice<5>)
+        auto _set(choice<5>)
         {
             return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<decltype(args)>(args)... }; };
         }
