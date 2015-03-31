@@ -29,6 +29,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/optional.hpp>
 
 #include "../configuration.h"
 #include "../swallow.h"
@@ -355,6 +356,18 @@ namespace reaver
 
         namespace _detail
         {
+            template<typename T>
+            struct _remove_optional
+            {
+                using type = T;
+            };
+
+            template<typename T>
+            struct _remove_optional<boost::optional<T>>
+            {
+                using type = T;
+            };
+
             std::string _name(const char * full_name)
             {
                 std::string buf{ full_name };
@@ -372,7 +385,7 @@ namespace reaver
             template<typename T, typename std::enable_if<!T::is_void, int>::type = 0>
             unit _handle(boost::program_options::options_description & desc)
             {
-                desc.add_options()(T::name, boost::program_options::value<typename T::type>(), T::description);
+                desc.add_options()(T::name, boost::program_options::value<typename _remove_optional<typename T::type>::type>(), T::description);
 
                 return {};
             }
@@ -444,7 +457,22 @@ namespace reaver
                 return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map.count(_name(Head::name))));
             }
 
-            template<typename Head, typename... Tail, typename Config, typename std::enable_if<!Head::is_void, int>::type = 0>
+            template<typename>
+            struct _is_optional : std::false_type {};
+
+            template<typename T>
+            struct _is_optional<boost::optional<T>> : std::true_type {};
+
+            template<typename Head, typename... Tail, typename Config, typename std::enable_if<_is_optional<typename Head::type>::value, int>::type = 0>
+            auto _get_impl(boost::program_options::variables_map & map, Config && config)
+            {
+                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(
+                    map.count(_name(Head::name))
+                        ? map[_name(Head::name)].template as<typename _remove_optional<typename Head::type>::type>()
+                        : typename Head::type{}));
+            }
+
+            template<typename Head, typename... Tail, typename Config, typename std::enable_if<!Head::is_void && !_is_optional<typename Head::type>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
                 return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<typename Head::type>()));

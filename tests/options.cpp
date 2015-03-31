@@ -67,6 +67,11 @@ namespace
     {
         static constexpr test::reaver::options::option_set options = { test::reaver::options::positional(1) };
     };
+
+    struct optional : test::reaver::options::opt<optional, boost::optional<int>>
+    {
+        static constexpr const char * name = "optional,o";
+    };
 }
 
 MAYFLY_BEGIN_SUITE("configuration");
@@ -131,6 +136,21 @@ MAYFLY_ADD_TESTCASE("multiple positional", []
 });
 
 // TODO: need checks for static asserts in positional comparator (checking for overlapping "regions" of positional arguments)
+
+MAYFLY_ADD_TESTCASE("optional", []
+{
+    {
+        const char * argv[] = { "", "--optional", "5" };
+        auto parsed = test::reaver::options::parse_argv(3, argv, test::reaver::id<optional>{});
+        MAYFLY_REQUIRE(parsed.get<optional>() == 5);
+    }
+
+    {
+        const char * argv[] = { "" };
+        auto parsed = test::reaver::options::parse_argv(1, argv, test::reaver::id<optional>{});
+        MAYFLY_REQUIRE(!parsed.get<optional>());
+    }
+});
 
 MAYFLY_ADD_TESTCASE("mixed arguments", []
 {
