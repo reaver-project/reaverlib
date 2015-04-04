@@ -35,6 +35,12 @@ namespace
         buzz = 1,
         fizz
     );
+
+    reflected_enum(another,
+        foo,
+        bar,
+        baz
+    );
 }
 
 MAYFLY_ADD_TESTCASE("enum_values", []
@@ -63,6 +69,13 @@ MAYFLY_ADD_TESTCASE("from_string", []
     MAYFLY_CHECK(from_string<test>("baz") == test::baz);
     MAYFLY_CHECK(from_string<test>("buzz") == test::buzz);
     MAYFLY_CHECK(from_string<test>("fizz") == test::fizz);
+});
+
+// this is a sanity test to check for potential problems with inlineness and multiple definitions and such
+MAYFLY_ADD_TESTCASE("another enum", []
+{
+    MAYFLY_REQUIRE(to_string(another::bar) == "bar");
+    MAYFLY_REQUIRE(from_string<another>("foo") == another::foo);
 });
 
 MAYFLY_END_SUITE;
