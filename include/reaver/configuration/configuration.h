@@ -22,10 +22,11 @@
 
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <type_traits>
 
 #include <boost/type_index.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/any.hpp>
 
 #include "../unit.h"
@@ -200,7 +201,7 @@ namespace reaver { inline namespace _v1
             return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<decltype(args)>(args)... }; };
         }
 
-        std::map<boost::typeindex::type_index, boost::any> _map;
+        std::unordered_map<boost::typeindex::type_index, boost::any, boost::hash<boost::typeindex::type_index>> _map;
     };
 
     namespace _detail

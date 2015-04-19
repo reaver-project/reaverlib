@@ -32,6 +32,8 @@
 #include <future>
 //#include <type_traits>
 
+#include <boost/functional/hash.hpp>
+
 namespace test
 {
 #   include "thread_pool.h"

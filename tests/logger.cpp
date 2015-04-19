@@ -22,6 +22,8 @@
 
 #include <reaver/mayfly.h>
 
+
+#include <boost/functional/hash.hpp>
 namespace test
 {
 #   include "logger.h"
