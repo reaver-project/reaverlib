@@ -459,7 +459,6 @@ namespace reaver
             template<typename T, typename U>
             struct _compare_positionals
             {
-                static_assert(!(T::options.position.required_position < U::options.position.required_position
                 static_assert_(!(T::options.position.required_position < U::options.position.required_position
                         && T::options.position.required_position + T::options.position.count > U::options.position.required_position)
                     && !(U::options.position.required_position < T::options.position.required_position
