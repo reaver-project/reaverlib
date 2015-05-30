@@ -132,7 +132,6 @@ namespace reaver
         relaxed_constexpr auto get_all(Args &&... args)
         {
             constexpr auto count = _detail::_count<K, Args...>::value;
-            std::array<typename K::value_type, count> array;
             std::array<typename K::value_type, count> array = {};
 
             for (std::size_t i = 0; i < count; ++i)
