@@ -28,6 +28,7 @@
 #include "vector.h"
 #include "nth.h"
 #include "concat.h"
+#include "../static_assert.h"
 
 namespace reaver
 {
@@ -56,7 +57,7 @@ namespace reaver
             template<typename... Elements, std::size_t Position, typename Type>
             struct _insert_nth_helper<vector<Elements...>, Position, Type, false>
             {
-                static_assert(Position == sizeof...(Elements));
+                static_assert_(Position == sizeof...(Elements));
                 using type = vector<Elements..., Type>;
             };
 
@@ -81,8 +82,14 @@ namespace reaver
                 using type = typename _sorted_insert<vector<Head>, Comparator, Tail...>::type;
             };
 
-            template<std::size_t Position, std::size_t Begin, std::size_t End, typename Vector, template<typename...> typename Comparator, typename Type>
+            template<std::size_t Position, std::size_t Begin, std::size_t End, typename Vector, template<typename...> typename Comparator, typename Type, typename = void>
             struct _sorted_position_impl;
+
+            template<std::size_t Begin, std::size_t End, typename Vector, template<typename...> typename Comparator, typename Type>
+            struct _sorted_position_impl<~0ull, Begin, End, Vector, Comparator, Type>
+            {
+                static constexpr const std::size_t value = -1;
+            };
 
             template<template<typename...> typename Comparator, typename Type>
             struct _sorted_position_impl<0, 0, 0, vector<>, Comparator, Type>
@@ -97,16 +104,22 @@ namespace reaver
             };
 
             template<std::size_t Position, std::size_t Begin, std::size_t End, typename... Elements, template<typename...> typename Comparator, typename Type>
-            struct _sorted_position_impl<Position, Begin, End, vector<Elements...>, Comparator, Type>
+            struct _sorted_position_impl<Position, Begin, End, vector<Elements...>, Comparator, Type, typename std::enable_if<Position != ~0ull>::type>
             {
-                static constexpr const std::size_t value = Comparator<nth<vector<Elements...>, End - 1>, Type>::value
+            private:
+                static constexpr const std::size_t condition1 = Comparator<nth<vector<Elements...>, Position - 1>, Type>::value || Position == Begin || Position == End;
+                static constexpr const std::size_t condition2 = Comparator<Type, nth<vector<Elements...>, Position>>::value
+                    || (!Comparator<Type, nth<vector<Elements...>, Position>>::value && !Comparator<nth<vector<Elements...>, Position>, Type>::value)
+                    || Position == Begin || Position == End;
+
+            public:
+                static constexpr const std::size_t value = Comparator<nth<vector<Elements...>, sizeof...(Elements) - 1>, Type>::value
                     ? sizeof...(Elements) // greater than the last element should be placed at the end
-                    : (Comparator<nth<vector<Elements...>, Position - 1>, Type>::value
-                        ? (Comparator<Type, nth<vector<Elements...>, Position>>::value
-                            || (!Comparator<Type, nth<vector<Elements...>, Position>>::value && !Comparator<nth<vector<Elements...>, Position>, Type>::value)
+                    : (condition1
+                        ? (condition2
                             ? Position
-                            : _sorted_position_impl<Position + (End - Position) / 2, Position, End, vector<Elements...>, Comparator, Type>::value)
-                        : _sorted_position_impl<Position - (Position - Begin) / 2, Begin, Position, vector<Elements...>, Comparator, Type>::value);
+                            : _sorted_position_impl<condition2 ? -1 : (Position + (End - Position) / 2), Position, End, vector<Elements...>, Comparator, Type>::value)
+                        : _sorted_position_impl<condition1 ? -1 : (Position - (Position - Begin) / 2), Begin, Position, vector<Elements...>, Comparator, Type>::value);
             };
 
             template<typename Vector, template<typename...> typename Comparator, typename Type>

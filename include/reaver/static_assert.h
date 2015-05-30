@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2014 Michał "Griwes" Dominiak
+ * Copyright © 2015 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -20,7 +20,9 @@
  *
  **/
 
-#pragma once
-
-#define relaxed_constexpr constexpr
+#ifdef __clang__
+# define static_assert_(...) static_assert(__VA_ARGS__)
+#else
+# define static_assert_(...) static_assert(__VA_ARGS__, #__VA_ARGS__)
+#endif
 

@@ -5,7 +5,7 @@ also be useful for people from outside of it.
 
 ## Supported compilers
 
-Currently supported compilers include GCC 4.9+ and Clang 3.5+, both with libstdc++
+Currently supported compilers include GCC 5+ and Clang 3.5+, both with libstdc++
 and libc++.
 
 CI status:

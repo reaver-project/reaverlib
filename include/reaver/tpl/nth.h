@@ -25,6 +25,7 @@
 #include <cstddef>
 
 #include "vector.h"
+#include "../static_assert.h"
 
 namespace reaver
 {
@@ -38,7 +39,7 @@ namespace reaver
             template<typename Head, typename... Elements, std::size_t N>
             struct _nth<vector<Head, Elements...>, N>
             {
-                static_assert(sizeof...(Elements) + 1 >= N);
+                static_assert_(sizeof...(Elements) + 1 >= N);
                 using type = typename _nth<vector<Elements...>, N - 1>::type;
             };
 
