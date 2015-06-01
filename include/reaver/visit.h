@@ -65,6 +65,18 @@ namespace reaver { inline namespace _v1
             auto operator()(Arg && arg) -> decltype(std::declval<Lambda>()(std::forward<Arg>(arg)));
             boost::detail::variant::void_ operator()(const boost::detail::variant::void_ & v);
         };
+
+        template<typename U>
+        struct _remove_recursive_wrapper
+        {
+            using type = U;
+        };
+
+        template<typename U>
+        struct _remove_recursive_wrapper<boost::recursive_wrapper<U>>
+        {
+            using type = U;
+        };
     }
 
     template<typename Lambda, typename... Variants>
@@ -72,7 +84,7 @@ namespace reaver { inline namespace _v1
     {
         Lambda lambda;
 
-        using result_type = typename _detail::_filtered_common_type<void, decltype(std::declval<_detail::_call_forwarder<Lambda>>()(std::declval<Variants>()))...>::type;
+        using result_type = typename _detail::_filtered_common_type<void, decltype(std::declval<_detail::_call_forwarder<Lambda>>()(std::declval<typename _detail::_remove_recursive_wrapper<Variants>::type>()))...>::type;
 
         template<typename Arg>
         decltype(auto) operator()(Arg && arg)
@@ -90,18 +102,6 @@ namespace reaver { inline namespace _v1
 
     namespace _detail
     {
-        template<typename U>
-        struct _remove_recursive_wrapper
-        {
-            using type = U;
-        };
-
-        template<typename U>
-        struct _remove_recursive_wrapper<boost::recursive_wrapper<U>>
-        {
-            using type = U;
-        };
-
         template<typename U, bool IsNotReference, bool IsNotCv>
         struct _match_type_specification_impl
         {
