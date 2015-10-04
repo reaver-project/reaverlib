@@ -1,0 +1,50 @@
+/**
+ * Reaver Library Licence
+ *
+ * Copyright © 2015 Michał "Griwes" Dominiak
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation is required.
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ **/
+
+#pragma once
+
+#include <type_traits>
+
+#include "vector.h"
+
+namespace reaver
+{
+    namespace tpl { inline namespace _v1
+    {
+        template<typename... Ts>
+        struct index_of;
+
+        template<typename Head, typename... Tail, typename T>
+        struct index_of<tpl::vector<Head, Tail...>, T>
+            : std::integral_constant<
+                std::size_t,
+                index_of<tpl::vector<Tail...>, T>::value + 1
+            >
+        {
+        };
+
+        template<typename... Tail, typename T>
+        struct index_of<tpl::vector<T, Tail...>, T> : std::integral_constant<std::size_t, 0>
+        {
+        };
+    }}
+}
