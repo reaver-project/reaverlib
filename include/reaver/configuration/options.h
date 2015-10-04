@@ -342,7 +342,15 @@ namespace reaver
         template<typename CRTP, typename ValueType, bool Register>
         _detail::_option_registrar<CRTP, Register> option<CRTP, ValueType, Register>::_registrar;
 
-        inline auto parse_argv(int argc, char ** argv, const option_registry & registry = default_option_registry())
+#       define opt_name(X) static constexpr const char * name = X
+#       define opt_desc(X) static constexpr const char * description = X
+#       define opt_name_desc(X, Y) opt_name(X); opt_desc(Y)
+#       define new_opt(name, type, name_string) struct name : ::reaver::options::opt<name, type> { opt_name(name_string); }
+#       define new_opt_desc(name, type, name_string, desc_string) struct name : ::reaver::options::opt<name, type> { opt_name_desc(name_string, desc_string); }
+#       define new_opt_ext(name, type, ...) struct name : ::reaver::options::opt<name, type> { __VA_ARGS__ }
+#       define opt_options(...) static constexpt ::reaver::options::option_set options = { __VA_ARGS__ }
+
+        inline auto parse_argv(int argc, const char * const * argv, const option_registry & registry = default_option_registry())
         {
             assert(false);
             // TODO: not implemented yet
@@ -402,16 +410,16 @@ namespace reaver
             template<typename T>
             struct _is_vector<std::vector<T>> : std::true_type {};
 
-            template<typename T, typename Value>
+            template<typename T, typename Value, typename std::enable_if<_is_vector<typename _po_type<T>::type>::value && T::options.allows_composing, int>::type = 0>
             auto _handle_vector_impl(choice<0>)
             {
-                return [](Value value){ return value; };
+                return [](Value value){ return value->composing(); };
             }
 
-            template<typename T, typename Value, typename std::enable_if<_is_vector<typename _po_type<T>::type>::value && T::options.allows_composing, int>::type = 0>
+            template<typename T, typename Value>
             auto _handle_vector_impl(choice<1>)
             {
-                return [](Value value){ return value->composing(); };
+                return [](Value value){ return value; };
             }
 
             template<typename T, typename Value>
@@ -501,7 +509,7 @@ namespace reaver
             template<typename T>
             struct _is_optional<boost::optional<T>> : std::true_type {};
 
-            template<typename Head, typename... Tail, typename Config, typename std::enable_if<_is_optional<typename Head::type>::value, int>::type = 0>
+            template<typename Head, typename... Tail, typename Config, typename std::enable_if<_is_optional<typename Head::type>::value || _is_vector<typename Head::type>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
                 return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(
@@ -533,7 +541,8 @@ namespace reaver
             template<typename Head, typename... Tail, typename Config, typename std::enable_if<
                 !Head::is_void
                 && !_is_optional<typename Head::type>::value
-                && !_has_default<Head>::value, int>::type = 0>
+                && !_has_default<Head>::value
+                && !_is_vector<typename Head::type>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
                 return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<typename _po_type<Head>::type>()));
@@ -547,7 +556,7 @@ namespace reaver
         }
 
         template<typename... Args>
-        auto parse_argv(int argc, const char ** argv, id<Args>... args)
+        auto parse_argv(int argc, const char * const * argv, id<Args>... args)
         {
             auto visible = _detail::_handle_visible(args...);
             auto hidden = _detail::_handle_hidden(args...);
@@ -567,6 +576,12 @@ namespace reaver
                     | boost::program_options::command_line_style::allow_long_disguise).run(), variables);
 
             return _detail::_get<Args...>(variables, bound_configuration<>{});
+        }
+
+        template<typename... Args>
+        auto parse_argv(int argc, const char * const * argv, tpl::vector<Args...>)
+        {
+            return parse_argv(argc, argv, id<Args>{}...);
         }
     }}
 }
