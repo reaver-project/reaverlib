@@ -1,6 +1,6 @@
 CXX = g++
 LD = g++
-CXXFLAGS += -Os -Wall -std=c++1z -MD -fPIC -Wno-unused-parameter -Wno-unused-const-variable -Wno-undefined-internal -g
+CXXFLAGS += -O0 -fno-omit-frame-pointer -Wall -std=c++1z -MD -fPIC -Wno-unused-parameter -Wno-unused-const-variable -Wno-undefined-internal -g
 SOFLAGS += -shared
 LDFLAGS +=
 LIBRARIES +=
@@ -18,28 +18,28 @@ BINDIR ?= $(EXEC_PREFIX)/bin
 LIBDIR ?= $(EXEC_PREFIX)/lib
 INCLUDEDIR ?= $(PREFIX)/include
 
-LIBRARY = libreaver.so
+# LIBRARY = libreaver.so
 # EXECUTABLE =
 
-all: library
+all: test
 
-library: $(LIBRARY)
+#library: $(LIBRARY)
 
 # $(EXECUTABLE): $(MAINOBJ)
 #	$(LD) $(CXXFLAGS) $(LDFLAGS) $(MAINOBJ) -o $@ $(LIBRARIES)
 
-$(LIBRARY): $(OBJECTS)
-	$(LD) $(CXXFLAGS) $(SOFLAGS) $(OBJECTS) -o $@ $(LIBRARIES)
+#$(LIBRARY): $(OBJECTS)
+#	$(LD) $(CXXFLAGS) $(SOFLAGS) $(OBJECTS) -o $@ $(LIBRARIES)
 
 test: ./tests/test
 
-./tests/test: $(TESTOBJ) $(LIBRARY)
-	$(LD) $(CXXFLAGS) $(LDFLAGS) $(TESTOBJ) -o $@ $(LIBRARIES) -lboost_system -lboost_iostreams -lboost_program_options -lboost_filesystem -ldl -pthread -L. $(LIBRARY)
+./tests/test: $(TESTOBJ) # $(LIBRARY)
+	$(LD) $(CXXFLAGS) $(LDFLAGS) $(TESTOBJ) -o $@ $(LIBRARIES) -lboost_system -lboost_iostreams -lboost_program_options -lboost_filesystem -pthread
 
-install: $(LIBRARY) # $(EXECUTABLE)
+install: # $(LIBRARY) # $(EXECUTABLE)
 #	@cp $(EXECUTABLE) $(DESTDIR)$(BINDIR)/$(EXECUTABLE)
-	@cp $(LIBRARY) $(DESTDIR)$(LIBDIR)/$(LIBRARY).1
-	@ln -sfn $(DESTDIR)$(LIBDIR)/$(LIBRARY).1 $(DESTDIR)$(LIBDIR)/$(LIBRARY)
+#	@cp $(LIBRARY) $(DESTDIR)$(LIBDIR)/$(LIBRARY).1
+#	@ln -sfn $(DESTDIR)$(LIBDIR)/$(LIBRARY).1 $(DESTDIR)$(LIBDIR)/$(LIBRARY)
 	@mkdir -p $(DESTDIR)$(INCLUDEDIR)/reaver
 	@cp -RT include $(DESTDIR)$(INCLUDEDIR)
 
