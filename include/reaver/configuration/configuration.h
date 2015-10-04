@@ -32,6 +32,7 @@
 #include "../unit.h"
 #include "../swallow.h"
 #include "../overloads.h"
+#include "../logic.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -206,39 +207,6 @@ namespace reaver { inline namespace _v1
 
     namespace _detail
     {
-        template<bool... Bools>
-        struct _any_of;
-
-        template<bool... Rest>
-        struct _any_of<false, Rest...> : _any_of<Rest...>
-        {
-        };
-
-        template<bool... Rest>
-        struct _any_of<true, Rest...> : std::true_type
-        {
-        };
-
-        template<>
-        struct _any_of<> : std::false_type
-        {
-        };
-
-        template<bool... Bools>
-        struct _all_of : std::false_type
-        {
-        };
-
-        template<bool... Tail>
-        struct _all_of<true, Tail...> : _all_of<Tail...>
-        {
-        };
-
-        template<>
-        struct _all_of<true> : std::true_type
-        {
-        };
-
         template<typename Checked, typename Set>
         struct _is_a_subset : public std::false_type
         {
@@ -270,7 +238,7 @@ namespace reaver { inline namespace _v1
         };
 
         template<typename... Checked, typename... Set>
-        struct _is_a_subset<std::tuple<Checked...>, std::tuple<Set...>> : public _all_of<_is_a_subset<std::tuple<Checked>, std::tuple<Set...>>::value...>
+        struct _is_a_subset<std::tuple<Checked...>, std::tuple<Set...>> : public all_of<_is_a_subset<std::tuple<Checked>, std::tuple<Set...>>::value...>
         {
         };
     }
@@ -324,31 +292,31 @@ namespace reaver { inline namespace _v1
             swallow{ set<Allowed>(std::move(config.get<Allowed>()))... };
         }
 
-        template<typename T, typename... Args, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
         unit set(Args &&... args)
         {
             return configuration::set<T>(std::forward<Args>(args)...);
         }
 
-        template<typename T, typename... Args, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
         unit set(T, Args &&... args)
         {
             return configuration::set(T{}, std::forward<Args>(args)...);
         }
 
-        template<typename T, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
         auto & get(T = {})
         {
             return configuration::get<T>();
         }
 
-        template<typename T, typename std::enable_if<_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
         auto & get(T = {}) const
         {
             return configuration::get<T>();
         }
 
-        template<typename T, typename... Args, typename std::enable_if<!_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<!any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
         auto add(Args &&... args) const &
         {
             bound_configuration<Allowed..., T> ret = *this;
@@ -356,7 +324,7 @@ namespace reaver { inline namespace _v1
             return ret;
         }
 
-        template<typename T, typename... Args, typename std::enable_if<!_detail::_any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<!any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
         auto add(Args &&... args) &&
         {
             bound_configuration<Allowed..., T> ret = std::move(*this);
