@@ -30,7 +30,7 @@
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v
+    namespace tpl { inline namespace _v1
     {
         template<typename... Elements>
         struct vector
