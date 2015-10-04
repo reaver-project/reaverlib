@@ -97,4 +97,30 @@ MAYFLY_ADD_TESTCASE("cvref type specifications", []()
     MAYFLY_REQUIRE(visitor(0) == 3);
 });
 
+MAYFLY_ADD_TESTCASE("lvalue reference arguments", []
+{
+    auto visitor = test::reaver::make_visitor(
+        test::reaver::id<int>(), [](int &){ return 1; },
+        test::reaver::id<float>(), [](float &){ return 2; }
+    );
+
+    boost::variant<int, float> a(1), b(1.f);
+
+    MAYFLY_REQUIRE(test::reaver::visit(visitor, a) == 1);
+    MAYFLY_REQUIRE(test::reaver::visit(visitor, b) == 2);
+});
+
+MAYFLY_ADD_TESTCASE("matching variants", []
+{
+    auto visitor = test::reaver::make_visitor(
+        test::reaver::id<boost::variant<int, float>>(), [](auto &&){ return 1; },
+        test::reaver::id<boost::variant<bool, char>>(), [](auto &&){ return 2; }
+    );
+
+    MAYFLY_REQUIRE(visitor(1) == 1);
+    MAYFLY_REQUIRE(visitor(1.f) == 1);
+    MAYFLY_REQUIRE(visitor(true) == 2);
+    MAYFLY_REQUIRE(visitor('a') == 2);
+});
+
 MAYFLY_END_SUITE;

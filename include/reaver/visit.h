@@ -27,81 +27,38 @@
 #include "tmp.h"
 #include "id.h"
 #include "unit.h"
+#include "overloads.h"
+#include "logic.h"
+#include "swallow.h"
 
 namespace reaver { inline namespace _v1
 {
-    namespace _detail
-    {
-        template<typename Void, typename...>
-        struct _filtered_common_type;
-
-        template<typename Last>
-        struct _filtered_common_type<void, Last>
-        {
-            using type = Last;
-        };
-
-        template<typename Last, typename... Voids>
-        struct _filtered_common_type<typename std::enable_if<all<std::is_same<Voids, boost::detail::variant::void_>::value...>::value>::type, Last, Voids...>
-        {
-            using type = Last;
-        };
-
-        template<typename First, typename... Rest>
-        struct _filtered_common_type<typename std::enable_if<!all<std::is_same<Rest, boost::detail::variant::void_>::value...>::value>::type, First, Rest...>
-            : std::common_type<First, typename _filtered_common_type<void, Rest...>::type>
-        {
-        };
-
-        template<typename... Rest>
-        struct _filtered_common_type<void, boost::detail::variant::void_, Rest...> : _filtered_common_type<void, Rest...>
-        {
-        };
-
-        template<typename Lambda>
-        struct _call_forwarder
-        {
-            template<typename Arg, typename std::enable_if<!std::is_same<boost::detail::variant::void_, Arg>::value, int>::type = 0>
-            auto operator()(Arg && arg) -> decltype(std::declval<Lambda>()(std::forward<Arg>(arg)));
-            boost::detail::variant::void_ operator()(const boost::detail::variant::void_ & v);
-        };
-
-        template<typename U>
-        struct _remove_recursive_wrapper
-        {
-            using type = U;
-        };
-
-        template<typename U>
-        struct _remove_recursive_wrapper<boost::recursive_wrapper<U>>
-        {
-            using type = U;
-        };
-    }
-
     template<typename Lambda, typename... Variants>
-    struct visitor
+    decltype(auto) visit(Lambda && lambda, boost::variant<Variants...> & variant)
     {
-        Lambda lambda;
-
-        using result_type = typename _detail::_filtered_common_type<void, decltype(std::declval<_detail::_call_forwarder<Lambda>>()(std::declval<typename _detail::_remove_recursive_wrapper<Variants>::type>()))...>::type;
-
-        template<typename Arg>
-        decltype(auto) operator()(Arg && arg)
-        {
-            return lambda(std::forward<Arg>(arg));
-        }
-    };
+        return boost::apply_visitor(lambda, variant);
+    }
 
     template<typename Lambda, typename... Variants>
     decltype(auto) visit(Lambda && lambda, const boost::variant<Variants...> & variant)
     {
-        auto v = visitor<Lambda, Variants...>{ std::forward<Lambda>(lambda) };
-        return boost::apply_visitor(v, variant);
+        return boost::apply_visitor(lambda, variant);
     }
 
     namespace _detail
     {
+        template<typename T>
+        struct _remove_recursive_wrapper
+        {
+            using type = T;
+        };
+
+        template<typename T>
+        struct _remove_recursive_wrapper<boost::recursive_wrapper<T>>
+        {
+            using type = T;
+        };
+
         template<typename U, bool IsNotReference, bool IsNotCv>
         struct _match_type_specification_impl
         {
@@ -136,6 +93,12 @@ namespace reaver { inline namespace _v1
             >::type;
         };
 
+        template<typename T, typename U>
+        struct _is_in_variant : std::false_type {};
+
+        template<typename... Args, typename U>
+        struct _is_in_variant<boost::variant<Args...>, U> : any_of<std::is_same<Args, U>::value...> {};
+
         template<typename T, typename Lambda, typename Default>
         struct _dispatching_visitor_impl
         {
@@ -144,19 +107,26 @@ namespace reaver { inline namespace _v1
             {
             }
 
-            template<typename U, typename std::enable_if<std::is_same<typename _match_type_specification<T, U>::type, T>::value, int>::type = 0>
+            template<typename U>
             decltype(auto) operator()(U && u)
             {
-                return _l(std::forward<U>(u));
-            }
-
-            template<typename U, typename std::enable_if<!std::is_same<typename _match_type_specification<T, U>::type, T>::value, int>::type = 0>
-            decltype(auto) operator()(U && u)
-            {
-                return _d(std::forward<U>(u));
+                return _call<U>(select_overload{})(std::forward<U>(u));
             }
 
         private:
+            template<typename U, typename std::enable_if<std::is_same<typename _match_type_specification<T, U>::type, T>::value
+                || _is_in_variant<T, U>::value, int>::type = 0>
+            auto _call(choice<0>)
+            {
+                return [&](U && u){ return _l(std::forward<U>(u)); };
+            }
+
+            template<typename U>
+            auto _call(choice<1>)
+            {
+                return [&](U && u){ return _d(std::forward<U>(u)); };
+            }
+
             Lambda _l;
             Default _d;
         };
@@ -172,7 +142,11 @@ namespace reaver { inline namespace _v1
 
     inline auto make_visitor()
     {
-        return [](){ return unit{}; };
+        return [](auto &&... args)
+        {
+            static_assert((swallow{args...}, false), "invalid call to dispatching visitor");
+            return unit{};
+        };
     }
 
     template<typename Lambda>
