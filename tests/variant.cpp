@@ -24,6 +24,7 @@
 #include <reaver/logic.h>
 
 #include <string>
+#include <memory>
 
 namespace test
 {
@@ -276,6 +277,20 @@ MAYFLY_ADD_TESTCASE("fmap", []()
     test::reaver::variant<foo> v2 = foo{};
     test::reaver::fmap(v2, [](auto arg) { return arg; });
     MAYFLY_CHECK(test::reaver::get<0>(v2).moved_from = true);
+});
+
+MAYFLY_ADD_TESTCASE("reference types", []()
+{
+    int i = 0;
+    test::reaver::variant<int &> v1 = i;
+    MAYFLY_CHECK(test::reaver::get<0>(v1) == 0);
+    MAYFLY_CHECK(std::addressof(test::reaver::get<0>(v1)) == std::addressof(i));
+
+    i = 1;
+    MAYFLY_CHECK(test::reaver::get<0>(v1) == 1);
+
+    test::reaver::get<0>(v1) = 2;
+    MAYFLY_CHECK(i == 2);
 });
 
 MAYFLY_END_SUITE;
