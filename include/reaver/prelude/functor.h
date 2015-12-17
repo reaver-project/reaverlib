@@ -34,6 +34,7 @@
 #include "../logic.h"
 #include "../tpl/unique.h"
 #include "../tpl/rebind.h"
+#include "../invoke.h"
 
 namespace reaver
 {
@@ -48,43 +49,43 @@ namespace reaver
         template<typename T, typename F, typename std::enable_if<is_optional<std::remove_cv_t<std::remove_reference_t<T>>>::value, int>::type = 0>
         auto fmap(T && o, F && f)
         {
-            return o ? boost::make_optional(std::invoke(std::forward<F>(f), *o)) : boost::none;
+            return o ? boost::make_optional(invoke(std::forward<F>(f), *o)) : boost::none;
         }
 
         template<typename T, typename F, typename std::enable_if<is_vector<std::remove_cv_t<std::remove_reference_t<T>>>::value, int>::type = 0>
         auto fmap(T & vec, F && f)
         {
-            std::vector<decltype(std::invoke(f, *vec.begin()))> ret;
+            std::vector<decltype(invoke(f, *vec.begin()))> ret;
             ret.reserve(vec.size());
-            for (auto && elem : vec) { ret.push_back(std::invoke(f, elem)); }
+            for (auto && elem : vec) { ret.push_back(invoke(f, elem)); }
             return ret;
         }
 
         template<typename T, typename F>
         auto fmap(std::vector<T> && vec, F && f)
         {
-            std::vector<decltype(std::invoke(f, *vec.begin()))> ret;
+            std::vector<decltype(invoke(f, *vec.begin()))> ret;
             ret.reserve(vec.size());
-            for (auto elem : vec) { ret.push_back(std::invoke(f, std::move(elem))); }
+            for (auto elem : vec) { ret.push_back(invoke(f, std::move(elem))); }
             return ret;
         }
 
         template<typename T, typename F>
         auto fmap(const std::unique_ptr<T> & ptr, F && f)
         {
-            return ptr ? std::make_unique<decltype(std::invoke(f, *ptr))>(std::invoke(f, *ptr)) : nullptr;
+            return ptr ? std::make_unique<decltype(invoke(f, *ptr))>(invoke(f, *ptr)) : nullptr;
         }
 
         template<typename T, typename F>
         auto fmap(std::unique_ptr<T> && ptr, F && f)
         {
-            return ptr ? std::make_unique<decltype(std::invoke(f, std::move(*ptr)))>(std::invoke(f, std::move(*ptr))) : nullptr;
+            return ptr ? std::make_unique<decltype(invoke(f, std::move(*ptr)))>(invoke(f, std::move(*ptr))) : nullptr;
         }
 
         template<typename T, typename F>
         auto fmap(const std::shared_ptr<T> & ptr, F && f)
         {
-            return ptr ? std::make_unique<decltype(std::invoke(f, *ptr))>(std::invoke(f, *ptr)) : nullptr;
+            return ptr ? std::make_unique<decltype(invoke(f, *ptr))>(invoke(f, *ptr)) : nullptr;
         }
 
         namespace _detail
@@ -99,7 +100,7 @@ namespace reaver
                 template<typename U>
                 T operator()(U && u)
                 {
-                    return T{ std::invoke(std::forward<F>(_f), std::forward<U>(u)) };
+                    return T{ invoke(std::forward<F>(_f), std::forward<U>(u)) };
                 }
 
                 F && _f;
@@ -109,7 +110,7 @@ namespace reaver
         template<typename... Ts, typename F>
         auto fmap(const boost::variant<Ts...> & variant, F && f)
         {
-            _detail::_visitor<tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), std::declval<Ts>()))...>, boost::variant>, F> visitor(std::forward<F>(f));
+            _detail::_visitor<tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<Ts>()))...>, boost::variant>, F> visitor(std::forward<F>(f));
             return boost::apply_visitor(visitor, variant);
         }
     }}}
