@@ -279,7 +279,7 @@ MAYFLY_ADD_TESTCASE("fmap", []()
     MAYFLY_CHECK(test::reaver::get<0>(v2).moved_from = true);
 });
 
-MAYFLY_ADD_TESTCASE("reference types", []()
+MAYFLY_ADD_TESTCASE("reference type", []()
 {
     int i = 0;
     test::reaver::variant<int &> v1 = i;
@@ -291,6 +291,25 @@ MAYFLY_ADD_TESTCASE("reference types", []()
 
     test::reaver::get<0>(v1) = 2;
     MAYFLY_CHECK(i == 2);
+});
+
+MAYFLY_ADD_TESTCASE("assignment with references", []()
+{
+    int i = 0;
+    std::string j = "1";
+
+    test::reaver::variant<int &, std::string &> v1 = i;
+    test::reaver::variant<int &, std::string &> v2 = j;
+
+    auto v3 = v2;
+    v2 = v1;
+    v1 = v3;
+
+    i = 123;
+    j = "123";
+
+    MAYFLY_CHECK(test::reaver::get<1>(v1) == "123");
+    MAYFLY_CHECK(test::reaver::get<0>(v2) == 123);
 });
 
 MAYFLY_END_SUITE;
