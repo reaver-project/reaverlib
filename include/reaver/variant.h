@@ -145,6 +145,22 @@ namespace reaver { inline namespace _v1
                 new (&_storage) auto(std::ref(t));
             }
 
+            template<typename T, typename std::enable_if<
+                !any_of<std::is_same<std::remove_reference_t<T>, Args>::value...>::value
+                    && any_of<std::is_constructible<Args, T &&>::value...>::value,
+                int>::type = 0>
+            _variant(T && t)
+            {
+                auto constructor = make_overload_set(
+                    [&](auto && t) -> typename std::enable_if<std::is_constructible<Args, decltype(t)>::value>::type {
+                        _tag = tpl::index_of<tpl::vector<Args...>, Args>();
+                        new (&_storage) Args(std::forward<decltype(t)>(t));
+                    }...
+                );
+
+                constructor(std::forward<T>(t));
+            }
+
             _variant(const _variant & other) noexcept(all_of<std::is_nothrow_copy_constructible<Args>::value...>::value) : _tag(other._tag)
             {
                 using visitor_type = void(*)(_variant & self, const _variant & other);
@@ -258,7 +274,7 @@ namespace reaver { inline namespace _v1
             >;
 
             _storage_type _storage;
-            std::size_t _tag;
+            std::size_t _tag = -1;
         };
     }
 

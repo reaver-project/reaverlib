@@ -312,5 +312,23 @@ MAYFLY_ADD_TESTCASE("assignment with references", []()
     MAYFLY_CHECK(test::reaver::get<0>(v2) == 123);
 });
 
+MAYFLY_ADD_TESTCASE("construct from implicitly convertible type", []()
+{
+    {
+        test::reaver::variant<bool> v = 1;
+        MAYFLY_CHECK(test::reaver::get<0>(v) == true);
+
+        test::reaver::variant<std::string> u = "abc";
+        MAYFLY_CHECK(test::reaver::get<0>(u) == "abc");
+    }
+
+    {
+        test::reaver::variant<int, std::string> v1 = 2.6;
+        test::reaver::variant<int, std::string> v2 = "abc";
+        MAYFLY_CHECK(test::reaver::get<0>(v1) == 2);
+        MAYFLY_CHECK(test::reaver::get<1>(v2) == "abc");
+    }
+});
+
 MAYFLY_END_SUITE;
 

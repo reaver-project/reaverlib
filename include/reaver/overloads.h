@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <utility>
+
 namespace reaver { inline namespace _v1
 {
     template<unsigned I>
@@ -31,4 +33,31 @@ namespace reaver { inline namespace _v1
     struct choice<10> {};
 
     struct select_overload : choice<0> {};
+
+    template<typename T, typename... Ts>
+    struct overload_set : T, overload_set<Ts...>
+    {
+        overload_set(T t, Ts... ts) : T{ std::forward<T>(t) }, overload_set<Ts...>{ std::forward<Ts>(ts)... }
+        {
+        }
+
+        using T::operator();
+        using overload_set<Ts...>::operator();
+    };
+
+    template<typename T>
+    struct overload_set<T> : T
+    {
+        overload_set(T t) : T{ std::forward<T>(t) }
+        {
+        }
+
+        using T::operator();
+    };
+
+    template<typename... Ts>
+    auto make_overload_set(Ts &&... ts)
+    {
+        return overload_set<Ts...>{ std::forward<Ts>(ts)... };
+    }
 }}
