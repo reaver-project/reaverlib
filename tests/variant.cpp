@@ -330,5 +330,18 @@ MAYFLY_ADD_TESTCASE("construct from implicitly convertible type", []()
     }
 });
 
+MAYFLY_ADD_TESTCASE("assign with implicitly convertible type", []()
+{
+    test::reaver::variant<bool> v = true;
+    v = 0;
+    MAYFLY_CHECK(test::reaver::get<0>(v) == false);
+
+    test::reaver::variant<int, std::string> u = 1;
+    u = "abc";
+    MAYFLY_CHECK(test::reaver::get<1>(u) == "abc");
+    u = 6.2;
+    MAYFLY_CHECK(test::reaver::get<0>(u) == 6);
+});
+
 MAYFLY_END_SUITE;
 
