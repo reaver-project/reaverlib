@@ -20,15 +20,16 @@
  *
  **/
 
+// some code review done on: 29.12.2015
+// TODO: further review of the functionality needed at a later time
+
 #pragma once
 
 #include "logger.h"
 #include "exception.h"
 #include "swallow.h"
 
-namespace reaver
-{
-inline namespace __v1
+namespace reaver { inline namespace _v1
 {
     class error_engine : public exception
     {
@@ -45,15 +46,17 @@ inline namespace __v1
             using std::swap;
 
             swap(_errors, moved_out._errors);
-            _error_count.exchange(moved_out._error_count);
-            _warning_count.exchange(moved_out._warning_count);
+            swap(_error_count, moved_out._error_count);
+            swap(_warning_count, moved_out._warning_count);
             swap(_max_errors, moved_out._max_errors);
             swap(_error_level, moved_out._error_level);
+
             _printed_in_handler = moved_out._printed_in_handler;
             moved_out._printed_in_handler = true;
         }
 
-        ~error_engine()
+        // this is very ugly; I'm a very naughty child
+        ~error_engine() noexcept(false)
         {
             if (_error_count && !_printed_in_handler)
             {
@@ -63,14 +66,15 @@ inline namespace __v1
 
         void push(exception e)
         {
+            auto level = e.level();
             _errors.emplace_back(std::move(e));
 
-            if (_errors.back().level() >= _error_level && _errors.back().level() != logger::base_level::always)
+            if (level >= _error_level && level != logger::base_level::always)
             {
                 ++_error_count;
             }
 
-            else if (_errors.back().level() == logger::base_level::warning)
+            else if (level == logger::base_level::warning)
             {
                 ++_warning_count;
             }
@@ -78,13 +82,12 @@ inline namespace __v1
             if (_error_count == _max_errors)
             {
                 _errors.emplace_back(exception(logger::fatal) << "too many errors emitted: " << _max_errors << ".");
-
-                // uh... I'm sorry, officer, I can't explain how this happened
-                throw std::move(*this);
+                level = logger::fatal;
             }
 
-            if (_errors.back().level() == logger::base_level::crash || _errors.back().level() == logger::base_level::fatal)
+            if (level == logger::base_level::crash || level == logger::base_level::fatal)
             {
+                // uh... I'm sorry, officer, I can't explain how this happened
                 throw std::move(*this);
             }
         }
@@ -102,29 +105,29 @@ inline namespace __v1
         {
             for (auto && elem : ve)
             {
+                auto level = elem.level();
                 _errors.emplace_back(std::move(elem));
 
-                if (_errors.back().level() >= _error_level && _errors.back().level() != logger::base_level::always)
+                if (level >= _error_level && level != logger::base_level::always)
                 {
                     ++_error_count;
                 }
 
-                else if (_errors.back().level() == logger::base_level::warning)
+                else if (level == logger::base_level::warning)
                 {
                     ++_warning_count;
                 }
             }
 
-            if (_error_count == _max_errors)
+            if (_error_count >= _max_errors)
             {
                 _errors.emplace_back(exception(logger::fatal) << "too many errors emitted: " << _max_errors << ".");
-
-                // uh... I'm sorry, officer, I can't explain how this happened
-                throw std::move(*this);
             }
 
-            if (_errors.back().level() == logger::base_level::crash || _errors.back().level() == logger::base_level::fatal)
+            auto level = _errors.back().level();
+            if (level == logger::base_level::crash || level == logger::base_level::fatal)
             {
+                // uh... I'm sorry, officer, I can't explain how this happened
                 throw std::move(*this);
             }
         }
@@ -182,7 +185,7 @@ inline namespace __v1
             return _error_count;
         }
 
-        bool size() const
+        bool error_count() const
         {
             return _errors.size();
         }
@@ -192,11 +195,10 @@ inline namespace __v1
 
     private:
         std::vector<exception> _errors;
-        std::atomic<std::size_t> _error_count{ 0 };
-        std::atomic<std::size_t> _warning_count{ 0 };
+        std::size_t _error_count = 0;
+        std::size_t _warning_count = 0;
         std::size_t _max_errors;
         logger::base_level _error_level;
         mutable bool _printed_in_handler = false;
     };
-}
-}
+}}
