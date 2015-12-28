@@ -33,15 +33,10 @@
 #include "../swallow.h"
 #include "../overloads.h"
 #include "../logic.h"
+#include "../void_t.h"
 
 namespace reaver { inline namespace _v1
 {
-    template<typename...>
-    struct voider { using type = void; };
-
-    template<typename... Args>
-    using void_t = typename voider<Args...>::type;
-
     namespace _detail
     {
         template<typename Tag, typename = void>
