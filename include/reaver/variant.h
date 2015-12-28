@@ -51,14 +51,14 @@ namespace reaver { inline namespace _v1
             _recursive_wrapper(const _recursive_wrapper & other) : _storage{ std::make_unique<T>(*other._storage) }
             {
             }
-            _recursive_wrapper(_recursive_wrapper &&) = default;
+            _recursive_wrapper(_recursive_wrapper &&) noexcept = default;
 
             _recursive_wrapper & operator=(const _recursive_wrapper & rhs)
             {
                 _storage = std::make_unique<T>(*rhs._storage);
                 return *this;
             }
-            _recursive_wrapper & operator=(_recursive_wrapper &&) = default;
+            _recursive_wrapper & operator=(_recursive_wrapper &&) noexcept = default;
 
             template<typename... Ts>
             _recursive_wrapper(Ts &&... ts) : _storage{ std::make_unique<T>(std::forward<Ts>(ts)...) }
@@ -469,7 +469,7 @@ namespace reaver { inline namespace _v1
     }
 
     template<typename CRTP, typename... Ts>
-    bool operator==(const _detail::_variant<CRTP, Ts...> & lhs, const variant<Ts...> & rhs)
+    bool operator==(const _detail::_variant<CRTP, Ts...> & lhs, const _detail::_variant<CRTP, Ts...> & rhs)
     {
         using comparator_type = bool (*)(const _detail::_variant<CRTP, Ts...> &, const _detail::_variant<CRTP, Ts...> &);
         static comparator_type comparators[] = {
@@ -523,6 +523,9 @@ namespace reaver { inline namespace _v1
 
     template<typename... Ts>
     using recursive_variant = typename _detail::_make_recursive_variant<Ts...>::type;
+
+    template<typename T>
+    using recursive_wrapper = _detail::_recursive_wrapper<T>;
 
     template<std::size_t N, typename Variant>
     decltype(auto) get(_detail::_recursive_wrapper<Variant> & variant)
