@@ -39,7 +39,6 @@ namespace reaver { inline namespace _v1
         }
 
         using _base::_base;
-        using _base::operator=;
 
         operator bool() const
         {

@@ -59,6 +59,23 @@ MAYFLY_ADD_TESTCASE("construction and comparisons", []()
     }
 });
 
+MAYFLY_ADD_TESTCASE("references", []()
+{
+    test::reaver::optional<int &> o;
+    MAYFLY_CHECK(!o);
+
+    int i = 1;
+    o = i;
+    MAYFLY_CHECK(o == 1);
+
+    i = 2;
+    MAYFLY_CHECK(o == 2);
+
+    int j = 123;
+    o = j;
+    MAYFLY_CHECK(o == 123);
+});
+
 MAYFLY_ADD_TESTCASE("fmap", []()
 {
     MAYFLY_CHECK(test::reaver::fmap(test::reaver::make_optional(1), [](auto a){ return std::to_string(a); }) == "1");
