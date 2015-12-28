@@ -529,7 +529,7 @@ namespace reaver
             {
                 if (map.count(_name(Head::name)))
                 {
-                    return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<
+                    return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map.at(_name(Head::name)).template as<
                         typename _remove_optional<typename _po_type<Head>::type>::type>()));
                 }
 
@@ -545,7 +545,7 @@ namespace reaver
                 && !_is_vector<typename Head::type>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
-                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map[_name(Head::name)].template as<typename _po_type<Head>::type>()));
+                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map.at(_name(Head::name)).template as<typename _po_type<Head>::type>()));
             }
 
             template<typename... Args, typename Config>
