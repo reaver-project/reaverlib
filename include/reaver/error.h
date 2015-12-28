@@ -55,8 +55,9 @@ namespace reaver { inline namespace _v1
             moved_out._printed_in_handler = true;
         }
 
-        // this is very ugly; I'm a very naughty child
-        ~error_engine() noexcept(false)
+        // yes, this is going to call std::terminate if not printed in handler
+        // I might need to write some documentation for this class at some point
+        virtual ~error_engine() noexcept
         {
             if (_error_count && !_printed_in_handler)
             {
