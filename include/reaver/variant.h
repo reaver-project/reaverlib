@@ -34,13 +34,100 @@
 #include "tpl/rebind.h"
 #include "tpl/index_of.h"
 #include "invoke.h"
+#include "traits.h"
+
+namespace reaver
+{
+    namespace tpl { inline namespace _v1
+    {
+        namespace _detail
+        {
+            template<typename Original, typename Find, typename Replace>
+            struct _replace
+            {
+                using type = Original;
+            };
+
+            template<typename Original, typename Replace>
+            struct _replace<Original, Original, Replace>
+            {
+                using type = Replace;
+            };
+
+            template<template<typename...> typename Original, typename... Ts, typename Find, typename Replace>
+            struct _replace<Original<Ts...>, Find, Replace>
+            {
+                using type = Original<typename _replace<Ts, Find, Replace>::type...>;
+            };
+
+            template<template<typename...> typename Original, typename... Ts, typename Replace>
+            struct _replace<Original<Ts...>, Original<Ts...>, Replace>
+            {
+                using type = Replace;
+            };
+        }
+
+        template<typename Original, typename Find, typename Replace>
+        using replace = typename _detail::_replace<Original, Find, Replace>::type;
+    }}
+}
 
 namespace reaver { inline namespace _v1
 {
     namespace _detail
     {
-        template<typename... Ts>
+        template<typename CRTP, typename... Ts>
         class _variant;
+
+        template<typename T>
+        struct _recursive_wrapper
+        {
+            _recursive_wrapper() = delete;
+            _recursive_wrapper(const _recursive_wrapper & other) : _storage{ std::make_unique<T>(*other._storage) }
+            {
+            }
+            _recursive_wrapper(_recursive_wrapper &&) = default;
+
+            _recursive_wrapper & operator=(const _recursive_wrapper & rhs)
+            {
+                _storage = std::make_unique<T>(*rhs._storage);
+                return *this;
+            }
+            _recursive_wrapper & operator=(_recursive_wrapper &&) = default;
+
+            template<typename... Ts>
+            _recursive_wrapper(Ts &&... ts) : _storage{ std::make_unique<T>(std::forward<Ts>(ts)...) }
+            {
+            }
+
+            operator T &()
+            {
+                return *_storage;
+            }
+
+            operator const T &() const
+            {
+                return *_storage;
+            }
+
+            T & operator*()
+            {
+                return *_storage;
+            }
+
+            const T & operator*() const
+            {
+                return *_storage;
+            }
+
+            auto index() const
+            {
+                return _storage->index();
+            }
+
+        private:
+            std::unique_ptr<T> _storage;
+        };
 
         template<typename T>
         struct _dereference_wrapper
@@ -51,7 +138,13 @@ namespace reaver { inline namespace _v1
         template<typename T>
         struct _dereference_wrapper<std::reference_wrapper<T>>
         {
-            using type = T &;
+            using type = typename _dereference_wrapper<T>::type &;
+        };
+
+        template<typename T>
+        struct _dereference_wrapper<_recursive_wrapper<T>>
+        {
+            using type = typename _dereference_wrapper<T>::type;
         };
 
         template<typename T>
@@ -64,14 +157,14 @@ namespace reaver { inline namespace _v1
         }
     }
 
-    template<std::size_t N, typename... Ts>
-    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(_detail::_variant<Ts...> &);
+    template<std::size_t N, typename CRTP, typename... Ts>
+    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(_detail::_variant<CRTP, Ts...> &);
 
-    template<std::size_t N, typename... Ts>
-    const _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(const _detail::_variant<Ts...> &);
+    template<std::size_t N, typename CRTP, typename... Ts>
+    const _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(const _detail::_variant<CRTP, Ts...> &);
 
-    template<std::size_t N, typename... Ts>
-    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> get(_detail::_variant<Ts...> &&);
+    template<std::size_t N, typename CRTP, typename... Ts>
+    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> get(_detail::_variant<CRTP, Ts...> &&);
 
     namespace _detail
     {
@@ -99,7 +192,7 @@ namespace reaver { inline namespace _v1
         template<typename T>
         using _replace_reference_t = typename _replace_reference<T>::type;
 
-        template<typename... Args>
+        template<typename CRTP, typename... Args>
         class _variant
         {
         public:
@@ -120,14 +213,14 @@ namespace reaver { inline namespace _v1
                 >::value,
                 "All types in variant must be noexcept destructible.");
 
-            template<std::size_t N, typename... Ts>
-            friend _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & reaver::get(_variant<Ts...> &);
+            template<std::size_t N, typename CRTP_, typename... Ts>
+            friend _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & reaver::get(_variant<CRTP_, Ts...> &);
 
-            template<std::size_t N, typename... Ts>
-            friend const _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & reaver::get(const _variant<Ts...> &);
+            template<std::size_t N, typename CRTP_, typename... Ts>
+            friend const _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & reaver::get(const _variant<CRTP_, Ts...> &);
 
-            template<std::size_t N, typename... Ts>
-            friend _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> reaver::get(_variant<Ts...> &&);
+            template<std::size_t N, typename CRTP_, typename... Ts>
+            friend _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> reaver::get(_variant<CRTP_, Ts...> &&);
 
             template<typename T, typename std::enable_if<
                 any_of<std::is_same<std::remove_reference_t<T>, Args>::value...>::value,
@@ -159,6 +252,24 @@ namespace reaver { inline namespace _v1
                 );
 
                 constructor(std::forward<T>(t));
+            }
+
+            template<typename T, typename std::enable_if<
+                is_container<T>::value
+                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, Args>::value)...>::value
+                    && !std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, T>::value,
+                int>::type = 0>
+            _variant(const T & t) : _variant{ tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>(std::begin(t), std::end(t)) }
+            {
+            }
+
+            template<typename T, typename std::enable_if<
+                is_container<T>::value
+                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, Args>::value)...>::value
+                    && !std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, T>::value,
+                int>::type = 0>
+            _variant(T && t) : _variant{ tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>(std::make_move_iterator(std::begin(t)), std::make_move_iterator(std::end(t))) }
+            {
             }
 
             _variant(const _variant & other) noexcept(all_of<std::is_nothrow_copy_constructible<Args>::value...>::value) : _tag(other._tag)
@@ -279,9 +390,9 @@ namespace reaver { inline namespace _v1
     }
 
     template<typename... Ts>
-    class variant : public _detail::_variant<_detail::_replace_reference_t<Ts>...>
+    class variant : public _detail::_variant<variant<Ts...>, _detail::_replace_reference_t<Ts>...>
     {
-        using _base = _detail::_variant<_detail::_replace_reference_t<Ts>...>;
+        using _base = _detail::_variant<variant, _detail::_replace_reference_t<Ts>...>;
 
     public:
         using _base::_base;
@@ -299,8 +410,8 @@ namespace reaver { inline namespace _v1
         std::size_t actual;
     };
 
-    template<std::size_t N, typename... Ts>
-    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(_detail::_variant<Ts...> & variant)
+    template<std::size_t N, typename CRTP, typename... Ts>
+    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(_detail::_variant<CRTP, Ts...> & variant)
     {
         if (variant._tag != N)
         {
@@ -310,8 +421,8 @@ namespace reaver { inline namespace _v1
         return _detail::_dereference(*reinterpret_cast<tpl::nth<tpl::vector<Ts...>, N> *>(&variant._storage));
     }
 
-    template<std::size_t N, typename... Ts>
-    const _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(const _detail::_variant<Ts...> & variant)
+    template<std::size_t N, typename CRTP, typename... Ts>
+    const _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(const _detail::_variant<CRTP, Ts...> & variant)
     {
         if (variant._tag != N)
         {
@@ -321,8 +432,8 @@ namespace reaver { inline namespace _v1
         return _detail::_dereference(*reinterpret_cast<const tpl::nth<tpl::vector<Ts...>, N> *>(&variant._storage));
     }
 
-    template<std::size_t N, typename... Ts>
-    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> get(_detail::_variant<Ts...> && variant)
+    template<std::size_t N, typename CRTP, typename... Ts>
+    _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> get(_detail::_variant<CRTP, Ts...> && variant)
     {
         if (variant._tag != N)
         {
@@ -330,6 +441,12 @@ namespace reaver { inline namespace _v1
         }
 
         return _detail::_dereference(std::move(*reinterpret_cast<tpl::nth<tpl::vector<Ts...>, N> *>(&variant._storage)));
+    }
+
+    template<typename T, typename CRTP, typename... Ts>
+    T & get(_detail::_variant<CRTP, Ts...> & variant)
+    {
+        return get<tpl::index_of<tpl::vector<Ts...>, T>::value>(variant);
     }
 
     template<typename... Ts, typename F>
@@ -401,6 +518,48 @@ namespace reaver { inline namespace _v1
         };
 
         return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && comparators[lhs.index()](lhs, rhs));
+    }
+
+    struct recursive_variant_tag{};
+    using rvt = recursive_variant_tag;
+
+    namespace _detail
+    {
+        template<typename... Ts>
+        struct _make_recursive_variant
+        {
+            class type;
+
+            class type : public _variant<type, _replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>
+            {
+                using _base = _variant<type, _replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>;
+
+            public:
+                using _base::_base;
+                using _base::operator=;
+            };
+        };
+    }
+
+    template<typename... Ts>
+    using recursive_variant = typename _detail::_make_recursive_variant<Ts...>::type;
+
+    template<std::size_t N, typename Variant>
+    decltype(auto) get(_detail::_recursive_wrapper<Variant> & variant)
+    {
+        return get<N>(*variant);
+    }
+
+    template<std::size_t N, typename Variant>
+    decltype(auto) get(const _detail::_recursive_wrapper<Variant> & variant)
+    {
+        return get<N>(*variant);
+    }
+
+    template<std::size_t N, typename Variant>
+    decltype(auto) get(_detail::_recursive_wrapper<Variant> && variant)
+    {
+        return get<N>(std::move(*variant));
     }
 }}
 

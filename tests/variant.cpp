@@ -343,5 +343,81 @@ MAYFLY_ADD_TESTCASE("assign with implicitly convertible type", []()
     MAYFLY_CHECK(test::reaver::get<0>(u) == 6);
 });
 
+MAYFLY_ADD_TESTCASE("recursive variant construction and inspection", []()
+{
+    using type = test::reaver::recursive_variant<
+        int,
+        std::vector<test::reaver::rvt>,
+        std::map<int, test::reaver::rvt>
+    >;
+
+    {
+        type v = 1;
+        MAYFLY_CHECK(test::reaver::get<0>(v) == 1);
+    }
+
+    {
+        type v = std::vector<type>{ 1, 2 };
+        MAYFLY_REQUIRE(v.index() == 1);
+
+        auto & vector = test::reaver::get<1>(v);
+        MAYFLY_CHECK(test::reaver::get<0>(vector[0]) == 1);
+        MAYFLY_CHECK(test::reaver::get<0>(vector[1]) == 2);
+    }
+
+    {
+        type v = std::map<int, type>{ { 1, 2 }, { 3, 4 } };
+        MAYFLY_REQUIRE(v.index() == 2);
+
+        auto & map = test::reaver::get<2>(v);
+        MAYFLY_CHECK(test::reaver::get<0>(map.at(1)) == 2);
+        MAYFLY_CHECK(test::reaver::get<0>(map.at(3)) == 4);
+    }
+
+    {
+        auto vec = std::vector<type>{ 1, 2 };
+        type v = vec;
+        MAYFLY_REQUIRE(v.index() == 1);
+
+        auto & vector = test::reaver::get<1>(v);
+        MAYFLY_CHECK(test::reaver::get<0>(vector[0]) == 1);
+        MAYFLY_CHECK(test::reaver::get<0>(vector[1]) == 2);
+    }
+
+    {
+        type v = std::map<int, type>{
+            { 1, 2 },
+            { 3, std::vector<type>{ 4, 5, 6 } },
+            { 7, std::map<int, type>{ { 8, 9 }, { 10, std::vector<type>{ 11, 12 } } } }
+        };
+
+        using test::reaver::get;
+
+        MAYFLY_REQUIRE(v.index() == 2);
+        auto & map = get<2>(v);
+
+        MAYFLY_CHECK(get<0>(map.at(1)) == 2);
+
+        MAYFLY_REQUIRE(map.at(3).index() == 1);
+        {
+            auto & vector = get<1>(map.at(3));
+            MAYFLY_CHECK(get<0>(vector[0]) == 4);
+            MAYFLY_CHECK(get<0>(vector[1]) == 5);
+            MAYFLY_CHECK(get<0>(vector[2]) == 6);
+        }
+
+        MAYFLY_REQUIRE(map.at(7).index() == 2);
+        {
+            auto & m = get<2>(map.at(7));
+            MAYFLY_CHECK(get<0>(m.at(8)) == 9);
+
+            MAYFLY_REQUIRE(m.at(10).index() == 1);
+            auto & vector = get<1>(m.at(10));
+            MAYFLY_CHECK(get<0>(vector[0]) == 11);
+            MAYFLY_CHECK(get<0>(vector[1]) == 12);
+        }
+    }
+});
+
 MAYFLY_END_SUITE;
 
