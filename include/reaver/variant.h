@@ -35,42 +35,7 @@
 #include "tpl/index_of.h"
 #include "invoke.h"
 #include "traits.h"
-
-namespace reaver
-{
-    namespace tpl { inline namespace _v1
-    {
-        namespace _detail
-        {
-            template<typename Original, typename Find, typename Replace>
-            struct _replace
-            {
-                using type = Original;
-            };
-
-            template<typename Original, typename Replace>
-            struct _replace<Original, Original, Replace>
-            {
-                using type = Replace;
-            };
-
-            template<template<typename...> typename Original, typename... Ts, typename Find, typename Replace>
-            struct _replace<Original<Ts...>, Find, Replace>
-            {
-                using type = Original<typename _replace<Ts, Find, Replace>::type...>;
-            };
-
-            template<template<typename...> typename Original, typename... Ts, typename Replace>
-            struct _replace<Original<Ts...>, Original<Ts...>, Replace>
-            {
-                using type = Replace;
-            };
-        }
-
-        template<typename Original, typename Find, typename Replace>
-        using replace = typename _detail::_replace<Original, Find, Replace>::type;
-    }}
-}
+#include "tpl/replace.h"
 
 namespace reaver { inline namespace _v1
 {
