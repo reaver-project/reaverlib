@@ -90,6 +90,21 @@ namespace reaver { inline namespace _v1
                 return _storage->index();
             }
 
+            bool operator==(const _recursive_wrapper & rhs) const
+            {
+                return *_storage == *rhs;
+            }
+
+            bool operator!=(const _recursive_wrapper & rhs) const
+            {
+                return *_storage != *rhs;
+            }
+
+            bool operator<(const _recursive_wrapper & rhs) const
+            {
+                return *_storage < *rhs;
+            }
+
         private:
             std::unique_ptr<T> _storage;
         };
@@ -414,51 +429,51 @@ namespace reaver { inline namespace _v1
         return get<tpl::index_of<tpl::vector<Ts...>, T>::value>(variant);
     }
 
-    template<typename... Ts, typename F>
-    auto fmap(variant<Ts...> && var, F && f)
+    template<typename CRTP, typename... Ts, typename F>
+    auto fmap(_detail::_variant<CRTP, Ts...> && var, F && f)
     {
         using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<Ts &&>()))...>, variant>;
-        using visitor_type = result_type (*)(variant<Ts...> &&, F &&);
+        using visitor_type = result_type (*)(_detail::_variant<CRTP, Ts...> &&, F &&);
         static visitor_type visitors[] = {
-            [](variant<Ts...> && v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(std::move(v))); }...
+            [](_detail::_variant<CRTP, Ts...> && v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(std::move(v))); }...
         };
 
         auto index = var.index();
         return visitors[index](std::move(var), std::forward<F>(f));
     }
 
-    template<typename... Ts, typename F>
-    auto fmap(const variant<Ts...> & var, F && f)
+    template<typename CRTP, typename... Ts, typename F>
+    auto fmap(const _detail::_variant<CRTP, Ts...> & var, F && f)
     {
         using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<const Ts &>()))...>, variant>;
-        using visitor_type = result_type (*)(const variant<Ts...> &, F &&);
+        using visitor_type = result_type (*)(const _detail::_variant<CRTP, Ts...> &, F &&);
         static visitor_type visitors[] = {
-            [](const variant<Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(v)); }...
+            [](const _detail::_variant<CRTP, Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(v)); }...
         };
 
         auto index = var.index();
         return visitors[index](var, std::forward<F>(f));
     }
 
-    template<typename... Ts, typename F>
-    auto fmap(variant<Ts...> & var, F && f)
+    template<typename CRTP, typename... Ts, typename F>
+    auto fmap(_detail::_variant<CRTP, Ts...> & var, F && f)
     {
         using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<Ts &>()))...>, variant>;
-        using visitor_type = result_type (*)(variant<Ts...> &, F &&);
+        using visitor_type = result_type (*)(_detail::_variant<CRTP, Ts...> &, F &&);
         static visitor_type visitors[] = {
-            [](variant<Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(v)); }...
+            [](_detail::_variant<CRTP, Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(v)); }...
         };
 
         auto index = var.index();
         return visitors[index](var, std::forward<F>(f));
     }
 
-    template<typename... Ts>
-    bool operator==(const variant<Ts...> & lhs, const variant<Ts...> & rhs)
+    template<typename CRTP, typename... Ts>
+    bool operator==(const _detail::_variant<CRTP, Ts...> & lhs, const variant<Ts...> & rhs)
     {
-        using comparator_type = bool (*)(const variant<Ts...> &, const variant<Ts...> &);
+        using comparator_type = bool (*)(const _detail::_variant<CRTP, Ts...> &, const _detail::_variant<CRTP, Ts...> &);
         static comparator_type comparators[] = {
-            [](const variant<Ts...> & lhs, const variant<Ts...> & rhs) {
+            [](const _detail::_variant<CRTP, Ts...> & lhs, const _detail::_variant<CRTP, Ts...> & rhs) {
                 return get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(lhs) == get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(rhs);
             }...
         };
@@ -466,18 +481,18 @@ namespace reaver { inline namespace _v1
         return lhs.index() == rhs.index() && comparators[lhs.index()](lhs, rhs);
     }
 
-    template<typename... Ts>
-    bool operator!=(const variant<Ts...> & lhs, const variant<Ts...> & rhs)
+    template<typename CRTP, typename... Ts>
+    bool operator!=(const _detail::_variant<CRTP, Ts...> & lhs, const _detail::_variant<CRTP, Ts...> & rhs)
     {
         return !(lhs == rhs);
     }
 
-    template<typename... Ts>
-    bool operator<(const variant<Ts...> & lhs, const variant<Ts...> & rhs)
+    template<typename CRTP, typename... Ts>
+    bool operator<(const _detail::_variant<CRTP, Ts...> & lhs, const _detail::_variant<CRTP, Ts...> & rhs)
     {
-        using comparator_type = bool (*)(const variant<Ts...> &, const variant<Ts...> &);
+        using comparator_type = bool (*)(const _detail::_variant<CRTP, Ts...> &, const _detail::_variant<CRTP, Ts...> &);
         static comparator_type comparators[] = {
-            [](const variant<Ts...> & lhs, const variant<Ts...> & rhs) {
+            [](const _detail::_variant<CRTP, Ts...> & lhs, const _detail::_variant<CRTP, Ts...> & rhs) {
                 return get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(lhs) < get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(rhs);
             }...
         };
@@ -525,6 +540,60 @@ namespace reaver { inline namespace _v1
     decltype(auto) get(_detail::_recursive_wrapper<Variant> && variant)
     {
         return get<N>(std::move(*variant));
+    }
+
+    template<typename Variant, typename F>
+    decltype(auto) fmap(_detail::_recursive_wrapper<Variant> & variant, F && f)
+    {
+        return fmap(*variant, std::forward<F>(f));
+    }
+
+    template<typename Variant, typename F>
+    decltype(auto) fmap(const _detail::_recursive_wrapper<Variant> & variant, F && f)
+    {
+        return fmap(*variant, std::forward<F>(f));
+    }
+
+    template<typename Variant, typename F>
+    decltype(auto) fmap(_detail::_recursive_wrapper<Variant> && variant, F && f)
+    {
+        return fmap(std::move(*variant), std::forward<F>(f));
+    }
+
+    template<typename T, typename U>
+    bool operator==(const _detail::_recursive_wrapper<T> & lhs, const U & rhs)
+    {
+        return *lhs == rhs;
+    }
+
+    template<typename T, typename U>
+    bool operator==(const T & lhs, const _detail::_recursive_wrapper<U> & rhs)
+    {
+        return lhs == *rhs;
+    }
+
+    template<typename T, typename U>
+    bool operator!=(const _detail::_recursive_wrapper<T> & lhs, const U & rhs)
+    {
+        return *lhs != rhs;
+    }
+
+    template<typename T, typename U>
+    bool operator!=(const T & lhs, const _detail::_recursive_wrapper<U> & rhs)
+    {
+        return lhs != *rhs;
+    }
+
+    template<typename T, typename U>
+    bool operator<(const _detail::_recursive_wrapper<T> & lhs, const U & rhs)
+    {
+        return *lhs < rhs;
+    }
+
+    template<typename T, typename U>
+    bool operator<(const T & lhs, const _detail::_recursive_wrapper<U> & rhs)
+    {
+        return lhs < *rhs;
     }
 }}
 
