@@ -55,6 +55,16 @@ namespace reaver { inline namespace _v1
             return get();
         }
 
+        auto * operator->()
+        {
+            return &get();
+        }
+
+        const auto * operator->() const
+        {
+            return &get();
+        }
+
         T & get()
         {
             return reaver::get<0>(*this);
