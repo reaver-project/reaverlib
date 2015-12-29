@@ -1,7 +1,7 @@
 /**
  * Reaver Library License
  *
- * Copyright © 2013 Michał "Griwes" Dominiak
+ * Copyright © 2013, 2015 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,13 +22,11 @@
 
 #pragma once
 
-#include <set>
+#include <unordered_set>
 
 #include "logger.h"
 
-namespace reaver
-{
-inline namespace __v1
+namespace reaver { inline namespace _v1
 {
     class invalid_exception_level : public std::runtime_error
     {
@@ -44,7 +42,7 @@ inline namespace __v1
         template<typename Level = logger::always_type, typename std::enable_if<logger::is_logger_level<Level>::value, int>::type = 0>
         exception(Level l = {}) : _level{ l }
         {
-            static std::set<logger::base_level> allowed_levels = {
+            static std::unordered_set<logger::base_level> allowed_levels = {
                 logger::always,
                 logger::note,
                 logger::info,
@@ -54,20 +52,18 @@ inline namespace __v1
                 logger::crash
             };
 
-            if (allowed_levels.find(Level{}) == allowed_levels.end())
+            if (allowed_levels.find(l) == allowed_levels.end())
             {
                 throw invalid_exception_level{};
             }
 
-            _streamables = logger::default_level_registry()[Level{}];
+            _streamables = logger::default_level_registry()[l];
         }
 
         exception(const exception &) = default;
         exception(exception &&) = default;
 
-        ~exception()
-        {
-        }
+        virtual ~exception() = default;
 
         template<typename T>
         exception & operator<<(T && rhs)
@@ -78,7 +74,22 @@ inline namespace __v1
 
         virtual const char * what() const noexcept
         {
-            return "reaver::exception\ncall e.print(<logger object>) to get more detailed output";
+            if (_what.empty())
+            {
+                std::ostringstream stream;
+
+                {
+                    logger::logger log;
+                    log.add_stream(stream);
+
+                    print(log);
+                }
+
+                stream.flush();
+                _what = stream.str();
+            }
+
+            return _what.c_str();
         }
 
         virtual void print(reaver::logger::logger & l) const noexcept
@@ -100,6 +111,7 @@ inline namespace __v1
         logger::base_level _level;
 
         std::vector<logger::streamable> _streamables;
+        mutable std::string _what;
     };
 
     class file_is_directory : public exception
@@ -143,5 +155,4 @@ inline namespace __v1
                 << style() << ".";
         }
     };
-}
-}
+}}
