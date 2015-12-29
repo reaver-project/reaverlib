@@ -20,10 +20,7 @@
  *
  **/
 
-#include <cstddef>
-#include <type_traits>
-#include <memory>
-#include <functional>
+#include <unordered_set>
 
 #include <reaver/exception.h>
 

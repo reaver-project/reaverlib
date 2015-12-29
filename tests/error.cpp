@@ -20,6 +20,7 @@
  *
  **/
 
+#include <unordered_set>
 #include <reaver/exception.h>
 #include <reaver/error.h>
 
