@@ -57,7 +57,7 @@ MAYFLY_ADD_TESTCASE("without reaching limit", []()
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpessimizing-move"
 
-MAYFLY_ADD_TESTCASE("moved-from shouldn't throw", []()
+MAYFLY_ADD_TESTCASE("moved-from should not throw", []()
 {
     MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, [](){
         test::reaver::optional<test::reaver::error_engine> engine;
