@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2014 Michał "Griwes" Dominiak
+ * Copyright © 2014-2015 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,16 +22,16 @@
 
 #pragma once
 
-#include <queue>
+#include <vector>
 #include <functional>
 #include <mutex>
 #include <thread>
 #include <iostream>
+#include <condition_variable>
 
 #include "action.h"
 #include "level_registry.h"
 #include "../style.h"
-#include "../semaphore.h"
 
 namespace reaver
 {
@@ -44,19 +44,20 @@ namespace reaver
                 {
                     while (!_quit)
                     {
-                        _semaphore.wait();
-
-                        std::queue<std::function<void()>> q;
+                        std::vector<std::function<void()>> functions;
 
                         {
-                            std::lock_guard<std::mutex> lock{ _lock };
-                            std::swap(q, _queue);
+                            std::unique_lock<std::mutex> lock{ _lock };
+                            if (_queue.empty())
+                            {
+                                _cv.wait(lock);
+                            }
+                            std::swap(functions, _queue);
                         }
 
-                        while (q.size())
+                        for (auto && f : functions)
                         {
-                            q.front()();
-                            q.pop();
+                            f();
                         }
                     }
 
@@ -101,20 +102,19 @@ namespace reaver
             void _async(std::function<void()> f)
             {
                 std::lock_guard<std::mutex> lock{ _lock };
+                _queue.push_back(std::move(f));
 
-                _queue.push(f);
-
-                _semaphore.notify();
+                _cv.notify_one();
             }
 
             std::atomic<bool> _quit{ false };
 
             base_level _level;
 
-            std::thread _worker;
-            std::queue<std::function<void()>> _queue;
-            semaphore _semaphore;
+            std::condition_variable _cv;
             std::mutex _lock;
+            std::thread _worker;
+            std::vector<std::function<void()>> _queue;
 
             std::vector<stream_wrapper> _streams;
         };
@@ -126,7 +126,7 @@ namespace reaver
 
         void logger_friend::_write(logger & l, std::vector<streamable> vec)
         {
-            l._async([=, &l]()
+            l._async([vec = std::move(vec), &l]()
             {
                 for (auto & stream : l._streams)
                 {

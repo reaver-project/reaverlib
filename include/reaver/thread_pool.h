@@ -35,6 +35,7 @@
 #include "exception.h"
 #include "callbacks.h"
 #include "thread.h"
+#include "semaphore.h"
 
 namespace reaver { inline namespace _v1
 {
