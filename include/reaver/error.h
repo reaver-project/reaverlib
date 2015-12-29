@@ -20,9 +20,6 @@
  *
  **/
 
-// some code review done on: 29.12.2015
-// TODO: further review of the functionality needed at a later time
-
 #pragma once
 
 #include "logger.h"
@@ -31,7 +28,30 @@
 
 namespace reaver { inline namespace _v1
 {
-    class error_engine : public exception
+    class error_engine_exception : public exception
+    {
+    public:
+        error_engine_exception(std::vector<exception> errors, std::size_t error_count, std::size_t warning_count) : exception{ logger::fatal }, errors{ std::move(errors) },
+            error_count{ error_count}, warning_count{ warning_count }
+        {
+        }
+
+        virtual void print(reaver::logger::logger & l) const noexcept override
+        {
+            for (const auto & e : errors)
+            {
+                e.print(l);
+            }
+
+            l() << error_count << " error" << (error_count != 1 ? "s" : "") << " and " << warning_count << " warning" << (warning_count != 1 ? "s" : "") << " generated.";
+        }
+
+        const std::vector<exception> errors;
+        const std::size_t error_count;
+        const std::size_t warning_count;
+    };
+
+    class error_engine
     {
     public:
         error_engine(std::size_t max_errors = 20, logger::base_level error_level = logger::base_level::error) : _max_errors{ max_errors },
@@ -41,7 +61,7 @@ namespace reaver { inline namespace _v1
 
         error_engine(const error_engine &) = delete;
 
-        error_engine(error_engine && moved_out)
+        error_engine(error_engine && moved_out) noexcept
         {
             using std::swap;
 
@@ -51,17 +71,23 @@ namespace reaver { inline namespace _v1
             swap(_max_errors, moved_out._max_errors);
             swap(_error_level, moved_out._error_level);
 
-            _printed_in_handler = moved_out._printed_in_handler;
-            moved_out._printed_in_handler = true;
+            _reported = moved_out._reported;
+            moved_out._reported = true;
         }
 
-        // yes, this is going to call std::terminate if not printed in handler
-        // I might need to write some documentation for this class at some point
-        virtual ~error_engine() noexcept
+        ~error_engine()
         {
-            if (_error_count && !_printed_in_handler)
+            if (_error_count && !_reported)
             {
-                throw std::move(*this);
+                _throw();
+            }
+        }
+
+        void validate()
+        {
+            if (_error_count && !_reported)
+            {
+                _throw();
             }
         }
 
@@ -88,8 +114,7 @@ namespace reaver { inline namespace _v1
 
             if (level == logger::base_level::crash || level == logger::base_level::fatal)
             {
-                // uh... I'm sorry, officer, I can't explain how this happened
-                throw std::move(*this);
+                _throw();
             }
         }
 
@@ -128,8 +153,7 @@ namespace reaver { inline namespace _v1
             auto level = _errors.back().level();
             if (level == logger::base_level::crash || level == logger::base_level::fatal)
             {
-                // uh... I'm sorry, officer, I can't explain how this happened
-                throw std::move(*this);
+                _throw();
             }
         }
 
@@ -138,33 +162,27 @@ namespace reaver { inline namespace _v1
             _error_level = l;
         }
 
-        virtual const char * what() const noexcept
-        {
-            if (!_printed_in_handler && std::current_exception() != std::exception_ptr{})
-            {
-                _printed_in_handler = true;
-            }
-
-            return exception::what();
-        }
-
         void set_error_limit(std::size_t i)
         {
+            if (i == 0)
+            {
+                i = 1;
+            }
+
             _max_errors = i;
 
             if (_error_count >= _max_errors)
             {
                 _errors.emplace_back(exception(logger::fatal) << "too many errors emitted: " << _max_errors << ".");
-
-                throw std::move(*this);
+                _throw();
             }
         }
 
-        virtual void print(reaver::logger::logger & l) const noexcept
+        void print(reaver::logger::logger & l) const noexcept
         {
             if (std::current_exception())
             {
-                _printed_in_handler = true;
+                _reported = true;
             }
 
             for (const auto & e : _errors)
@@ -191,15 +209,19 @@ namespace reaver { inline namespace _v1
             return _errors.size();
         }
 
-        template<typename T>
-        exception & operator<<(const T & rhs) = delete;
-
     private:
+        void _throw()
+        {
+            _reported = true;
+            throw error_engine_exception{ std::move(_errors), _error_count, _warning_count };
+        }
+
         std::vector<exception> _errors;
         std::size_t _error_count = 0;
         std::size_t _warning_count = 0;
         std::size_t _max_errors;
         logger::base_level _error_level;
-        mutable bool _printed_in_handler = false;
+        mutable bool _reported = false;
     };
 }}
+
