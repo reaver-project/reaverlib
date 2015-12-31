@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2013 Michał "Griwes" Dominiak
+ * Copyright © 2013, 2015 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,58 +22,40 @@
 
 #pragma once
 
-namespace reaver
-{
-inline namespace __v1
-{
-    template<uint64_t I>
-    struct increment
-    {
-        static constexpr uint64_t advance()
-        {
-            return I + 1;
-        }
-    };
+#include <cstddef>
+#include <type_traits>
 
-    template<uint64_t I, uint64_t J>
-    struct different
-    {
-        static constexpr bool check()
-        {
-            return I != J;
-        }
-    };
+namespace reaver { inline namespace _v1
+{
+    template<std::size_t I>
+    struct increment : std::integral_constant<std::size_t, I + 1> {};
 
-    template<uint64_t I, uint64_t J>
-    struct less
-    {
-        static constexpr bool check()
-        {
-            return I < J;
-        }
-    };
+    template<std::size_t I, std::size_t J>
+    struct different : std::integral_constant<bool, I != J> {};
+
+    template<std::size_t I, std::size_t J>
+    struct less : std::integral_constant<bool, I < J> {};
 
     namespace _detail
     {
-        template<uint64_t, uint64_t, template<uint64_t> class, template<uint64_t, uint64_t> class, template<uint64_t> class, bool>
+        template<std::size_t, std::size_t, template<std::size_t> class, template<std::size_t, std::size_t> class, template<std::size_t> class, bool>
         struct _static_for;
 
-        template<uint64_t Begin, uint64_t End, template<uint64_t> class Func, template<uint64_t, uint64_t> class Compare,
-            template<uint64_t> class Advance>
+        template<std::size_t Begin, std::size_t End, template<std::size_t> class Func, template<std::size_t, std::size_t> class Compare,
+            template<std::size_t> class Advance>
         struct _static_for<Begin, End, Func, Compare, Advance, true>
         {
-            static constexpr uint64_t next = Advance<Begin>::advance();
+            static constexpr std::size_t next = Advance<Begin>();
 
             static void exec()
             {
                 Func<Begin>{}();
-
-                _static_for<next, End, Func, Compare, Advance, Compare<next, End>::check()>::exec();
+                _static_for<next, End, Func, Compare, Advance, Compare<next, End>{}>::exec();
             }
         };
 
-        template<uint64_t Begin, uint64_t End, template<uint64_t> class Func, template<uint64_t, uint64_t> class Compare,
-            template<uint64_t> class Advance>
+        template<std::size_t Begin, std::size_t End, template<std::size_t> class Func, template<std::size_t, std::size_t> class Compare,
+            template<std::size_t> class Advance>
         struct _static_for<Begin, End, Func, Compare, Advance, false>
         {
             static void exec()
@@ -82,14 +64,13 @@ inline namespace __v1
         };
     }
 
-    template<uint64_t Begin, uint64_t End, template<uint64_t> class Func, template<uint64_t, uint64_t> class Compare = less,
-        template<uint64_t> class Advance = increment>
+    template<std::size_t Begin, std::size_t End, template<std::size_t> class Func, template<std::size_t, std::size_t> class Compare = less,
+        template<std::size_t> class Advance = increment>
     struct static_for
     {
         static void exec()
         {
-            _detail::_static_for<Begin, End, Func, Compare, Advance, Compare<Begin, End>::check()>::exec();
+            _detail::_static_for<Begin, End, Func, Compare, Advance, Compare<Begin, End>{}>::exec();
         }
     };
-}
-}
+}}

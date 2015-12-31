@@ -1,1 +1,3 @@
  * `callbacks`: write tests
+ * `semaphore`: tests
+ * `static_for`: this needs some thinking over - and some tests...
