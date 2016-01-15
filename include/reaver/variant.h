@@ -60,8 +60,7 @@ namespace reaver { inline namespace _v1
             }
             _recursive_wrapper & operator=(_recursive_wrapper &&) noexcept = default;
 
-            template<typename... Ts>
-            _recursive_wrapper(Ts &&... ts) : _storage{ std::make_unique<T>(std::forward<Ts>(ts)...) }
+            _recursive_wrapper(T t) : _storage{ std::make_unique<T>(std::move(t)) }
             {
             }
 
