@@ -432,7 +432,7 @@ namespace reaver { inline namespace _v1
     template<typename CRTP, typename... Ts, typename F>
     auto fmap(_detail::_variant<CRTP, Ts...> && var, F && f)
     {
-        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<Ts &&>()))...>, variant>;
+        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<_detail::_dereference_wrapper_t<Ts> &&>()))...>, variant>;
         using visitor_type = result_type (*)(_detail::_variant<CRTP, Ts...> &&, F &&);
         static visitor_type visitors[] = {
             [](_detail::_variant<CRTP, Ts...> && v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(std::move(v))); }...
@@ -445,7 +445,7 @@ namespace reaver { inline namespace _v1
     template<typename CRTP, typename... Ts, typename F>
     auto fmap(const _detail::_variant<CRTP, Ts...> & var, F && f)
     {
-        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<const Ts &>()))...>, variant>;
+        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<const _detail::_dereference_wrapper_t<Ts> &>()))...>, variant>;
         using visitor_type = result_type (*)(const _detail::_variant<CRTP, Ts...> &, F &&);
         static visitor_type visitors[] = {
             [](const _detail::_variant<CRTP, Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(v)); }...
@@ -458,7 +458,7 @@ namespace reaver { inline namespace _v1
     template<typename CRTP, typename... Ts, typename F>
     auto fmap(_detail::_variant<CRTP, Ts...> & var, F && f)
     {
-        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<Ts &>()))...>, variant>;
+        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<_detail::_dereference_wrapper_t<Ts> &>()))...>, variant>;
         using visitor_type = result_type (*)(_detail::_variant<CRTP, Ts...> &, F &&);
         static visitor_type visitors[] = {
             [](_detail::_variant<CRTP, Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, Ts>::value>(v)); }...

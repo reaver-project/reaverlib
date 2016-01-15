@@ -419,5 +419,20 @@ MAYFLY_ADD_TESTCASE("recursive variant construction and inspection", []()
     }
 });
 
+MAYFLY_ADD_TESTCASE("recursive_wrapper fmap", []()
+{
+    struct foo
+    {
+        foo(int i) : i{ i }
+        {
+        }
+
+        int i;
+    };
+
+    test::reaver::variant<test::reaver::recursive_wrapper<foo>> v = { 1 };
+    MAYFLY_CHECK(test::reaver::get<0>(fmap(v, [](auto && f) { return f.i; })) == 1);
+});
+
 MAYFLY_END_SUITE;
 
