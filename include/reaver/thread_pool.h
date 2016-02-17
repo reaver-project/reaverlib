@@ -61,8 +61,11 @@ namespace reaver { inline namespace _v1
 
         ~thread_pool()
         {
-            _end = true;
-            _cond.notify_all();
+            {
+                std::unique_lock<std::mutex> lock{ _lock };
+                _end = true;
+                _cond.notify_all();
+            }
 
             for (auto & th : _threads)
             {
@@ -152,7 +155,6 @@ namespace reaver { inline namespace _v1
 
             _die_semaphore.notify(_size - new_size);
             _cond.notify_all();
-            _size = new_size;
         }
 
     private:
