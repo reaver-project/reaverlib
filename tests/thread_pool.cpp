@@ -73,34 +73,6 @@ MAYFLY_ADD_TESTCASE("handling aborted pools", []
     MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::thread_pool_closed, pool.push([]{}));
 });
 
-MAYFLY_ADD_TESTCASE("affinities", []
-{
-    {
-        test::reaver::thread_pool pool{ 1 };
-        pool.allocate_affinity();
-        MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::free_affinities_exhausted, pool.allocate_affinity());
-    }
-
-    {
-        test::reaver::thread_pool pool{ 2 };
-        auto affinity1 = pool.allocate_affinity();
-        auto affinity2 = pool.allocate_affinity();
-
-        auto future1 = pool.push(affinity1, []{ return std::this_thread::get_id(); });
-        auto future2 = pool.push(affinity2, []{ return std::this_thread::get_id(); });
-
-        MAYFLY_CHECK(future1.get() == affinity1);
-        MAYFLY_CHECK(future2.get() == affinity2);
-    }
-
-    {
-        test::reaver::thread_pool pool{ 1 };
-        pool.allocate_affinity();
-        pool.allocate_affinity(true);
-        MAYFLY_REQUIRE(pool.size() == 2);
-    }
-});
-
 MAYFLY_ADD_TESTCASE("resizing", []
 {
     {
@@ -115,13 +87,6 @@ MAYFLY_ADD_TESTCASE("resizing", []
         {
             std::this_thread::yield();
         }
-    }
-
-    {
-        test::reaver::thread_pool pool{ 1 };
-        pool.allocate_affinity();
-        pool.resize(2);
-        pool.allocate_affinity();
     }
 });
 
