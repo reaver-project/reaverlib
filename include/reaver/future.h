@@ -136,6 +136,7 @@ namespace reaver { inline namespace _v1
             std::mutex lock;
             variant<T, std::exception_ptr, none_t> value;
             std::atomic<std::size_t> promise_count;
+            std::atomic<std::size_t> shared_count{ 1 };
 
             std::shared_ptr<executor> scheduler;
             then_t continuations;
@@ -146,9 +147,12 @@ namespace reaver { inline namespace _v1
             optional<T> try_get()
             {
                 std::lock_guard<std::mutex> l(lock);
-                return get<0>(fmap(value, make_overload_set(
+                return get<0>(fmap(shared_count == 1 ? std::move(value) : value, make_overload_set(
                     [&](T t) {
-                        value = none;
+                        if (shared_count == 1)
+                        {
+                            value = none;
+                        }
                         return make_optional(std::move(t));
                     },
 
@@ -174,8 +178,11 @@ namespace reaver { inline namespace _v1
                     std::rethrow_exception(get<1>(value));
                 }
 
-                auto ret = std::move(get<0>(value));
-                value = none;
+                auto ret = shared_count == 1 ? std::move(get<0>(value)) : get<0>(value);
+                if (shared_count == 1)
+                {
+                    value = none;
+                }
                 return ret;
             }
 
@@ -190,6 +197,8 @@ namespace reaver { inline namespace _v1
                 {
                     assert(!"what do?");
                 }
+
+                ++shared_count;
 
                 auto sched = [this, provided = std::move(provided_sched)]() {
                     if (provided)
@@ -258,6 +267,7 @@ namespace reaver { inline namespace _v1
             mutable std::mutex lock;
             variant<ready_type, std::exception_ptr, none_t> value;
             std::atomic<std::size_t> promise_count;
+            std::atomic<std::size_t> shared_count{ 1 };
 
             std::shared_ptr<executor> scheduler;
             then_t continuations;
@@ -270,7 +280,10 @@ namespace reaver { inline namespace _v1
                 std::lock_guard<std::mutex> l(lock);
                 return get<0>(fmap(value, make_overload_set(
                     [&](ready_type) {
-                        value = none;
+                        if (shared_count == 1)
+                        {
+                            value = none;
+                        }
                         return true;
                     },
 
@@ -294,6 +307,11 @@ namespace reaver { inline namespace _v1
                 if (value.index() == 1)
                 {
                     std::rethrow_exception(get<1>(value));
+                }
+
+                if (shared_count == 1)
+                {
+                    value = none;
                 }
             }
 
@@ -322,6 +340,8 @@ namespace reaver { inline namespace _v1
 
                     assert(!"I really don't know what to do this time.");
                 };
+
+                ++shared_count;
 
                 return get<0>(fmap(value, make_overload_set(
                     [&](variant<ready_type, std::exception_ptr>) {
@@ -509,18 +529,61 @@ namespace reaver { inline namespace _v1
         {
         }
 
+        void _add_count()
+        {
+            if (_state)
+            {
+                ++_state->shared_count;
+            }
+        }
+
+        void _remove_count()
+        {
+            if (_state)
+            {
+                --_state->shared_count;
+            }
+        }
+
     public:
         template<typename F>
         friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
-        future(const future &) = default;
-        future(future &&) = default;
+        future(const future & other) : _state{ other._state }
+        {
+            _add_count();
+        }
 
-        future & operator=(const future &) = default;
-        future & operator=(future &&) = default;
+        future(future && other) noexcept : _state{ std::move(other._state) }
+        {
+            other._state = {};
+        }
+
+        future & operator=(const future & other)
+        {
+            _remove_count();
+            _state = other._state;
+            _add_count();
+
+            return *this;
+        }
+
+        future & operator=(future && other) noexcept
+        {
+            _remove_count();
+            _state = std::move(other._state);
+            other._state = {};
+
+            return *this;
+        }
 
         explicit future(T value) : _state{ std::make_shared<_detail::_shared_state<T>>(std::move(value)) }
         {
+        }
+
+        ~future()
+        {
+            _remove_count();
         }
 
         auto try_get()
@@ -567,18 +630,61 @@ namespace reaver { inline namespace _v1
         {
         }
 
+        void _add_count()
+        {
+            if (_state)
+            {
+                ++_state->shared_count;
+            }
+        }
+
+        void _remove_count()
+        {
+            if (_state)
+            {
+                --_state->shared_count;
+            }
+        }
+
     public:
         template<typename F>
         friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
-        future(const future &) = default;
-        future(future &&) = default;
+        future(const future & other) : _state{ other._state }
+        {
+            _add_count();
+        }
 
-        future & operator=(const future &) = default;
-        future & operator=(future &&) = default;
+        future(future && other) noexcept : _state{ std::move(other._state) }
+        {
+            other._state = {};
+        }
+
+        future & operator=(const future & other)
+        {
+            _remove_count();
+            _state = other._state;
+            _add_count();
+
+            return *this;
+        }
+
+        future & operator=(future && other) noexcept
+        {
+            _remove_count();
+            _state = std::move(other._state);
+            other._state = {};
+
+            return *this;
+        }
 
         explicit future(ready_type) : _state{ std::make_shared<_detail::_shared_state<void>>(ready) }
         {
+        }
+
+        ~future()
+        {
+            _remove_count();
         }
 
         bool try_get()
