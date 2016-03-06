@@ -297,6 +297,12 @@ MAYFLY_ADD_TESTCASE("noncopyable value", []()
         MAYFLY_CHECK(future.try_get() == 3);
         MAYFLY_CHECK(!pair.future.try_get());
     }
+
+    {
+        auto pair = test::reaver::package([](){ return noncopyable{ 3 }; });
+        pair.future.then([](auto){});
+        MAYFLY_CHECK_THROWS_TYPE(test::reaver::multiple_noncopyable_continuations, pair.future.then([](auto){}));
+    }
 });
 
 MAYFLY_END_SUITE;
