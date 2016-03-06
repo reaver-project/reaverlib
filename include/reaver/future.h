@@ -28,6 +28,7 @@
 #include "exception.h"
 #include "optional.h"
 #include "overloads.h"
+#include "prelude/functor.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -112,6 +113,27 @@ namespace reaver { inline namespace _v1
             return state.value.index() == 2 && state.function;
         }
 
+        template<typename... Args, typename std::enable_if<all_of<std::is_copy_constructible<Args>::value...>::value, int>::type = 0>
+        auto _move_or_copy(variant<Args...> & v, bool move)
+        {
+            if (move)
+            {
+                auto ret = std::move(v);
+                v = none;
+                return ret;
+            }
+
+            return v;
+        }
+
+        template<typename... Args, typename std::enable_if<!all_of<std::is_copy_constructible<Args>::value...>::value, int>::type = 0>
+        auto _move_or_copy(variant<Args...> & v, bool)
+        {
+            auto ret = std::move(v);
+            v = none;
+            return ret;
+        }
+
         template<typename T>
         struct _shared_state : std::enable_shared_from_this<_shared_state<T>>
         {
@@ -147,7 +169,7 @@ namespace reaver { inline namespace _v1
             optional<T> try_get()
             {
                 std::lock_guard<std::mutex> l(lock);
-                return get<0>(fmap(shared_count == 1 ? std::move(value) : value, make_overload_set(
+                return get<0>(fmap(_move_or_copy(value, shared_count == 1), make_overload_set(
                     [&](T t) {
                         if (shared_count == 1)
                         {
@@ -178,7 +200,7 @@ namespace reaver { inline namespace _v1
                     std::rethrow_exception(get<1>(value));
                 }
 
-                auto ret = shared_count == 1 ? std::move(get<0>(value)) : get<0>(value);
+                auto ret = get<0>(_move_or_copy(value, shared_count == 1));
                 if (shared_count == 1)
                 {
                     value = none;
@@ -479,10 +501,7 @@ namespace reaver { inline namespace _v1
                 state->value = std::current_exception();
             }
 
-            for (auto && cont : state->continuations)
-            {
-                cont();
-            }
+            fmap(state->continuations, [](auto && cont){ cont(); return unit{}; });
 
             state->function = {};
         }
@@ -514,10 +533,7 @@ namespace reaver { inline namespace _v1
             state->value = std::current_exception();
         }
 
-        for (auto && cont : state->continuations)
-        {
-            cont();
-        }
+        fmap(state->continuations, [](auto && cont){ cont(); return unit{}; });
 
         state->function = {};
     }

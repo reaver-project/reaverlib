@@ -24,6 +24,9 @@
 
 #include <reaver/optional.h>
 
+// due to prelude/functor.h; can probably purge the boost::variant fmap from there at some point
+#include <boost/variant.hpp>
+
 namespace test
 {
 #   include "future.h"
@@ -257,6 +260,42 @@ MAYFLY_ADD_TESTCASE("shared void future", []()
 
         MAYFLY_CHECK(future2.try_get());
         MAYFLY_CHECK(copy.try_get());
+    }
+});
+
+MAYFLY_ADD_TESTCASE("noncopyable value", []()
+{
+    struct noncopyable
+    {
+        int i = 0;
+
+        noncopyable(int i) : i{ i }
+        {
+        }
+
+        noncopyable(noncopyable &&) = default;
+        noncopyable & operator=(noncopyable &&) = default;
+
+        noncopyable(const noncopyable &) = delete;
+        noncopyable & operator=(const noncopyable &) = delete;
+    };
+
+    {
+        auto ready = test::reaver::make_ready_future(noncopyable{ 1 });
+
+        MAYFLY_CHECK(ready.try_get()->i == 1);
+        MAYFLY_CHECK(!ready.try_get());
+    }
+
+    {
+        auto pair = test::reaver::package([](){ return noncopyable{ 3 }; });
+        auto future = pair.future.then([](noncopyable n){ return n.i; });
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK(future.try_get() == 3);
+        MAYFLY_CHECK(!pair.future.try_get());
     }
 });
 
