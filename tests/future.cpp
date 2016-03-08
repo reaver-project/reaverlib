@@ -305,5 +305,24 @@ MAYFLY_ADD_TESTCASE("noncopyable value", []()
     }
 });
 
+MAYFLY_ADD_TESTCASE("when_all", []()
+{
+    {
+        //auto ready = test::reaver::make_ready_future();
+        //auto ready_int = test::reaver::make_ready_future(1);
+
+        auto pair = test::reaver::package([](){});
+        auto pair_int = test::reaver::package([](){ return 2; });
+
+        auto final = test::reaver::when_all(/*ready, ready_int,*/ pair.future, pair_int.future);
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair_int.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK(final.try_get() == std::make_tuple(/*1,*/ 2));
+    }
+});
+
 MAYFLY_END_SUITE;
 

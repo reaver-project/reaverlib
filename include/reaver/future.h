@@ -28,6 +28,8 @@
 #include "exception.h"
 #include "optional.h"
 #include "overloads.h"
+#include "tpl/rebind.h"
+#include "tpl/filter.h"
 #include "prelude/functor.h"
 
 namespace reaver { inline namespace _v1
@@ -456,7 +458,7 @@ namespace reaver { inline namespace _v1
             _add_promise();
         }
 
-        packaged_task(packaged_task && other) : _state{ other._state }
+        packaged_task(packaged_task && other) noexcept : _state{ other._state }
         {
             other._state = {};
         }
@@ -468,7 +470,7 @@ namespace reaver { inline namespace _v1
             _add_promise();
         }
 
-        packaged_task & operator=(packaged_task && other)
+        packaged_task & operator=(packaged_task && other) noexcept
         {
             _remove_promise();
             _state = other._state;
@@ -756,5 +758,80 @@ namespace reaver { inline namespace _v1
 
         return future_package_pair<T>{ { state }, { std::move(state) } };
     };
+
+    namespace _detail
+    {
+        template<typename T>
+        struct _is_not_void : std::integral_constant<bool, !std::is_void<T>::value> {};
+
+        template<typename... Args>
+        using _optional_tuple = std::tuple<optional<Args>...>;
+
+        template<typename... Args>
+        std::tuple<Args...> _remove_optional(std::tuple<optional<Args>...> & opt)
+        {
+            return { std::move(*get<tpl::index_of<tpl::vector<Args...>, Args>::value>(opt))... };
+        }
+    }
+
+    template<typename... Ts>
+    auto when_all(future<Ts>... futures)
+    {
+        using nonvoid = tpl::filter<
+            tpl::vector<Ts...>,
+            _detail::_is_not_void
+        >;
+
+        using return_type = tpl::rebind<
+            nonvoid,
+            std::tuple
+        >;
+
+        using buffer_type = tpl::rebind<
+            nonvoid,
+            _detail::_optional_tuple
+        >;
+
+        struct internal_state
+        {
+            buffer_type buffer;
+            std::atomic<std::size_t> remaining{ sizeof...(Ts) };
+            optional<packaged_task<return_type>> task;
+            std::vector<future<>> futures;
+        };
+
+        auto state = std::make_shared<internal_state>();
+        auto pair = package([state](){
+            return _detail::_remove_optional(state->buffer);
+        });
+        state->task = std::move(pair.packaged_task);
+
+        swallow{
+            [&]() {
+                state->futures.push_back(futures.then(make_overload_set(
+                    [state]() {
+                        if (--state->remaining == 0)
+                        {
+                            (*state->task)();
+                        }
+                    },
+
+                    [state](auto value) -> typename std::enable_if<!std::is_void<decltype(value)>::value>::type {
+                        using T = decltype(value);
+                        get<tpl::index_of<nonvoid, T>::value>(state->buffer) = std::move(value);
+
+                        if (--state->remaining == 0)
+                        {
+                            (*state->task)();
+                        }
+                    }
+                )));
+
+                return unit{};
+            }()...
+        };
+
+        return std::move(pair.future);
+    }
 }}
 
