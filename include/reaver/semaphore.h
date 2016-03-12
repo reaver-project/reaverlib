@@ -27,9 +27,7 @@
 #include <thread>
 #include <atomic>
 
-namespace reaver
-{
-inline namespace __v1
+namespace reaver { inline namespace _v1
 {
     class semaphore
     {
@@ -42,7 +40,6 @@ inline namespace __v1
         {
             {
                 std::unique_lock<std::mutex> lock{ _mutex };
-
                 _count += i;
             }
 
@@ -82,5 +79,4 @@ inline namespace __v1
         std::condition_variable _condition;
         std::atomic<std::size_t> _count;
     };
-}
-}
+}}
