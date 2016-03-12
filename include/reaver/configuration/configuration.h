@@ -70,13 +70,13 @@ namespace reaver { inline namespace _v1
         struct _has_exact_match : _has_exact_match_impl<void, Tag, std::remove_reference_t<From>...> {};
 
         template<typename... Args>
-        struct _is_callable_impl : public std::false_type {};
+        struct _is_construct_callable_impl : public std::false_type {};
 
         template<typename T, typename... Args>
-        struct _is_callable_impl<void_t<decltype(T::construct(std::declval<Args>()...))>, T, Args...> : public std::true_type {};
+        struct _is_construct_callable_impl<void_t<decltype(T::construct(std::declval<Args>()...))>, T, Args...> : public std::true_type {};
 
         template<typename Tag, typename... Args>
-        struct _is_callable : public _is_callable_impl<void, Tag, Args...> {};
+        struct _is_construct_callable : public _is_construct_callable_impl<void, Tag, Args...> {};
 
         template<typename... Args>
         struct _is_constructible_impl : public std::false_type {};
@@ -185,7 +185,7 @@ namespace reaver { inline namespace _v1
             return [&](auto && arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(std::forward<decltype(arg)>(arg)); };
         }
 
-        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_callable, T, TypeList>::value, int>::type = 0>
+        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_construct_callable, T, TypeList>::value, int>::type = 0>
         auto _set(choice<4>)
         {
             return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(args)>(args)...)); };
