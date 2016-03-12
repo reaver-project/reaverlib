@@ -47,5 +47,17 @@ namespace reaver { inline namespace _v1
                 decltype(std::declval<T>().cend())
             >
         > : public std::true_type {};
+
+    namespace _detail
+    {
+        template<typename... Args>
+        struct _is_callable_impl : std::false_type {};
+
+        template<typename T, typename... Args>
+        struct _is_callable_impl<void_t<decltype(std::declval<T>()(std::declval<Args>()...))>, T, Args...> : std::true_type {};
+    };
+
+    template<typename T, typename... Args>
+    struct is_callable : _detail::_is_callable_impl<void, T, Args...> {};
 }}
 
