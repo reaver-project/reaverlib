@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <exception>
+#include <type_traits>
 
 #include "exception.h"
 #include "optional.h"
@@ -31,6 +32,7 @@
 #include "tpl/rebind.h"
 #include "tpl/filter.h"
 #include "prelude/functor.h"
+#include "function.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -42,7 +44,7 @@ namespace reaver { inline namespace _v1
         virtual ~executor() {}
 
         // TODO: reaver::function
-        virtual void push(std::function<void ()> f) = 0;
+        virtual void push(reaver::function<void ()> f) = 0;
     };
 
     template<typename T, typename... Args>
@@ -83,7 +85,7 @@ namespace reaver { inline namespace _v1
         template<typename T>
         struct _shared_state;
 
-        using _continuation_type = std::function<void ()>;
+        using _continuation_type = reaver::function<void ()>;
 
         template<typename T, typename F, typename std::enable_if<std::is_void<T>::value || std::is_copy_constructible<T>::value, int>::type = 0>
         void _add_continuation(_shared_state<T> & state, F && f)
@@ -159,14 +161,14 @@ namespace reaver { inline namespace _v1
 
             std::mutex lock;
             variant<T, std::exception_ptr, none_t> value;
-            std::atomic<std::size_t> promise_count;
-            std::atomic<std::size_t> shared_count{ 1 };
+            std::atomic<std::size_t> promise_count{ 0 };
+            std::atomic<std::size_t> shared_count{ 0 };
 
             std::shared_ptr<executor> scheduler;
             then_t continuations;
 
             // TODO: reaver::function
-            std::function<T ()> function;
+            optional<class function<T ()>> function;
 
             optional<T> try_get()
             {
@@ -290,14 +292,14 @@ namespace reaver { inline namespace _v1
 
             mutable std::mutex lock;
             variant<ready_type, std::exception_ptr, none_t> value;
-            std::atomic<std::size_t> promise_count;
-            std::atomic<std::size_t> shared_count{ 1 };
+            std::atomic<std::size_t> promise_count{ 0 };
+            std::atomic<std::size_t> shared_count{ 0 };
 
             std::shared_ptr<executor> scheduler;
             then_t continuations;
 
             // TODO: reaver::function
-            std::function<void ()> function;
+            optional<class function<void ()>> function;
 
             bool try_get()
             {
@@ -496,7 +498,7 @@ namespace reaver { inline namespace _v1
 
             try
             {
-                state->value = state->function();
+                state->value = (*state->function)();
             }
             catch (...)
             {
@@ -527,7 +529,7 @@ namespace reaver { inline namespace _v1
 
         try
         {
-            state->function();
+            (*state->function)();
             state->value = ready;
         }
         catch (...)
@@ -545,6 +547,7 @@ namespace reaver { inline namespace _v1
     {
         future(std::shared_ptr<_detail::_shared_state<T>> state) : _state{ std::move(state) }
         {
+            _add_count();
         }
 
         void _add_count()
@@ -595,7 +598,7 @@ namespace reaver { inline namespace _v1
             return *this;
         }
 
-        explicit future(T value) : _state{ std::make_shared<_detail::_shared_state<T>>(std::move(value)) }
+        explicit future(T value) : future{ std::make_shared<_detail::_shared_state<T>>(std::move(value)) }
         {
         }
 
@@ -646,6 +649,7 @@ namespace reaver { inline namespace _v1
     {
         future(std::shared_ptr<_detail::_shared_state<void>> state) : _state{ std::move(state) }
         {
+            _add_count();
         }
 
         void _add_count()
@@ -696,7 +700,7 @@ namespace reaver { inline namespace _v1
             return *this;
         }
 
-        explicit future(ready_type) : _state{ std::make_shared<_detail::_shared_state<void>>(ready) }
+        explicit future(ready_type) : future{ std::make_shared<_detail::_shared_state<void>>(ready) }
         {
         }
 
@@ -744,8 +748,8 @@ namespace reaver { inline namespace _v1
     template<typename T>
     struct future_package_pair
     {
-        packaged_task<T> packaged_task;
-        future<T> future;
+        class packaged_task<T> packaged_task;
+        class future<T> future;
     };
 
     template<typename F>
@@ -768,9 +772,9 @@ namespace reaver { inline namespace _v1
         using _optional_tuple = std::tuple<optional<Args>...>;
 
         template<typename... Args>
-        std::tuple<Args...> _remove_optional(std::tuple<optional<Args>...> & opt)
+        auto _remove_optional(std::tuple<optional<Args>...> & opt)
         {
-            return { std::move(*get<tpl::index_of<tpl::vector<Args...>, Args>::value>(opt))... };
+            return std::tuple<Args...>{ std::move(*get<tpl::index_of<tpl::vector<Args...>, Args>::value>(opt))... };
         }
     }
 
@@ -806,29 +810,31 @@ namespace reaver { inline namespace _v1
         });
         state->task = std::move(pair.packaged_task);
 
-        swallow{
-            [&]() {
-                state->futures.push_back(futures.then(make_overload_set(
-                    [state]() {
-                        if (--state->remaining == 0)
-                        {
-                            (*state->task)();
-                        }
-                    },
-
-                    [state](auto value) -> typename std::enable_if<!std::is_void<decltype(value)>::value>::type {
-                        using T = decltype(value);
-                        get<tpl::index_of<nonvoid, T>::value>(state->buffer) = std::move(value);
-
-                        if (--state->remaining == 0)
-                        {
-                            (*state->task)();
-                        }
+        auto handler = [&](auto & future) {
+            state->futures.push_back(future.then(make_overload_set(
+                [state]() {
+                    if (--state->remaining == 0)
+                    {
+                        (*state->task)();
                     }
-                )));
+                },
 
-                return unit{};
-            }()...
+                [state](auto value) {
+                    using T = decltype(value);
+                    get<tpl::index_of<nonvoid, T>::value>(state->buffer) = std::move(value);
+
+                    if (--state->remaining == 0)
+                    {
+                        (*state->task)();
+                    }
+                }
+            )));
+
+            return unit{};
+        };
+
+        swallow{
+            handler(futures)...
         };
 
         return std::move(pair.future);

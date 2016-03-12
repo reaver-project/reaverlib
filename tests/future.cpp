@@ -37,7 +37,7 @@ namespace
     struct trivial_executor : public test::reaver::executor
     {
         // TODO: reaver::function
-        virtual void push(std::function<void ()> f) override
+        virtual void push(test::reaver::function<void ()> f) override
         {
             f();
         }
@@ -100,6 +100,7 @@ MAYFLY_ADD_TESTCASE("broken promise", []()
 
         MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::broken_promise, future->try_get());
         MAYFLY_REQUIRE_NOTHROW(future->try_get());
+        MAYFLY_REQUIRE(!future->try_get());
     }
 
     {
@@ -112,6 +113,7 @@ MAYFLY_ADD_TESTCASE("broken promise", []()
 
         MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::broken_promise, future->try_get());
         MAYFLY_REQUIRE_NOTHROW(future->try_get());
+        MAYFLY_REQUIRE(!future->try_get());
     }
 });
 
