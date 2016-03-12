@@ -23,12 +23,10 @@
 #include <unordered_set>
 #include <reaver/exception.h>
 #include <reaver/error.h>
+#include <reaver/optional.h>
 
 namespace test
 {
-// TODO: use global once available
-#   include "optional.h"
-
 #   include "error.h"
 }
 
@@ -61,7 +59,7 @@ MAYFLY_ADD_TESTCASE("without reaching limit", []()
 MAYFLY_ADD_TESTCASE("moved-from should not throw", []()
 {
     MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, [](){
-        test::reaver::optional<test::reaver::error_engine> engine;
+        reaver::optional<test::reaver::error_engine> engine;
         MAYFLY_CHECK_NOTHROW(engine = [](){
             test::reaver::error_engine engine{ 2 };
             engine.push(test::reaver::exception{ test::reaver::logger::error });
