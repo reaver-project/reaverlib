@@ -29,10 +29,10 @@ namespace reaver { inline namespace _v1
 #ifdef __clang__
     using std::invoke;
 #else
-    template<typename... Args>
-    decltype(auto) invoke(Args &&... args)
+    template<typename F, typename... Args>
+    decltype(auto) invoke(F && f, Args &&... args)
     {
-        return std::bind(std::forward<Args>(args)...)();
+        return std::__invoke(f, std::forward<Args>(args)...);
     }
 #endif
 }}
