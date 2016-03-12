@@ -47,6 +47,14 @@ namespace reaver
             always
         };
 
+        struct hasher
+        {
+            auto operator()(const base_level & l) const
+            {
+                return std::hash<std::underlying_type_t<base_level>>()(static_cast<std::underlying_type_t<base_level>>(l));
+            }
+        };
+
         struct level_type
         {
             using type = std::vector<streamable>;

@@ -42,7 +42,7 @@ namespace reaver { inline namespace _v1
         template<typename Level = logger::always_type, typename std::enable_if<logger::is_logger_level<Level>::value, int>::type = 0>
         exception(Level l = {}) : _level{ l }
         {
-            static std::unordered_set<logger::base_level> allowed_levels = {
+            static std::unordered_set<logger::base_level, logger::hasher> allowed_levels = {
                 logger::always,
                 logger::note,
                 logger::info,
