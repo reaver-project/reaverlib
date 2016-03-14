@@ -324,6 +324,19 @@ MAYFLY_ADD_TESTCASE("when_all", []()
 
         MAYFLY_CHECK(final.try_get() == std::make_tuple(/*1,*/ 2));
     }
+
+    {
+        auto pair1 = test::reaver::package([](){ return 1; });
+        auto pair2 = test::reaver::package([](){ return 2; });
+
+        auto final = test::reaver::when_all(pair1.future, pair2.future);
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair1.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK(final.try_get() == std::make_tuple(1, 2));
+    }
 });
 
 MAYFLY_END_SUITE;

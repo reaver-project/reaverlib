@@ -567,6 +567,8 @@ namespace reaver { inline namespace _v1
         }
 
     public:
+        using value_type = T;
+
         template<typename F>
         friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
@@ -669,6 +671,8 @@ namespace reaver { inline namespace _v1
         }
 
     public:
+        using value_type = void;
+
         template<typename F>
         friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
@@ -771,11 +775,14 @@ namespace reaver { inline namespace _v1
         template<typename... Args>
         using _optional_tuple = std::tuple<optional<Args>...>;
 
-        template<typename... Args>
-        auto _remove_optional(std::tuple<optional<Args>...> & opt)
+        template<typename... Args, std::size_t... I>
+        auto _remove_optional(std::tuple<optional<Args>...> & opt, std::index_sequence<I...>)
         {
-            return std::tuple<Args...>{ std::move(*get<tpl::index_of<tpl::vector<Args...>, Args>::value>(opt))... };
+            return std::tuple<Args...>{ std::move(*get<I>(opt))... };
         }
+
+        template<std::size_t N>
+        using _int = std::integral_constant<std::size_t, N>;
     }
 
     template<typename... Ts>
@@ -806,36 +813,44 @@ namespace reaver { inline namespace _v1
 
         auto state = std::make_shared<internal_state>();
         auto pair = package([state](){
-            return _detail::_remove_optional(state->buffer);
+            state->futures = {};
+            return _detail::_remove_optional(state->buffer, std::make_index_sequence<nonvoid::size>());
         });
         state->task = std::move(pair.packaged_task);
 
-        auto handler = [&](auto & future) {
-            state->futures.push_back(future.then(make_overload_set(
-                [state]() {
-                    if (--state->remaining == 0)
-                    {
-                        (*state->task)();
-                    }
-                },
+        auto void_handler = [state]() {
+            if (--state->remaining == 0)
+            {
+                (*state->task)();
+            }
+        };
 
-                [state](auto value) {
-                    using T = decltype(value);
-                    get<tpl::index_of<nonvoid, T>::value>(state->buffer) = std::move(value);
+        auto nonvoid_handler = [&](auto index) {
+            return [state](auto value) {
+                get<decltype(index)::value>(state->buffer) = std::move(value);
 
-                    if (--state->remaining == 0)
-                    {
-                        (*state->task)();
-                    }
+                if (--state->remaining == 0)
+                {
+                    (*state->task)();
                 }
-            )));
-
-            return unit{};
+            };
         };
 
-        swallow{
-            handler(futures)...
-        };
+        auto handler = make_overload_set(
+            [](auto self, auto index){},
+
+            [&](auto self, auto index, future<void> & vf, auto &... rest) {
+                state->futures.push_back(vf.then(void_handler));
+                self(self, _detail::_int<index>(), rest...);
+            },
+
+            [&](auto self, auto index, auto & nvf, auto &... rest) {
+                state->futures.push_back(nvf.then(nonvoid_handler(index)));
+                self(self, _detail::_int<index + 1>(), rest...);
+            }
+        );
+
+        handler(handler, _detail::_int<0>(), futures...);
 
         return std::move(pair.future);
     }
