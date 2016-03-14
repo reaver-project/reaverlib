@@ -785,7 +785,7 @@ namespace reaver { inline namespace _v1
         using _int = std::integral_constant<std::size_t, N>;
     }
 
-    template<typename... Ts>
+    template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
     auto when_all(future<Ts>... futures)
     {
         using nonvoid = tpl::filter<
@@ -853,6 +853,11 @@ namespace reaver { inline namespace _v1
         handler(handler, _detail::_int<0>(), futures...);
 
         return std::move(pair.future);
+    }
+
+    auto when_all()
+    {
+        return make_ready_future();
     }
 }}
 

@@ -337,6 +337,11 @@ MAYFLY_ADD_TESTCASE("when_all", []()
 
         MAYFLY_CHECK(final.try_get() == std::make_tuple(1, 2));
     }
+
+    {
+        auto f = test::reaver::when_all();
+        MAYFLY_CHECK(f.try_get());
+    }
 });
 
 MAYFLY_END_SUITE;
