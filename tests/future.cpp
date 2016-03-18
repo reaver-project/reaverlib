@@ -78,12 +78,14 @@ MAYFLY_ADD_TESTCASE("exceptional future", []()
 
         MAYFLY_REQUIRE_NOTHROW(pair.packaged_task());
         MAYFLY_REQUIRE_THROWS_TYPE(int, pair.future.try_get());
+        MAYFLY_REQUIRE_THROWS_TYPE(int, pair.future.try_get());
     }
 
     {
         auto pair = test::reaver::package([]() -> int { throw 1; });
 
         MAYFLY_REQUIRE_NOTHROW(pair.packaged_task());
+        MAYFLY_REQUIRE_THROWS_TYPE(int, pair.future.try_get());
         MAYFLY_REQUIRE_THROWS_TYPE(int, pair.future.try_get());
     }
 });
@@ -99,8 +101,6 @@ MAYFLY_ADD_TESTCASE("broken promise", []()
         }
 
         MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::broken_promise, future->try_get());
-        MAYFLY_REQUIRE_NOTHROW(future->try_get());
-        MAYFLY_REQUIRE(!future->try_get());
     }
 
     {
@@ -112,10 +112,10 @@ MAYFLY_ADD_TESTCASE("broken promise", []()
         }
 
         MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::broken_promise, future->try_get());
-        MAYFLY_REQUIRE_NOTHROW(future->try_get());
-        MAYFLY_REQUIRE(!future->try_get());
     }
 });
+
+MAYFLY_BEGIN_SUITE("continuations");
 
 MAYFLY_ADD_TESTCASE("then", []()
 {
@@ -140,6 +140,33 @@ MAYFLY_ADD_TESTCASE("then", []()
     }
 });
 
+MAYFLY_ADD_TESTCASE("exceptional continuation", []()
+{
+    {
+        auto pair = test::reaver::package([](){ throw 1; });
+        auto future = pair.future.then([](){ return false; });
+        auto exceptional = pair.future.on_error([](std::exception_ptr ex){ return true; });
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
+        MAYFLY_REQUIRE(exceptional.try_get() == true);
+    }
+
+    {
+        auto pair = test::reaver::package([]() -> int { throw 1; });
+        auto future = pair.future.then([](int){ return false; });
+        auto exceptional = pair.future.on_error([](std::exception_ptr ex){ return true; });
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
+        MAYFLY_REQUIRE(exceptional.try_get() == true);
+    }
+});
+
 MAYFLY_ADD_TESTCASE("exception propagation", []()
 {
     {
@@ -160,6 +187,76 @@ MAYFLY_ADD_TESTCASE("exception propagation", []()
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
 
         MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
+    }
+});
+
+MAYFLY_ADD_TESTCASE("then keeps the state alive", []()
+{
+    {
+        bool invoked = false;
+
+        auto pair = test::reaver::package([&](){ invoked = true; });
+        auto future = pair.future.then([](){});
+
+        {
+            auto moved = std::move(pair.future);
+        }
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK(invoked == true);
+    }
+
+    {
+        bool invoked = false;
+
+        auto pair = test::reaver::package([&](){ invoked = true; return 1; });
+        auto future = pair.future.then([](auto){});
+
+        {
+            auto moved = std::move(pair.future);
+        }
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK(invoked == true);
+    }
+});
+
+MAYFLY_ADD_TESTCASE("on_error keeps the state alive", []()
+{
+    {
+        bool invoked = false;
+
+        auto pair = test::reaver::package([&](){ invoked = true; });
+        auto future = pair.future.on_error([](auto){});
+
+        {
+            auto moved = std::move(pair.future);
+        }
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_REQUIRE(invoked == true);
+    }
+
+    {
+        bool invoked = false;
+
+        auto pair = test::reaver::package([&](){ invoked = true; return 1; });
+        auto future = pair.future.on_error([](auto){});
+
+        {
+            auto moved = std::move(pair.future);
+        }
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_REQUIRE(invoked == true);
     }
 });
 
@@ -265,6 +362,8 @@ MAYFLY_ADD_TESTCASE("shared void future", []()
     }
 });
 
+MAYFLY_END_SUITE;
+
 MAYFLY_ADD_TESTCASE("noncopyable value", []()
 {
     struct noncopyable
@@ -307,6 +406,8 @@ MAYFLY_ADD_TESTCASE("noncopyable value", []()
     }
 });
 
+MAYFLY_BEGIN_SUITE("when_all");
+
 MAYFLY_ADD_TESTCASE("when_all", []()
 {
     {
@@ -343,6 +444,22 @@ MAYFLY_ADD_TESTCASE("when_all", []()
         MAYFLY_CHECK(f.try_get());
     }
 });
+
+MAYFLY_ADD_TESTCASE("exception propagation", []()
+{
+    {
+        auto pair = test::reaver::package([](){ throw 1; });
+
+        auto final = test::reaver::when_all(std::move(pair.future));
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK_THROWS_TYPE(test::reaver::exception_list, final.try_get());
+    }
+});
+
+MAYFLY_END_SUITE;
 
 MAYFLY_END_SUITE;
 

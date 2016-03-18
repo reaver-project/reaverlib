@@ -70,6 +70,15 @@ namespace reaver { inline namespace _v1
         }
     };
 
+    class multiple_exceptional_continuations : public exception
+    {
+    public:
+        multiple_exceptional_continuations() : exception{ logger::error }
+        {
+            *this << "attempted to attach multiple exceptional continuations to a future.";
+        }
+    };
+
     template<typename T = void>
     class future;
 
@@ -102,6 +111,18 @@ namespace reaver { inline namespace _v1
             }
 
             state.continuations = _continuation_type{ std::forward<F>(f) };
+        }
+
+        template<typename T, typename F>
+        void _add_exceptional_continuation(_shared_state<T> & state, F && f)
+        {
+            if (state.exceptional_continuations)
+            {
+                throw multiple_exceptional_continuations{};
+                return;
+            }
+
+            state.exceptional_continuations = _continuation_type{ std::forward<F>(f) };
         }
 
         template<typename T>
@@ -138,13 +159,14 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename T>
-        struct _shared_state : std::enable_shared_from_this<_shared_state<T>>
+        struct _shared_state : public std::enable_shared_from_this<_shared_state<T>>
         {
             using then_t = std::conditional_t<
                 std::is_copy_constructible<T>::value,
                 std::vector<_continuation_type>,
                 optional<_continuation_type>
             >;
+            using failed_then_t = optional<_continuation_type>;
 
             _shared_state(T t) : value{ std::move(t) }
             {
@@ -165,6 +187,7 @@ namespace reaver { inline namespace _v1
 
             std::shared_ptr<executor> scheduler;
             then_t continuations;
+            failed_then_t exceptional_continuations;
 
             // TODO: reaver::function
             optional<class function<T ()>> function;
@@ -172,7 +195,7 @@ namespace reaver { inline namespace _v1
             optional<T> try_get()
             {
                 std::lock_guard<std::mutex> l(lock);
-                return get<0>(fmap(_move_or_copy(value, shared_count == 1), make_overload_set(
+                return get<0>(fmap(_move_or_copy(value, shared_count == 1 && value.index() != 1), make_overload_set(
                     [&](T t) {
                         if (shared_count == 1)
                         {
@@ -182,7 +205,6 @@ namespace reaver { inline namespace _v1
                     },
 
                     [&](std::exception_ptr ptr) {
-                        value = none;
                         std::rethrow_exception(ptr);
                         return unit{};
                     },
@@ -203,7 +225,7 @@ namespace reaver { inline namespace _v1
                     std::rethrow_exception(get<1>(value));
                 }
 
-                auto ret = get<0>(_move_or_copy(value, shared_count == 1));
+                auto ret = get<0>(_move_or_copy(value, shared_count == 1 && value.index() != 1));
                 if (shared_count == 1)
                 {
                     value = none;
@@ -212,7 +234,6 @@ namespace reaver { inline namespace _v1
             }
 
         public:
-
             template<typename F>
             auto then(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
             {
@@ -244,7 +265,11 @@ namespace reaver { inline namespace _v1
                         auto pair = package([this, f = std::forward<F>(f)]() mutable {
                             return std::forward<F>(f)(_get());
                         });
-                        sched()->push([sched, task = std::move(pair.packaged_task)](){ task(sched()); });
+
+                        // GCC is deeply confused when this is directly in the capture list
+                        auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
+
+                        sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)](){ task(sched()); });
                         return std::move(pair.future);
                     },
 
@@ -252,8 +277,77 @@ namespace reaver { inline namespace _v1
                         auto pair = package([this, f = std::forward<F>(f)]() mutable {
                             return std::forward<F>(f)(_get());
                         });
-                        _add_continuation(*this, [sched, task = std::move(pair.packaged_task)]() mutable {
-                            sched()->push([sched, task = std::move(task)](){ task(sched()); });
+
+                        // GCC is deeply confused when this is directly in the capture list
+                        auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
+
+                        _add_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
+                            sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
+                        });
+                        return std::move(pair.future);
+                    }
+                )));
+            }
+
+            template<typename F>
+            auto on_error(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+            {
+                std::lock_guard<std::mutex> l{ lock };
+
+                if (!_is_valid(*this))
+                {
+                    assert(!"what do?");
+                }
+
+                ++shared_count;
+
+                auto sched = [this, provided = std::move(provided_sched)]() {
+                    if (provided)
+                    {
+                        return provided;
+                    }
+
+                    if (scheduler)
+                    {
+                        return scheduler;
+                    }
+
+                    assert(!"what do again?");
+                };
+
+                return get<1>(fmap(value, make_overload_set(
+                    [&](const T &) {
+                        return unit{};
+                    },
+
+                    [&](std::exception_ptr ptr) {
+                        auto pair = package([this, f = std::forward<F>(f), ptr]() mutable {
+                            return std::forward<F>(f)(ptr);
+                        });
+
+                        // GCC is deeply confused when this is directly in the capture list
+                        auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
+
+                        sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)](){ task(sched()); });
+                        return std::move(pair.future);
+                    },
+
+                    [&](none_t) {
+                        auto pair = package([this, f = std::forward<F>(f)]() mutable {
+                            if (value.index() == 1)
+                            {
+                                auto ptr = get<1>(value);
+                                return std::forward<F>(f)(ptr);
+                            }
+                            assert(!"or maybe make the resulting future exceptional? this would be a solution, though not a stellar one");
+                            assert(!"I guess we should somehow propagate the value here, but there's no obvious way to do that");
+                        });
+
+                        // GCC is deeply confused when this is directly in the capture list
+                        auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
+
+                        _add_exceptional_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
+                            sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
                         });
                         return std::move(pair.future);
                     }
@@ -270,12 +364,24 @@ namespace reaver { inline namespace _v1
 
                 return then(scheduler, std::forward<F>(f));
             }
+
+            template<typename F>
+            auto on_error(F && f)
+            {
+                if (!scheduler)
+                {
+                    assert("here we need a default executor");
+                }
+
+                return on_error(scheduler, std::forward<F>(f));
+            }
         };
 
         template<>
         struct _shared_state<void> : std::enable_shared_from_this<_shared_state<void>>
         {
             using then_t = std::vector<_continuation_type>;
+            using failed_then_t = optional<_continuation_type>;
 
             _shared_state(ready_type) : value{ ready }
             {
@@ -296,6 +402,7 @@ namespace reaver { inline namespace _v1
 
             std::shared_ptr<executor> scheduler;
             then_t continuations;
+            failed_then_t exceptional_continuations;
 
             // TODO: reaver::function
             optional<class function<void ()>> function;
@@ -313,7 +420,6 @@ namespace reaver { inline namespace _v1
                     },
 
                     [&](std::exception_ptr ptr) {
-                        value = none;
                         std::rethrow_exception(ptr);
                         return unit{};
                     },
@@ -341,7 +447,6 @@ namespace reaver { inline namespace _v1
             }
 
         public:
-
             template<typename F>
             auto then(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)())>
             {
@@ -374,7 +479,11 @@ namespace reaver { inline namespace _v1
                             _get(); // will throw if in exceptional state
                             return std::forward<F>(f)();
                         });
-                        sched()->push([sched, task = std::move(pair.packaged_task)](){ task(sched()); });
+
+                        // GCC ICEs when this is in capture list directly
+                        auto state = shared_from_this();
+
+                        sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)](){ task(sched()); });
                         return std::move(pair.future);
                     },
 
@@ -383,8 +492,77 @@ namespace reaver { inline namespace _v1
                             _get(); // will throw if in exceptional state
                             return std::forward<F>(f)();
                         });
-                        _add_continuation(*this, [sched, task = std::move(pair.packaged_task)]() mutable {
-                            sched()->push([sched, task = std::move(task)](){ task(sched()); });
+
+                        // GCC ICEs when this is in capture list directly
+                        auto state = shared_from_this();
+
+                        _add_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
+                            sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
+                        });
+                        return std::move(pair.future);
+                    }
+                )));
+            }
+
+            template<typename F>
+            auto on_error(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+            {
+                std::lock_guard<std::mutex> l{ lock };
+
+                if (!_is_valid(*this))
+                {
+                    assert(!"what do?");
+                }
+
+                ++shared_count;
+
+                auto sched = [this, provided = std::move(provided_sched)]() {
+                    if (provided)
+                    {
+                        return provided;
+                    }
+
+                    if (scheduler)
+                    {
+                        return scheduler;
+                    }
+
+                    assert(!"what do again?");
+                };
+
+                return get<1>(fmap(value, make_overload_set(
+                    [&](ready_type) {
+                        return unit{};
+                    },
+
+                    [&](std::exception_ptr ptr) {
+                        auto pair = package([this, f = std::forward<F>(f), ptr]() mutable {
+                            return std::forward<F>(f)(ptr);
+                        });
+
+                        // GCC ICEs when this is in capture list directly
+                        auto state = shared_from_this();
+
+                        sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)](){ task(sched()); });
+                        return std::move(pair.future);
+                    },
+
+                    [&](none_t) {
+                        auto pair = package([this, f = std::forward<F>(f)]() mutable {
+                            if (value.index() == 1)
+                            {
+                                auto ptr = get<1>(value);
+                                return std::forward<F>(f)(ptr);
+                            }
+                            assert(!"or maybe make the resulting future exceptional? this would be a solution, though not a stellar one");
+                            assert(!"I guess we should somehow propagate the value here, but there's no obvious way to do that");
+                        });
+
+                        // GCC ICEs when this is in capture list directly
+                        auto state = shared_from_this();
+
+                        _add_exceptional_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
+                            sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
                         });
                         return std::move(pair.future);
                     }
@@ -400,6 +578,17 @@ namespace reaver { inline namespace _v1
                 }
 
                 return then(scheduler, std::forward<F>(f));
+            }
+
+            template<typename F>
+            auto on_error(F && f)
+            {
+                if (!scheduler)
+                {
+                    assert("here we need a default executor");
+                }
+
+                return on_error(scheduler, std::forward<F>(f));
             }
         };
 
@@ -502,9 +691,19 @@ namespace reaver { inline namespace _v1
             catch (...)
             {
                 state->value = std::current_exception();
+                if (state->exceptional_continuations)
+                {
+                    fmap(state->exceptional_continuations, [](auto && cont){ cont(); return unit{}; });
+                }
             }
 
-            fmap(state->continuations, [](auto && cont){ cont(); return unit{}; });
+            fmap(state->continuations, [&](auto && cont) {
+                if (state->value.index() != 2)
+                {
+                    cont();
+                }
+                return unit{};
+            });
 
             state->function = {};
         }
@@ -534,9 +733,19 @@ namespace reaver { inline namespace _v1
         catch (...)
         {
             state->value = std::current_exception();
+            if (state->exceptional_continuations)
+            {
+                fmap(state->exceptional_continuations, [](auto && cont){ cont(); return unit{}; });
+            }
         }
 
-        fmap(state->continuations, [](auto && cont){ cont(); return unit{}; });
+        fmap(state->continuations, [&](auto && cont) {
+            if (state->value.index() != 2)
+            {
+                cont();
+            }
+            return unit{};
+        });
 
         state->function = {};
     }
@@ -625,7 +834,18 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto then(F && f)
+        auto on_error(std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        {
+            if (!_state)
+            {
+                assert(!"handle this somehow (new exception type!)");
+            }
+
+            return _state->on_error(std::move(sched), std::forward<F>(f));
+        }
+
+        template<typename F>
+        auto then(F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
         {
             if (!_state)
             {
@@ -635,6 +855,16 @@ namespace reaver { inline namespace _v1
             return _state->then(std::forward<F>(f));
         }
 
+        template<typename F>
+        auto on_error(F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        {
+            if (!_state)
+            {
+                assert(!"handle this somehow (new exception type!)");
+            }
+
+            return _state->on_error(std::forward<F>(f));
+        }
     private:
         std::shared_ptr<_detail::_shared_state<T>> _state;
     };
@@ -729,7 +959,18 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto then(F && f)
+        auto on_error(std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        {
+            if (!_state)
+            {
+                assert(!"handle this somehow (new exception type!)");
+            }
+
+            return _state->on_error(std::move(sched), std::forward<F>(f));
+        }
+
+        template<typename F>
+        auto then(F && f) -> future<decltype(std::forward<F>(f)())>
         {
             if (!_state)
             {
@@ -737,6 +978,17 @@ namespace reaver { inline namespace _v1
             }
 
             return _state->then(std::forward<F>(f));
+        }
+
+        template<typename F>
+        auto on_error(F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        {
+            if (!_state)
+            {
+                assert(!"handle this somehow (new exception type!)");
+            }
+
+            return _state->on_error(std::forward<F>(f));
         }
 
     private:
@@ -784,8 +1036,14 @@ namespace reaver { inline namespace _v1
         using _int = std::integral_constant<std::size_t, N>;
     }
 
+    enum class exception_policy
+    {
+        aggregate,
+        abort_on_first_failure
+    };
+
     template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
-    auto when_all(future<Ts>... futures)
+    auto when_all(exception_policy policy, future<Ts>... futures)
     {
         using nonvoid = tpl::filter<
             tpl::vector<Ts...>,
@@ -808,11 +1066,18 @@ namespace reaver { inline namespace _v1
             std::atomic<std::size_t> remaining{ sizeof...(Ts) };
             optional<packaged_task<return_type>> task;
             std::vector<future<>> futures;
+            exception_list exceptions;
         };
 
         auto state = std::make_shared<internal_state>();
         auto pair = package([state](){
             state->futures = {};
+
+            if (state->exceptions.size())
+            {
+                throw std::move(state->exceptions);
+            }
+
             return _detail::_remove_optional(state->buffer, std::make_index_sequence<nonvoid::size>());
         });
         state->task = std::move(pair.packaged_task);
@@ -835,16 +1100,35 @@ namespace reaver { inline namespace _v1
             };
         };
 
+        auto on_error = [state, policy](auto exception_ptr) {
+            switch (policy)
+            {
+                case exception_policy::aggregate:
+                    state->exceptions.push_back(exception_ptr);
+                    if (--state->remaining == 0)
+                    {
+                        (*state->task)();
+                    }
+                    break;
+
+                case exception_policy::abort_on_first_failure:
+                    assert(!"implement this shit");
+                    break;
+            }
+        };
+
         auto handler = make_overload_set(
-            [](auto self, auto index){},
+            [](auto /* self */, auto /* index */){},
 
             [&](auto self, auto index, future<void> & vf, auto &... rest) {
                 state->futures.push_back(vf.then(void_handler));
+                state->futures.push_back(vf.on_error(on_error));
                 self(self, _detail::_int<index>(), rest...);
             },
 
             [&](auto self, auto index, auto & nvf, auto &... rest) {
                 state->futures.push_back(nvf.then(nonvoid_handler(index)));
+                state->futures.push_back(nvf.on_error(on_error));
                 self(self, _detail::_int<index + 1>(), rest...);
             }
         );
@@ -854,9 +1138,21 @@ namespace reaver { inline namespace _v1
         return std::move(pair.future);
     }
 
-    auto when_all()
+    template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
+    auto when_all(future<Ts>... futures)
+    {
+        return when_all(exception_policy::aggregate, std::move(futures)...);
+    }
+
+    auto when_all(exception_policy = exception_policy::aggregate)
     {
         return make_ready_future();
+    }
+
+    template<typename T, typename F>
+    auto fmap(future<T> fut, F && f)
+    {
+        return std::move(fut).then(std::forward<F>(f));
     }
 }}
 
