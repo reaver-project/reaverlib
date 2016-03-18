@@ -25,9 +25,6 @@
 #include <vector>
 #include <memory>
 
-#include <boost/optional.hpp>
-#include <boost/variant.hpp>
-
 #include "../tmp.h"
 #include "../tpl/vector.h"
 #include "fold.h"
@@ -40,18 +37,6 @@ namespace reaver
 {
     inline namespace prelude { inline namespace functor { inline namespace _v1
     {
-        template<typename F>
-        auto fmap(boost::none_t, F &&)
-        {
-            return boost::none;
-        }
-
-        template<typename T, typename F, typename std::enable_if<is_optional<std::remove_cv_t<std::remove_reference_t<T>>>::value, int>::type = 0>
-        auto fmap(T && o, F && f)
-        {
-            return o ? boost::make_optional(invoke(std::forward<F>(f), *o)) : boost::none;
-        }
-
         template<typename T, typename F, typename std::enable_if<is_vector<std::remove_cv_t<std::remove_reference_t<T>>>::value, int>::type = 0>
         auto fmap(T & vec, F && f)
         {
@@ -86,32 +71,6 @@ namespace reaver
         auto fmap(const std::shared_ptr<T> & ptr, F && f)
         {
             return ptr ? std::make_unique<decltype(invoke(f, *ptr))>(invoke(f, *ptr)) : nullptr;
-        }
-
-        namespace _detail
-        {
-            template<typename T, typename F>
-            struct _visitor : boost::static_visitor<T>
-            {
-                _visitor(F && f) : _f(std::forward<F>(f))
-                {
-                }
-
-                template<typename U>
-                T operator()(U && u)
-                {
-                    return T{ invoke(std::forward<F>(_f), std::forward<U>(u)) };
-                }
-
-                F && _f;
-            };
-        }
-
-        template<typename... Ts, typename F>
-        auto fmap(const boost::variant<Ts...> & variant, F && f)
-        {
-            _detail::_visitor<tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<Ts>()))...>, boost::variant>, F> visitor(std::forward<F>(f));
-            return boost::apply_visitor(visitor, variant);
         }
     }}}
 }

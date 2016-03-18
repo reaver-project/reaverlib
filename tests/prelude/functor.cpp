@@ -35,15 +35,6 @@ namespace test
 MAYFLY_BEGIN_SUITE("prelude");
 MAYFLY_BEGIN_SUITE("functor");
 
-MAYFLY_ADD_TESTCASE("boost::optional", []
-{
-    auto empty = test::reaver::fmap(boost::none, []{ return test::reaver::unit{}; });
-    MAYFLY_CHECK(std::is_same<decltype(empty), boost::none_t>::value);
-
-    MAYFLY_CHECK(test::reaver::fmap(boost::make_optional(1), [](auto v) -> char { return 'a' + v; }) == boost::make_optional('b'));
-    MAYFLY_CHECK(!test::reaver::fmap(boost::optional<int>{}, [](auto v) -> char { return 'a' + v; }));
-});
-
 MAYFLY_ADD_TESTCASE("std::vector", []
 {
     MAYFLY_CHECK(test::reaver::fmap(std::vector<int>{ 1, 2, 3, 4, 5}, [](auto v) { return v * 2; }) == std::vector<int>{ 2, 4, 6, 8, 10 });
@@ -63,12 +54,6 @@ MAYFLY_ADD_TESTCASE("std::shared_ptr", []
     MAYFLY_CHECK(*test::reaver::fmap(std::make_shared<int>(1), [](auto v) { return v * 2; }) == 2);
     MAYFLY_CHECK(test::reaver::fmap(std::shared_ptr<int>(nullptr), [](auto v) { return v * 2; }) == nullptr);
     MAYFLY_CHECK(*test::reaver::fmap(std::make_shared<int>(1), [](auto v) { return std::to_string(v); }) == "1");
-});
-
-
-MAYFLY_ADD_TESTCASE("boost::variant", []
-{
-    MAYFLY_CHECK(test::reaver::fmap(boost::variant<int, bool>(1), [](auto v) { return !!v; }) == boost::variant<bool>(true));
 });
 
 MAYFLY_END_SUITE;
