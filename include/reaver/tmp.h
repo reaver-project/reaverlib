@@ -26,9 +26,6 @@
 #include <vector>
 #include <tuple>
 
-#include <boost/optional.hpp>
-#include <boost/variant.hpp>
-
 namespace reaver
 {
 inline namespace __v1
@@ -78,146 +75,9 @@ inline namespace __v1
     {
     };
 
-    template<typename T>
-    struct is_optional<boost::optional<T>> : public std::true_type
-    {
-    };
-
     template<typename...>
     struct is_variant : public std::false_type
     {
-    };
-
-    template<typename... Ts>
-    struct is_variant<boost::variant<Ts...>> : public std::true_type
-    {
-    };
-
-    template<typename T, typename U>
-    struct make_tuple_type
-    {
-        using type = std::tuple<T, U>;
-    };
-
-    template<typename T, typename... Us>
-    struct make_tuple_type<T, std::tuple<Us...>>
-    {
-        using type = std::tuple<T, Us...>;
-    };
-
-    template<typename... Ts, typename U>
-    struct make_tuple_type<std::tuple<Ts...>, U>
-    {
-        using type = std::tuple<Ts..., U>;
-    };
-
-    template<typename... Ts, typename... Us>
-    struct make_tuple_type<std::tuple<Ts...>, std::tuple<Us...>>
-    {
-        using type = std::tuple<Ts..., Us...>;
-    };
-
-    template<typename T>
-    struct remove_optional
-    {
-        using type = T;
-    };
-
-    template<typename T>
-    struct remove_optional<boost::optional<T>>
-    {
-        using type = T;
-    };
-
-    template<typename T, typename U>
-    struct make_variant_type
-    {
-        using type = boost::variant<typename remove_optional<T>::type, typename remove_optional<U>::type>;
-    };
-
-    namespace _detail
-    {
-        template<typename... Ts>
-        struct _type_sequence
-        {
-        };
-
-        template<typename...>
-        struct _make_variant_type_sequence_helper;
-
-        template<typename First, typename... Ts, typename... Types>
-        struct _make_variant_type_sequence_helper<_type_sequence<Types...>, First, Ts...>
-        {
-            using type = typename _make_variant_type_sequence_helper<_type_sequence<Types..., First>, Ts...>::type;
-        };
-
-        template<typename... Ts, typename... Types>
-        struct _make_variant_type_sequence_helper<_type_sequence<Types...>, boost::detail::variant::void_, Ts...>
-        {
-            using type = _type_sequence<Types...>;
-        };
-
-        template<typename... Types>
-        struct _make_variant_type_sequence_helper<_type_sequence<Types...>>
-        {
-            using type = _type_sequence<Types...>;
-        };
-
-        template<typename, typename>
-        struct _make_variant_helper;
-
-        template<typename... Types1, typename... Types2>
-        struct _make_variant_helper<_type_sequence<Types1...>, _type_sequence<Types2...>>
-        {
-            using type = boost::variant<Types1..., Types2...>;
-        };
-    }
-
-    template<typename T, typename... Ts>
-    struct make_variant_type<T, boost::variant<Ts...>>
-    {
-        using type = typename _detail::_make_variant_helper<
-            typename _detail::_make_variant_type_sequence_helper<
-                _detail::_type_sequence<>,
-                typename remove_optional<Ts>::type...,
-                typename remove_optional<T>::type
-            >::type,
-            _detail::_type_sequence<>
-        >::type;
-    };
-
-    template<typename... Ts, typename T>
-    struct make_variant_type<boost::variant<Ts...>, T>
-    {
-        using type = typename _detail::_make_variant_helper<
-            typename _detail::_make_variant_type_sequence_helper<
-                _detail::_type_sequence<>,
-                typename remove_optional<T>::type,
-                typename remove_optional<Ts>::type...
-            >::type,
-            _detail::_type_sequence<>
-        >::type;
-    };
-
-    template<typename... T1s, typename... T2s>
-    struct make_variant_type<boost::variant<T1s...>, boost::variant<T2s...>>
-    {
-        using type = typename _detail::_make_variant_helper<
-            typename _detail::_make_variant_type_sequence_helper<
-                _detail::_type_sequence<>,
-                typename remove_optional<T1s>::type...
-            >::type,
-            typename _detail::_make_variant_type_sequence_helper<
-                _detail::_type_sequence<>,
-                typename remove_optional<T2s>::type...
-            >::type
-        >::type;
-    };
-
-    template<typename T>
-    struct make_variant_type<T, T>
-    {
-        using type = T;
     };
 
     template<int...>
