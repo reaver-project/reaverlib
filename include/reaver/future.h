@@ -43,7 +43,6 @@ namespace reaver { inline namespace _v1
     public:
         virtual ~executor() {}
 
-        // TODO: reaver::function
         virtual void push(reaver::function<void ()> f) = 0;
     };
 
