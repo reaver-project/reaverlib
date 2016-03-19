@@ -36,11 +36,33 @@ namespace
 {
     struct trivial_executor : public test::reaver::executor
     {
-        // TODO: reaver::function
         virtual void push(test::reaver::function<void ()> f) override
         {
+            if (in_function)
+            {
+                queue.push_back(std::move(f));
+                return;
+            }
+
+            in_function = true;
             f();
+
+            while (queue.size())
+            {
+                auto fs = move(queue);
+                queue.clear();
+
+                for (auto && f : fs)
+                {
+                    f();
+                }
+            }
+
+            in_function = false;
         }
+
+        std::vector<test::reaver::function<void ()>> queue;
+        bool in_function = false;
     };
 }
 
@@ -411,28 +433,30 @@ MAYFLY_BEGIN_SUITE("when_all");
 MAYFLY_ADD_TESTCASE("when_all", []()
 {
     {
-        //auto ready = test::reaver::make_ready_future();
-        //auto ready_int = test::reaver::make_ready_future(1);
+        auto ready = test::reaver::make_ready_future();
+        auto ready_int = test::reaver::make_ready_future(1);
 
         auto pair = test::reaver::package([](){});
         auto pair_int = test::reaver::package([](){ return 2; });
 
-        auto final = test::reaver::when_all(/*ready, ready_int,*/ pair.future, pair_int.future);
-
         auto exec = test::reaver::make_executor<trivial_executor>();
+
+        auto final = test::reaver::when_all(exec, ready, ready_int, pair.future, pair_int.future);
+
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
         exec->push([exec, task = std::move(pair_int.packaged_task)](){ task(exec); });
 
-        MAYFLY_CHECK(final.try_get() == std::make_tuple(/*1,*/ 2));
+        MAYFLY_CHECK(final.try_get() == std::make_tuple(1, 2));
     }
 
     {
         auto pair1 = test::reaver::package([](){ return 1; });
         auto pair2 = test::reaver::package([](){ return 2; });
 
-        auto final = test::reaver::when_all(pair1.future, pair2.future);
-
         auto exec = test::reaver::make_executor<trivial_executor>();
+
+        auto final = test::reaver::when_all(exec, pair1.future, pair2.future);
+
         exec->push([exec, task = std::move(pair1.packaged_task)](){ task(exec); });
         exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
 
@@ -450,12 +474,60 @@ MAYFLY_ADD_TESTCASE("exception propagation", []()
     {
         auto pair = test::reaver::package([](){ throw 1; });
 
-        auto final = test::reaver::when_all(std::move(pair.future));
-
         auto exec = test::reaver::make_executor<trivial_executor>();
+
+        auto final = test::reaver::when_all(exec, std::move(pair.future));
+
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
 
         MAYFLY_CHECK_THROWS_TYPE(test::reaver::exception_list, final.try_get());
+    }
+});
+
+MAYFLY_ADD_TESTCASE("vector", []()
+{
+    {
+        auto pair1 = test::reaver::package([](){ return 1; });
+        auto pair2 = test::reaver::package([](){ return 2; });
+        auto pair3 = test::reaver::package([](){ return 3; });
+
+        auto futures = std::vector<test::reaver::future<int>>{
+            std::move(pair1.future),
+            std::move(pair2.future),
+            std::move(pair3.future)
+        };
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+
+        auto final = test::reaver::when_all(exec, futures);
+
+        exec->push([exec, task = std::move(pair1.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair3.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK(final.try_get() == std::vector<int>{ 1, 2, 3 });
+    }
+
+    {
+        auto pair1 = test::reaver::package([](){});
+        auto pair2 = test::reaver::package([](){});
+        auto pair3 = test::reaver::package([](){});
+
+        auto futures = std::vector<test::reaver::future<>>{
+            std::move(pair1.future),
+            std::move(pair2.future),
+            std::move(pair3.future)
+        };
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+
+        auto final = test::reaver::when_all(exec, futures);
+
+        exec->push([exec, task = std::move(pair1.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair3.packaged_task)](){ task(exec); });
+
+        MAYFLY_CHECK(final.try_get());
     }
 });
 

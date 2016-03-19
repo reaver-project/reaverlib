@@ -315,9 +315,10 @@ namespace reaver { inline namespace _v1
                     assert(!"what do again?");
                 };
 
-                return get<1>(fmap(value, make_overload_set(
+                return get<0>(fmap(value, make_overload_set(
                     [&](const T &) {
-                        return unit{};
+                        auto pair = package([]() -> decltype(std::forward<F>(f)(std::declval<std::exception_ptr>())) { std::terminate(); });
+                        return std::move(pair.future);
                     },
 
                     [&](std::exception_ptr ptr) {
@@ -530,9 +531,10 @@ namespace reaver { inline namespace _v1
                     assert(!"what do again?");
                 };
 
-                return get<1>(fmap(value, make_overload_set(
+                return get<0>(fmap(value, make_overload_set(
                     [&](ready_type) {
-                        return unit{};
+                        auto pair = package([]() -> decltype(std::forward<F>(f)(std::declval<std::exception_ptr>())) { std::terminate(); });
+                        return std::move(pair.future);
                     },
 
                     [&](std::exception_ptr ptr) {
@@ -865,6 +867,13 @@ namespace reaver { inline namespace _v1
 
             return _state->on_error(std::forward<F>(f));
         }
+
+        auto scheduler() const
+        {
+            std::lock_guard<std::mutex> lock{ _state->lock };
+            return _state->scheduler;
+        }
+
     private:
         std::shared_ptr<_detail::_shared_state<T>> _state;
     };
@@ -991,6 +1000,12 @@ namespace reaver { inline namespace _v1
             return _state->on_error(std::forward<F>(f));
         }
 
+        auto scheduler() const
+        {
+            std::lock_guard<std::mutex> lock{ _state->lock };
+            return _state->scheduler;
+        }
+
     private:
         std::shared_ptr<_detail::_shared_state<void>> _state;
     };
@@ -1043,7 +1058,7 @@ namespace reaver { inline namespace _v1
     };
 
     template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
-    auto when_all(exception_policy policy, future<Ts>... futures)
+    auto when_all(std::shared_ptr<executor> sched, exception_policy policy, future<Ts>... futures)
     {
         using nonvoid = tpl::filter<
             tpl::vector<Ts...>,
@@ -1082,32 +1097,32 @@ namespace reaver { inline namespace _v1
         });
         state->task = std::move(pair.packaged_task);
 
-        auto void_handler = [state]() {
+        auto void_handler = [state, sched]() {
             if (--state->remaining == 0)
             {
-                (*state->task)();
+                sched->push([sched, task = std::move(*state->task)](){ task(sched); });
             }
         };
 
         auto nonvoid_handler = [&](auto index) {
-            return [state](auto value) {
+            return [state, sched](auto value) {
                 get<decltype(index)::value>(state->buffer) = std::move(value);
 
                 if (--state->remaining == 0)
                 {
-                    (*state->task)();
+                    sched->push([sched, task = std::move(*state->task)](){ task(sched); });
                 }
             };
         };
 
-        auto on_error = [state, policy](auto exception_ptr) {
+        auto on_error = [state, sched, policy](auto exception_ptr) {
             switch (policy)
             {
                 case exception_policy::aggregate:
                     state->exceptions.push_back(exception_ptr);
                     if (--state->remaining == 0)
                     {
-                        (*state->task)();
+                        sched->push([sched, task = std::move(*state->task)](){ task(sched); });
                     }
                     break;
 
@@ -1121,14 +1136,20 @@ namespace reaver { inline namespace _v1
             [](auto /* self */, auto /* index */){},
 
             [&](auto self, auto index, future<void> & vf, auto &... rest) {
-                state->futures.push_back(vf.then(void_handler));
-                state->futures.push_back(vf.on_error(on_error));
+                auto scheduler = vf.scheduler() ? vf.scheduler() : sched;
+
+                state->futures.push_back(vf.then(std::move(scheduler), void_handler));
+                state->futures.push_back(vf.on_error(std::move(scheduler), on_error));
+
                 self(self, _detail::_int<index>(), rest...);
             },
 
             [&](auto self, auto index, auto & nvf, auto &... rest) {
-                state->futures.push_back(nvf.then(nonvoid_handler(index)));
-                state->futures.push_back(nvf.on_error(on_error));
+                auto scheduler = nvf.scheduler() ? nvf.scheduler() : sched;
+
+                state->futures.push_back(nvf.then(std::move(scheduler), nonvoid_handler(index)));
+                state->futures.push_back(nvf.on_error(std::move(scheduler), on_error));
+
                 self(self, _detail::_int<index + 1>(), rest...);
             }
         );
@@ -1136,6 +1157,19 @@ namespace reaver { inline namespace _v1
         handler(handler, _detail::_int<0>(), futures...);
 
         return std::move(pair.future);
+    }
+
+    template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
+    auto when_all(exception_policy policy, future<Ts>... futures)
+    {
+        //return when_all(default, policy, std::move(futures)...);
+        assert(!"what do");
+    }
+
+    template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
+    auto when_all(std::shared_ptr<executor> sched, future<Ts>... futures)
+    {
+        return when_all(std::move(sched), exception_policy::aggregate, std::move(futures)...);
     }
 
     template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
@@ -1147,6 +1181,114 @@ namespace reaver { inline namespace _v1
     auto when_all(exception_policy = exception_policy::aggregate)
     {
         return make_ready_future();
+    }
+
+    template<typename T>
+    auto when_all(std::shared_ptr<executor> sched, exception_policy policy, const std::vector<future<T>> & futures)
+    {
+        using value_type = std::conditional_t<
+            std::is_void<T>::value,
+            ready_type,
+            std::vector<T>
+        >;
+
+        using task_type = std::conditional_t<
+            std::is_void<T>::value,
+            void,
+            std::vector<T>
+        >;
+
+        if (futures.size() == 0)
+        {
+            return future<task_type>(value_type{});
+        }
+
+        struct internal_state
+        {
+            std::atomic<std::size_t> remaining;
+            optional<packaged_task<task_type>> task;
+            std::vector<future<T>> futures;
+            std::vector<future<>> keep_alive;
+            exception_list exceptions;
+        };
+
+        if (!sched)
+        {
+            assert(!"what do");
+        }
+
+        auto state = std::make_shared<internal_state>();
+        state->remaining = futures.size();
+
+        auto to_package = make_overload_set(
+            [&](auto) {
+                return [state]() {
+                    if (state->exceptions.size())
+                    {
+                        throw std::move(state->exceptions);
+                    }
+
+                    auto ret = fmap(state->futures, [](auto & future){ return *future.try_get(); });
+                    state->futures = {};
+                    return ret;
+                };
+            },
+
+            [&](id<void>) {
+                return [state]() {
+                    state->futures = {};
+
+                    if (state->exceptions.size())
+                    {
+                        throw std::move(state->exceptions);
+                    }
+                };
+            }
+        );
+
+        auto pair = package(to_package(id<T>()));
+        state->task = std::move(pair.packaged_task);
+        state->futures = futures;
+        state->keep_alive.reserve(futures.size());
+
+        fmap(state->futures, [&](auto future) {
+            auto scheduler = future.scheduler() ? future.scheduler() : sched;
+
+            state->keep_alive.push_back(future.then(std::move(scheduler), [sched, state](auto &&... arg) {
+                // GCC fails to understand that the argument pack can be empty...
+                // ...unless it has a name
+                // WTF.
+                swallow{ arg... };
+
+                if (--state->remaining == 0)
+                {
+                    sched->push([sched, task = std::move(*state->task)](){ task(sched); });
+                }
+            }));
+
+            return unit{};
+        });
+
+        return std::move(pair.future);
+    }
+
+    template<typename T>
+    auto when_all(exception_policy policy, const std::vector<future<T>> & futures)
+    {
+        //return when_all(default, policy, futures);
+        assert(!"what do");
+    }
+
+    template<typename T>
+    auto when_all(const std::vector<future<T>> & futures)
+    {
+        return when_all(exception_policy::aggregate, futures);
+    }
+
+    template<typename T>
+    auto when_all(std::shared_ptr<executor> sched, const std::vector<future<T>> & futures)
+    {
+        return when_all(std::move(sched), exception_policy::aggregate, futures);
     }
 
     template<typename T, typename F>
