@@ -24,9 +24,6 @@
 
 #include <reaver/optional.h>
 
-// due to prelude/functor.h; can probably purge the boost::variant fmap from there at some point
-#include <boost/variant.hpp>
-
 namespace test
 {
 #   include "future.h"
