@@ -79,10 +79,10 @@ namespace reaver { inline namespace _v1
         {
         }
 
-        function(function &) = delete;
+        function(const function &) = delete;
         function(function &&) = default;
 
-        function & operator=(function &) = delete;
+        function & operator=(const function &) = delete;
         function & operator=(function &&) = default;
 
         template<typename T, typename std::enable_if<
