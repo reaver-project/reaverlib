@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015-2016 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,7 +22,11 @@
 
 #include <reaver/mayfly.h>
 
-#include "enum.h"
+namespace test
+{
+#   define REAVER_ROOT_NAMESPACE ::test::reaver
+#   include "enum.h"
+}
 
 MAYFLY_BEGIN_SUITE("reflected enum");
 

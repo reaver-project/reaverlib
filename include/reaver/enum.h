@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015-2016 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -28,6 +28,10 @@
 #include <cctype>
 #include <unordered_map>
 #include <vector>
+
+#ifndef REAVER_ROOT_NAMESPACE
+# define REAVER_ROOT_NAMESPACE ::reaver
+#endif
 
 namespace reaver { inline namespace _v1
 {
@@ -81,7 +85,7 @@ namespace reaver { inline namespace _v1
     inline const std::vector<name> & enum_values<name>() \
     { \
         static auto values = []{ \
-            ::reaver::_detail::_enum_wrapper<name, class context> __VA_ARGS__; \
+            REAVER_ROOT_NAMESPACE::_detail::_enum_wrapper<name, class context> __VA_ARGS__; \
             std::vector<name> vec{ __VA_ARGS__ }; \
             return vec; \
         }(); \
