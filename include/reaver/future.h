@@ -33,18 +33,11 @@
 #include "tpl/filter.h"
 #include "prelude/functor.h"
 #include "function.h"
+#include "executor.h"
 
 namespace reaver { inline namespace _v1
 {
     constexpr struct ready_type {} ready = {};
-
-    class executor
-    {
-    public:
-        virtual ~executor() {}
-
-        virtual void push(reaver::function<void ()> f) = 0;
-    };
 
     template<typename T, typename... Args>
     std::shared_ptr<executor> make_executor(Args &&... args)

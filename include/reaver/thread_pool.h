@@ -1,7 +1,7 @@
 /**
  * Reaver Library License
  *
- * Copyright © 2013-2014 Michał "Griwes" Dominiak
+ * Copyright © 2013-2016 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -36,6 +36,8 @@
 #include "callbacks.h"
 #include "thread.h"
 #include "semaphore.h"
+#include "executor.h"
+#include "optional.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -48,7 +50,7 @@ namespace reaver { inline namespace _v1
         }
     };
 
-    class thread_pool
+    class thread_pool : public executor
     {
     public:
         thread_pool(std::size_t size)
@@ -129,6 +131,11 @@ namespace reaver { inline namespace _v1
             return future;
         }
 
+        virtual void push(function<void ()> f) override
+        {
+            _queue.emplace(std::move(f));
+        }
+
         std::size_t size() const
         {
             return _size;
@@ -177,7 +184,7 @@ namespace reaver { inline namespace _v1
                     }
                 }
 
-                std::function<void ()> f;
+                optional<function<void ()>> f;
 
                 {
                     std::unique_lock<std::mutex> lock{ _lock };
@@ -209,7 +216,7 @@ namespace reaver { inline namespace _v1
                     }
                 }
 
-                f();
+                fmap(std::move(f), [](auto f){ f(); return unit{}; });
 
                 if (_waiters)
                 {
@@ -243,7 +250,7 @@ namespace reaver { inline namespace _v1
         std::atomic<std::size_t> _size{ 0 };
 
         std::map<std::thread::id, detaching_thread> _threads;
-        std::queue<std::function<void ()>> _queue;
+        std::queue<function<void ()>> _queue;
 
         std::condition_variable _cond;
         std::mutex _lock;
