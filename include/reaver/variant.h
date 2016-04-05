@@ -232,6 +232,9 @@ namespace reaver { inline namespace _v1
             template<typename Arg>
             struct _generator
             {
+                // needed for this to compile under GCC 5.1
+                _generator() {}
+
                 template<typename T>
                 auto operator()(_variant & v, T && t) -> decltype(Arg(std::forward<T>(t)), void()) const
                 {
