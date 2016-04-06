@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -xe
+
+if [[ -f /proc/cpuinfo ]]
+then
+    core_number=$(cat /proc/cpuinfo  | grep -c ^processor)
+else
+    core_number=2
+fi
+
+# this section to be made smarter in the future
+# will kinda get automatically smarter once reaverlib itself uses develop and master for stable
+function install_package() {
+    local package=$1
+    local branch=$2
+
+    wget https://github.com/griwes/${package}/archive/${branch}.zip
+    unzip ${branch}.zip
+    cd ${package}-${branch}
+    make install # no sudo needed; to be executed in docker as sudo
+    cd ..
+    rm -rf ${package}-${branch} ${branch}.zip
+}
+
+install_package reaverlib master
+install_package mayfly develop
+
+make test -j${core_number} -l${core_number}
+./tests/test -j ${core_number} -l 3 -r teamcity
