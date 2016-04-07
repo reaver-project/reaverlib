@@ -23,7 +23,9 @@ function install_package() {
     rm -rf ${package}-${branch} ${branch}.zip
 }
 
-install_package reaverlib master
+# TODO: install from master; change before merging this
+#install_package reaverlib master
+make install
 install_package mayfly develop
 
 make test -j${core_number} -l${core_number}
