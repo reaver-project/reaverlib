@@ -22,16 +22,17 @@
 
 #pragma once
 
-# include <functional>
+#include <functional>
 
 namespace reaver { inline namespace _v1
 {
-#ifdef __clang__
+#if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 3700
     using std::invoke;
 #else
     template<typename F, typename... Args>
     decltype(auto) invoke(F && f, Args &&... args)
     {
+        // GCC breaks when this is done correctly with std::forward on f
         return std::__invoke(f, std::forward<Args>(args)...);
     }
 #endif
