@@ -26,7 +26,7 @@
 
 namespace reaver { inline namespace _v1
 {
-#if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 3700
+#if (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 3700) || (defined(__GNUC__) && __GNUC__ >= 6)
     using std::invoke;
 #else
     template<typename F, typename... Args>
