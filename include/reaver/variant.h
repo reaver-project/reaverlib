@@ -41,6 +41,7 @@
 #include "invoke.h"
 #include "traits.h"
 #include "tpl/replace.h"
+#include "overloads.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -151,10 +152,7 @@ namespace reaver { inline namespace _v1
         {
             return std::forward<T>(t);
         }
-    }
 
-    namespace _detail
-    {
         struct _max
         {
             template<typename T, typename U>
@@ -163,21 +161,6 @@ namespace reaver { inline namespace _v1
                 return t > u ? std::forward<T>(t) : std::forward<U>(u);
             }
         };
-
-        template<typename T>
-        struct _replace_reference
-        {
-            using type = T;
-        };
-
-        template<typename T>
-        struct _replace_reference<T &>
-        {
-            using type = std::reference_wrapper<T>;
-        };
-
-        template<typename T>
-        using _replace_reference_t = typename _replace_reference<T>::type;
 
         template<typename CRTP, typename... Args>
         class _variant
@@ -210,9 +193,9 @@ namespace reaver { inline namespace _v1
             friend _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> get(_variant<CRTP_, Ts...> &&);
 
             template<typename T, typename std::enable_if<
-                any_of<std::is_same<std::remove_reference_t<T>, Args>::value...>::value,
+                any_of<std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, Args>::value...>::value,
                 int>::type = 0>
-            _variant(T && t) noexcept(noexcept(std::remove_reference_t<T>(std::forward<T>(t)))) : _tag(tpl::index_of<tpl::vector<Args...>, std::remove_reference_t<T>>())
+            _variant(T && t) noexcept(noexcept(std::remove_reference_t<T>(std::forward<T>(t)))) : _tag(tpl::index_of<tpl::vector<Args...>, std::remove_cv_t<std::remove_reference_t<T>>>())
             {
                 new (&_storage) std::remove_reference_t<T>(std::forward<T>(t));
             }
@@ -229,29 +212,53 @@ namespace reaver { inline namespace _v1
             // and fails hard at type deduction
             // so we need some additional boilerplate for the next constructor
         private:
-            template<typename Arg>
             struct _generator
             {
                 // needed for this to compile under GCC 5.1
                 _generator() {}
 
                 template<typename T>
-                auto operator()(_variant & v, T && t) -> decltype(Arg(std::forward<T>(t)), void()) const
+                static void conversion_context(T);
+
+                template<typename Arg, typename T, typename = decltype(conversion_context<Arg>({ std::declval<T>() }))>
+                static auto generate(choice<0>)
                 {
-                    v._tag = tpl::index_of<tpl::vector<Args...>, Arg>();
-                    new (&v._storage) Arg(std::forward<T>(t));
+                    return [](_variant & v, T && t)
+                    {
+                        v._tag = tpl::index_of<tpl::vector<Args...>, Arg>();
+                        new (&v._storage) Arg{ std::forward<T>(t) };
+                    };
+                }
+
+                template<typename Arg, typename T, typename = decltype(conversion_context<Arg>(std::declval<T>()))>
+                static auto generate(choice<1>)
+                {
+                    return [](_variant & v, auto && t)
+                    {
+                        v._tag = tpl::index_of<tpl::vector<Args...>, Arg>();
+                        new (&v._storage) Arg(std::forward<T>(t));
+                    };
+                }
+
+                template<typename...>
+                static auto generate(choice<2>)
+                {
+                    return [](auto &&... args)
+                    {
+                        static_assert(sizeof...(args) != 0, "no viable constructor for variant");
+                    };
                 };
             };
 
         public:
             template<typename T, typename std::enable_if<
-                !any_of<std::is_same<std::remove_reference_t<T>, Args>::value...>::value
+                !any_of<std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, Args>::value...>::value
                     && any_of<std::is_constructible<Args, T &&>::value...>::value,
                 int>::type = 0>
             _variant(T && t)
             {
                 auto constructor = reaver::make_overload_set(
-                    _generator<Args>()...
+                    _generator::template generate<Args, T>(select_overload{})...
                 );
 
                 constructor(*this, std::forward<T>(t));
@@ -475,12 +482,27 @@ namespace reaver { inline namespace _v1
         }
     }
 
+    template<typename T>
+    struct replace_reference
+    {
+        using type = T;
+    };
+
+    template<typename T>
+    struct replace_reference<T &>
+    {
+        using type = std::reference_wrapper<T>;
+    };
+
+    template<typename T>
+    using replace_reference_t = typename replace_reference<T>::type;
+
     using _detail::get;
 
     template<typename... Ts>
-    class variant : public _detail::_variant<variant<Ts...>, _detail::_replace_reference_t<Ts>...>
+    class variant : public _detail::_variant<variant<Ts...>, replace_reference_t<Ts>...>
     {
-        using _base = _detail::_variant<variant, _detail::_replace_reference_t<Ts>...>;
+        using _base = _detail::_variant<variant, replace_reference_t<Ts>...>;
 
     public:
         using _base::_base;
@@ -608,9 +630,9 @@ namespace reaver { inline namespace _v1
         {
             class type;
 
-            class type : public _variant<type, _replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>
+            class type : public _variant<type, replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>
             {
-                using _base = _variant<type, _replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>;
+                using _base = _variant<type, replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>;
 
             public:
                 using _base::_base;

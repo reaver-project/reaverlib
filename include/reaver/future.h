@@ -601,7 +601,7 @@ namespace reaver { inline namespace _v1
                 std::lock_guard<std::mutex> lock{ state.lock };
                 if (_is_pending(state))
                 {
-                    state.function = {};
+                    state.function = none;
                     state.value = std::make_exception_ptr(broken_promise{});
                 }
             }
@@ -700,7 +700,7 @@ namespace reaver { inline namespace _v1
                 return unit{};
             });
 
-            state->function = {};
+            state->function = none;
         }
 
     private:
@@ -742,7 +742,7 @@ namespace reaver { inline namespace _v1
             return unit{};
         });
 
-        state->function = {};
+        state->function = none;
     }
 
     template<typename T>
@@ -1003,7 +1003,7 @@ namespace reaver { inline namespace _v1
         std::shared_ptr<_detail::_shared_state<void>> _state;
     };
 
-    auto make_ready_future()
+    inline auto make_ready_future()
     {
         return future<>{ ready };
     }
@@ -1171,7 +1171,7 @@ namespace reaver { inline namespace _v1
         return when_all(exception_policy::aggregate, std::move(futures)...);
     }
 
-    auto when_all(exception_policy = exception_policy::aggregate)
+    inline auto when_all(exception_policy = exception_policy::aggregate)
     {
         return make_ready_future();
     }

@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "variant.h"
 #include "invoke.h"
+#include "variant.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -38,7 +38,41 @@ namespace reaver { inline namespace _v1
         {
         }
 
-        using _base::_base;
+        optional(none_t) : _base{ none }
+        {
+        }
+
+        optional(replace_reference_t<T> t) : _base{ std::move(t) }
+        {
+        }
+
+        template<typename U = T, typename std::enable_if<std::is_reference<U>::value, int>::type = 0>
+        optional(T t) : _base{ t }
+        {
+        }
+
+        template<typename U, typename = decltype(T{ std::declval<U>() })>
+        explicit optional(U && u) : _base{ T{ std::forward<U>(u) } }
+        {
+        }
+
+        optional(const optional &) = default;
+        optional(optional &&) = default;
+        optional & operator=(const optional &) = default;
+        optional & operator=(optional &&) = default;
+
+        optional & operator=(const T & t) noexcept
+        {
+            _base::operator=(_base{ t });
+            return *this;
+        }
+
+        template<typename U = T, typename std::enable_if<!std::is_reference<U>::value, int>::type = 0>
+        optional & operator=(T && t) noexcept
+        {
+            _base::operator=(_base{ std::move(t) });
+            return *this;
+        }
 
         operator bool() const
         {
