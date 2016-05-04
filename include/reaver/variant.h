@@ -230,14 +230,25 @@ namespace reaver { inline namespace _v1
                     };
                 }
 
-                template<typename Arg, typename T, typename = decltype(conversion_context<Arg>(std::declval<T>()))>
-                static auto generate(choice<1>)
+                // workaround for an ICE in GCC 6.1
+                // the last argument *must be* a template for overload resolution to work properly in this case
+                // (favoring working braced-init over ())
+                // but if that happens with the lambda-style of the 0th choice... it segfaults
+                template<typename Arg, typename T>
+                struct to_generate
                 {
-                    return [](_variant & v, auto && t)
+                    template<typename U>
+                    void operator()(_variant & v, U && t) const
                     {
                         v._tag = tpl::index_of<tpl::vector<Args...>, Arg>();
                         new (&v._storage) Arg(std::forward<T>(t));
-                    };
+                    }
+                };
+
+                template<typename Arg, typename T, typename = decltype(conversion_context<Arg>(std::declval<T>()))>
+                static auto generate(choice<1>)
+                {
+                    return to_generate<Arg, T>();
                 }
 
                 template<typename...>
