@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015-2016 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -77,6 +77,31 @@ MAYFLY_ADD_TESTCASE("fmap", []()
 {
     MAYFLY_CHECK(test::reaver::fmap(test::reaver::make_optional(1), [](auto a){ return std::to_string(a); }) == "1");
     MAYFLY_CHECK(!test::reaver::fmap(test::reaver::optional<int>{}, [](auto...){ return reaver::unit{}; }));
+});
+
+MAYFLY_ADD_TESTCASE("variant of optionals", []()
+{
+    test::reaver::variant<test::reaver::optional<int>, test::reaver::optional<float>> v1 = 1;
+    test::reaver::variant<test::reaver::optional<int>, test::reaver::optional<float>> v2 = 2.f;
+
+    MAYFLY_CHECK(test::reaver::get<0>(v1) == 1);
+    MAYFLY_CHECK(test::reaver::get<1>(v2) == 2.f);
+
+    // the following doesn't currently work, *by design*
+    // might make variant prefer constructors in the order of arguments some day
+    // but that day is not today
+    // test::reaver::variant<test::reaver::optional<int>, test::reaver::optional<float>> v3 = test::reaver::none;
+});
+
+MAYFLY_ADD_TESTCASE("optional variant", []()
+{
+    auto v1 = test::reaver::optional<test::reaver::variant<int, float>>{ 1 };
+    auto v2 = test::reaver::optional<test::reaver::variant<int, float>>{ 2.f };
+
+    MAYFLY_CHECK(fmap(v1, [](auto && v){ return test::reaver::get<0>(v); }) == 1);
+    MAYFLY_CHECK(fmap(v2, [](auto && v){ return test::reaver::get<1>(v); }) == 2.f);
+
+    test::reaver::optional<test::reaver::variant<int, float>> v3 = test::reaver::none;
 });
 
 MAYFLY_END_SUITE;
