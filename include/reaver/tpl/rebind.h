@@ -38,10 +38,22 @@ namespace reaver
             {
                 using type = Another<Types...>;
             };
+
+            template<typename Other>
+            struct _unbind;
+
+            template<template<typename...> typename Template, typename... Ts>
+            struct _unbind<Template<Ts...>>
+            {
+                using type = tpl::vector<Ts...>;
+            };
         }
 
         template<typename Vector, template<typename...> typename Another>
         using rebind = typename _detail::_rebind<Vector, Another>::type;
+
+        template<typename Other>
+        using unbind = typename _detail::_unbind<Other>::type;
     }}
 }
 

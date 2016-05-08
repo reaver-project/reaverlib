@@ -434,5 +434,46 @@ MAYFLY_ADD_TESTCASE("recursive_wrapper fmap", []()
     MAYFLY_CHECK(test::reaver::get<0>(fmap(v, [](auto && f) { return f.i; })) == 1);
 });
 
+MAYFLY_ADD_TESTCASE("n-ary visitation", []()
+{
+    {
+        test::reaver::variant<int, float> v1 = 1;
+        test::reaver::variant<float, std::string> v2 = 2.f;
+        test::reaver::variant<std::string, int> v3 = "abc";
+
+        MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)) == 1);
+        MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second, auto third) { return first; }, v1, v2, v3)) == 1);
+        MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, v1, v2, v3)) == 2.f);
+        MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, v1, v2, v3)) == "abc");
+    }
+
+    {
+        const test::reaver::variant<int, float> v1 = 1;
+        const test::reaver::variant<float, std::string> v2 = 2.f;
+        const test::reaver::variant<std::string, int> v3 = "abc";
+
+        MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)) == 1);
+        MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second, auto third) { return first; }, v1, v2, v3)) == 1);
+        MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, v1, v2, v3)) == 2.f);
+        MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, v1, v2, v3)) == "abc");
+    }
+
+    {
+        test::reaver::variant<int, float> v1 = 1;
+        test::reaver::variant<float, std::string> v2 = 2.f;
+        test::reaver::variant<std::string, int> v3 = "abc";
+
+        MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second) { return first; }, std::move(v1), std::move(v2))) == 1);
+
+        MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second, auto third) { return first; }, std::move(v1), std::move(v2), std::move(v3))) == 1);
+
+        v3 = "abc";
+        MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, std::move(v1), std::move(v2), std::move(v3))) == 2.f);
+
+        v3 = "abc";
+        MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, std::move(v1), std::move(v2), std::move(v3))) == "abc");
+    }
+});
+
 MAYFLY_END_SUITE;
 
