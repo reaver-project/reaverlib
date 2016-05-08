@@ -42,6 +42,7 @@
 #include "traits.h"
 #include "tpl/replace.h"
 #include "overloads.h"
+#include "tpl/concat.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -523,6 +524,18 @@ namespace reaver { inline namespace _v1
     };
 
     template<typename T, typename CRTP, typename... Ts>
+    T get(_detail::_variant<CRTP, Ts...> && variant)
+    {
+        return get<tpl::index_of<tpl::vector<Ts...>, T>::value>(std::move(variant));
+    }
+
+    template<typename T, typename CRTP, typename... Ts>
+    const T & get(const _detail::_variant<CRTP, Ts...> & variant)
+    {
+        return get<tpl::index_of<tpl::vector<Ts...>, T>::value>(variant);
+    }
+
+    template<typename T, typename CRTP, typename... Ts>
     T & get(_detail::_variant<CRTP, Ts...> & variant)
     {
         return get<tpl::index_of<tpl::vector<Ts...>, T>::value>(variant);
@@ -586,6 +599,102 @@ namespace reaver { inline namespace _v1
 
         auto index = var.index();
         return visitors[index](var, std::forward<F>(f));
+    }
+
+    template<typename F, typename CRTP, typename... Ts,
+        typename = decltype(get<0>(fmap(std::declval<const _detail::_variant<CRTP, Ts...> &>(), std::declval<F>())))>
+    auto mbind(const _detail::_variant<CRTP, Ts...> & v, F && f)
+    {
+        using return_type = tpl::rebind<
+            tpl::rebind<
+                tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
+                tpl::unique
+            >,
+            variant
+        >;
+
+        return get<0>(get<0>(fmap(v, [&](auto && value) -> return_type {
+            return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
+        })));
+    }
+
+    template<typename F, typename CRTP, typename... Ts,
+        typename = decltype(get<0>(fmap(std::declval<_detail::_variant<CRTP, Ts...> &>(), std::declval<F>())))>
+    auto mbind(_detail::_variant<CRTP, Ts...> & v, F && f)
+    {
+        using return_type = tpl::rebind<
+            tpl::rebind<
+                tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
+                tpl::unique
+            >,
+            variant
+        >;
+
+        return get<0>(get<0>(fmap(v, [&](auto && value) -> return_type {
+            return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
+        })));
+    }
+
+    template<typename F, typename CRTP, typename... Ts,
+        typename = decltype(get<0>(fmap(std::declval<_detail::_variant<CRTP, Ts...>>(), std::declval<F>())))>
+    auto mbind(_detail::_variant<CRTP, Ts...> && v, F && f)
+    {
+        using return_type = tpl::rebind<
+            tpl::rebind<
+                tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>,
+                tpl::unique
+            >,
+            variant
+        >;
+
+        return get<0>(get<0>(fmap(std::move(v), [&](auto && value) -> return_type {
+            return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
+        })));
+    }
+
+    namespace _detail
+    {
+        template<typename T>
+        auto _make_variant(T && t)
+        {
+            return variant<T>{ std::forward<T>(t) };
+        };
+
+        template<typename F, std::size_t... Is, typename... TupleTs>
+        auto _visit(F && f, std::index_sequence<Is...>, std::tuple<TupleTs...> tuple)
+        {
+            return _make_variant(std::forward<F>(f)(std::forward<TupleTs>(std::get<Is>(tuple))...));
+        }
+
+        template<typename F, typename CRTP, std::size_t... Is, typename... TupleTs, typename... Ts, typename... Variants>
+        auto _visit(F && f, std::index_sequence<Is...>, std::tuple<TupleTs...> tuple, const _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
+        {
+            return mbind(head, [&](auto && elem) {
+                return _visit(std::forward<F>(f), std::make_index_sequence<sizeof...(TupleTs) + 1>(), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+            });
+        }
+
+        template<typename F, typename CRTP, std::size_t... Is, typename... TupleTs, typename... Ts, typename... Variants>
+        auto _visit(F && f, std::index_sequence<Is...>, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
+        {
+            return mbind(head, [&](auto && elem) {
+                return _visit(std::forward<F>(f), std::make_index_sequence<sizeof...(TupleTs) + 1>(), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+            });
+        }
+
+        template<typename F, typename CRTP, std::size_t... Is, typename... TupleTs, typename... Ts, typename... Variants>
+        auto _visit(F && f, std::index_sequence<Is...>, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> && head, Variants &&... tail)
+        {
+            return mbind(std::move(head), [&](auto && elem) {
+                return _visit(std::forward<F>(f), std::make_index_sequence<sizeof...(TupleTs) + 1>(), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+            });
+        }
+    }
+
+    template<typename F, typename... Variants>
+    auto visit(F && f, Variants &&... variants)
+    {
+        return _detail::_visit(std::forward<F>(f), std::make_index_sequence<0>(), std::make_tuple(), std::forward<Variants>(variants)...);
     }
 
     template<typename CRTP, typename... Ts>

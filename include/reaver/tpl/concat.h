@@ -33,6 +33,12 @@ namespace reaver
             template<typename... Vectors>
             struct _concat;
 
+            template<typename... Elements>
+            struct _concat<vector<Elements...>>
+            {
+                using type = vector<Elements...>;
+            };
+
             template<typename... Elements1, typename... Elements2>
             struct _concat<vector<Elements1...>, vector<Elements2...>>
             {
