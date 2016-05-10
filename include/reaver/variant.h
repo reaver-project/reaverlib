@@ -43,6 +43,7 @@
 #include "tpl/replace.h"
 #include "overloads.h"
 #include "tpl/concat.h"
+#include "tpl/map.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -277,6 +278,45 @@ namespace reaver { inline namespace _v1
                 );
 
                 constructor(*this, std::forward<T>(t));
+            }
+
+            template<typename CRTP_, typename... Ts, typename std::enable_if<is_subset<tpl::vector<Ts...>, tpl::vector<Args...>>::value, int>::type = 0>
+            _variant(const _variant<CRTP_, Ts...> & other)
+            {
+                fmap(other, [&](auto && value) {
+                    using Other = std::remove_cv_t<std::remove_reference_t<decltype(value)>>;
+
+                    _tag = tpl::index_of<tpl::vector<Args...>, Other>();
+                    new (&_storage) Other(std::forward<decltype(value)>(value));
+
+                    return unit{};
+                });
+            }
+
+            template<typename CRTP_, typename... Ts, typename std::enable_if<is_subset<tpl::vector<Ts...>, tpl::vector<Args...>>::value, int>::type = 0>
+            _variant(_variant<CRTP_, Ts...> & other)
+            {
+                fmap(other, [&](auto && value) {
+                    using Other = std::remove_cv_t<std::remove_reference_t<decltype(value)>>;
+
+                    _tag = tpl::index_of<tpl::vector<Args...>, Other>();
+                    new (&_storage) Other(std::forward<decltype(value)>(value));
+
+                    return unit{};
+                });
+            }
+
+            template<typename CRTP_, typename... Ts, typename std::enable_if<is_subset<tpl::vector<Ts...>, tpl::vector<Args...>>::value, int>::type = 0>
+            _variant(_variant<CRTP_, Ts...> && other)
+            {
+                fmap(std::move(other), [&](auto && value) {
+                    using Other = std::remove_cv_t<std::remove_reference_t<decltype(value)>>;
+
+                    _tag = tpl::index_of<tpl::vector<Args...>, Other>();
+                    new (&_storage) Other(std::forward<decltype(value)>(value));
+
+                    return unit{};
+                });
             }
 
             template<typename T, typename std::enable_if<
@@ -607,15 +647,21 @@ namespace reaver { inline namespace _v1
     {
         using return_type = tpl::rebind<
             tpl::rebind<
-                tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
+                tpl::rebind<
+                    tpl::map<
+                        tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
+                        tpl::unbind
+                    >,
+                    tpl::concat
+                >,
                 tpl::unique
             >,
             variant
         >;
 
-        return get<0>(get<0>(fmap(v, [&](auto && value) -> return_type {
+        return get<0>(fmap(v, [&](auto && value) -> return_type {
             return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
-        })));
+        }));
     }
 
     template<typename F, typename CRTP, typename... Ts,
@@ -624,15 +670,21 @@ namespace reaver { inline namespace _v1
     {
         using return_type = tpl::rebind<
             tpl::rebind<
-                tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
+                tpl::rebind<
+                    tpl::map<
+                        tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
+                        tpl::unbind
+                    >,
+                    tpl::concat
+                >,
                 tpl::unique
             >,
             variant
         >;
 
-        return get<0>(get<0>(fmap(v, [&](auto && value) -> return_type {
+        return get<0>(fmap(v, [&](auto && value) -> return_type {
             return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
-        })));
+        }));
     }
 
     template<typename F, typename CRTP, typename... Ts,
@@ -641,15 +693,21 @@ namespace reaver { inline namespace _v1
     {
         using return_type = tpl::rebind<
             tpl::rebind<
-                tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>,
+                tpl::rebind<
+                    tpl::map<
+                        tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>,
+                        tpl::unbind
+                    >,
+                    tpl::concat
+                >,
                 tpl::unique
             >,
             variant
         >;
 
-        return get<0>(get<0>(fmap(std::move(v), [&](auto && value) -> return_type {
+        return get<0>(fmap(std::move(v), [&](auto && value) -> return_type {
             return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
-        })));
+        }));
     }
 
     namespace _detail
@@ -666,27 +724,33 @@ namespace reaver { inline namespace _v1
             return _make_variant(std::forward<F>(f)(std::forward<TupleTs>(std::get<Is>(tuple))...));
         }
 
-        template<typename F, typename CRTP, std::size_t... Is, typename... TupleTs, typename... Ts, typename... Variants>
-        auto _visit(F && f, std::index_sequence<Is...>, std::tuple<TupleTs...> tuple, const _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
+        template<typename F, typename... TupleTs>
+        auto _visit(F && f, std::tuple<TupleTs...> tuple)
+        {
+            return _visit(std::forward<F>(f), std::make_index_sequence<sizeof...(TupleTs)>(), std::move(tuple));
+        }
+
+        template<typename F, typename CRTP, typename... TupleTs, typename... Ts, typename... Variants>
+        auto _visit(F && f, std::tuple<TupleTs...> tuple, const _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
         {
             return mbind(head, [&](auto && elem) {
-                return _visit(std::forward<F>(f), std::make_index_sequence<sizeof...(TupleTs) + 1>(), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+                return _visit(std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
             });
         }
 
-        template<typename F, typename CRTP, std::size_t... Is, typename... TupleTs, typename... Ts, typename... Variants>
-        auto _visit(F && f, std::index_sequence<Is...>, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
+        template<typename F, typename CRTP,  typename... TupleTs, typename... Ts, typename... Variants>
+        auto _visit(F && f, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
         {
             return mbind(head, [&](auto && elem) {
-                return _visit(std::forward<F>(f), std::make_index_sequence<sizeof...(TupleTs) + 1>(), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+                return _visit(std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
             });
         }
 
-        template<typename F, typename CRTP, std::size_t... Is, typename... TupleTs, typename... Ts, typename... Variants>
-        auto _visit(F && f, std::index_sequence<Is...>, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> && head, Variants &&... tail)
+        template<typename F, typename CRTP, typename... TupleTs, typename... Ts, typename... Variants>
+        auto _visit(F && f, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> && head, Variants &&... tail)
         {
             return mbind(std::move(head), [&](auto && elem) {
-                return _visit(std::forward<F>(f), std::make_index_sequence<sizeof...(TupleTs) + 1>(), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+                return _visit(std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
             });
         }
     }
@@ -694,7 +758,7 @@ namespace reaver { inline namespace _v1
     template<typename F, typename... Variants>
     auto visit(F && f, Variants &&... variants)
     {
-        return _detail::_visit(std::forward<F>(f), std::make_index_sequence<0>(), std::make_tuple(), std::forward<Variants>(variants)...);
+        return _detail::_visit(std::forward<F>(f), std::make_tuple(), std::forward<Variants>(variants)...);
     }
 
     template<typename CRTP, typename... Ts>

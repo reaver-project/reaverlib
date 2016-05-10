@@ -22,17 +22,25 @@
 
 #pragma once
 
+#include "vector.h"
+
 namespace reaver
 {
     namespace tpl { inline namespace _v1
     {
         namespace _detail
         {
-            template<typename TypeVector, typename Function>
+            template<typename TypeVector, template<typename...> typename Function>
             struct _map;
+
+            template<typename... Ts, template<typename...> typename Function>
+            struct _map<vector<Ts...>, Function>
+            {
+                using type = vector<Function<Ts>...>;
+            };
         }
 
-        template<typename Vector, typename Function>
+        template<typename Vector, template<typename...> typename Function>
         using map = typename _detail::_map<Vector, Function>::type;
     }}
 }
