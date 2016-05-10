@@ -34,6 +34,7 @@
 #include "../overloads.h"
 #include "../logic.h"
 #include "../void_t.h"
+#include "../subset.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -200,78 +201,40 @@ namespace reaver { inline namespace _v1
         std::unordered_map<boost::typeindex::type_index, boost::any, boost::hash<boost::typeindex::type_index>> _map;
     };
 
-    namespace _detail
-    {
-        template<typename Checked, typename Set>
-        struct _is_a_subset : public std::false_type
-        {
-        };
-
-        template<typename... Set>
-        struct _is_a_subset<std::tuple<>, std::tuple<Set...>> : public std::true_type
-        {
-        };
-
-        template<typename... Checked>
-        struct _is_a_subset<std::tuple<Checked...>, std::tuple<>> : public std::false_type
-        {
-        };
-
-        template<typename T>
-        struct _is_a_subset<std::tuple<T>, std::tuple<T>> : public std::true_type
-        {
-        };
-
-        template<typename T, typename... Others>
-        struct _is_a_subset<std::tuple<T>, std::tuple<T, Others...>> : public std::true_type
-        {
-        };
-
-        template<typename T, typename Head, typename... Tail>
-        struct _is_a_subset<std::tuple<T>, std::tuple<Head, Tail...>> : public _is_a_subset<std::tuple<T>, std::tuple<Tail...>>
-        {
-        };
-
-        template<typename... Checked, typename... Set>
-        struct _is_a_subset<std::tuple<Checked...>, std::tuple<Set...>> : public all_of<_is_a_subset<std::tuple<Checked>, std::tuple<Set...>>::value...>
-        {
-        };
-    }
-
     template<typename... Allowed>
     class bound_configuration : public configuration
     {
     private:
-        template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Other...>, std::tuple<Allowed...>>::value, int>::type = 0>
+        template<typename... Other, typename std::enable_if<is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value, int>::type = 0>
         bound_configuration(const bound_configuration<Other...> & other) : configuration{ other }
         {
         }
 
-        template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Other...>, std::tuple<Allowed...>>::value, int>::type = 0>
+        template<typename... Other, typename std::enable_if<is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value, int>::type = 0>
         bound_configuration(bound_configuration<Other...> && other) : configuration{ std::move(other) }
         {
         }
 
     public:
         template<typename... Other, typename std::enable_if<
-            !_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value &&
-            !_detail::_is_a_subset<std::tuple<Other...>, std::tuple<Allowed...>>::value,
+            !is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value &&
+            !is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value,
         int>::type = 0>
         bound_configuration(const bound_configuration<Other...> & other) = delete;
 
         template<typename... Other, typename std::enable_if<
-            !_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value &&
-            !_detail::_is_a_subset<std::tuple<Other...>, std::tuple<Allowed...>>::value,
+            !is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value &&
+            !is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value,
         int>::type = 0>
         bound_configuration(bound_configuration<Other...> && other) = delete;
 
-        template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value, int>::type = 0>
+        template<typename... Other, typename std::enable_if<is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value, int>::type = 0>
         bound_configuration(const bound_configuration<Other...> & other)
         {
             swallow{ set<Allowed>(other.template get<Allowed>())... };
         }
 
-        template<typename... Other, typename std::enable_if<_detail::_is_a_subset<std::tuple<Allowed...>, std::tuple<Other...>>::value, int>::type = 0>
+        template<typename... Other, typename std::enable_if<is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value, int>::type = 0>
         bound_configuration(bound_configuration<Other...> && other)
         {
             swallow{ set<Allowed>(std::move(other.template get<Allowed>()))... };
