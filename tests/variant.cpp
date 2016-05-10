@@ -445,6 +445,8 @@ MAYFLY_ADD_TESTCASE("n-ary visitation", []()
         MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second, auto third) { return first; }, v1, v2, v3)) == 1);
         MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, v1, v2, v3)) == 2.f);
         MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, v1, v2, v3)) == "abc");
+
+        MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
     }
 
     {
@@ -456,6 +458,8 @@ MAYFLY_ADD_TESTCASE("n-ary visitation", []()
         MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second, auto third) { return first; }, v1, v2, v3)) == 1);
         MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, v1, v2, v3)) == 2.f);
         MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, v1, v2, v3)) == "abc");
+
+        MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
     }
 
     {
@@ -472,6 +476,8 @@ MAYFLY_ADD_TESTCASE("n-ary visitation", []()
 
         v3 = "abc";
         MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, std::move(v1), std::move(v2), std::move(v3))) == "abc");
+
+        MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
     }
 });
 
