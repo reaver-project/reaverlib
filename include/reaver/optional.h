@@ -79,6 +79,11 @@ namespace reaver { inline namespace _v1
             return _base::index() == 0;
         }
 
+        bool empty() const
+        {
+            return !*this;
+        }
+
         T & operator*()
         {
             return get();

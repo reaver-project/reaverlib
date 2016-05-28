@@ -67,7 +67,10 @@ namespace reaver { inline namespace _v1
         template<typename T>
         struct _recursive_wrapper
         {
-            _recursive_wrapper() = delete;
+            _recursive_wrapper() : _storage{ std::make_unique<T>() }
+            {
+            }
+
             _recursive_wrapper(const _recursive_wrapper & other) : _storage{ std::make_unique<T>(*other._storage) }
             {
             }
@@ -79,6 +82,18 @@ namespace reaver { inline namespace _v1
                 return *this;
             }
             _recursive_wrapper & operator=(_recursive_wrapper &&) noexcept = default;
+
+            _recursive_wrapper & operator=(const T & t)
+            {
+                _storage = std::make_unique<T>(t);
+                return *this;
+            }
+
+            _recursive_wrapper & operator=(T && t)
+            {
+                _storage = std::make_unique<T>(std::move(t));
+                return *this;
+            }
 
             _recursive_wrapper(T t) : _storage{ std::make_unique<T>(std::move(t)) }
             {
@@ -102,6 +117,16 @@ namespace reaver { inline namespace _v1
             const T & operator*() const
             {
                 return *_storage;
+            }
+
+            T * operator->()
+            {
+                return &*_storage;
+            }
+
+            const T * operator->() const
+            {
+                return &*_storage;
             }
 
             auto index() const
