@@ -28,7 +28,7 @@ namespace reaver
 {
     namespace wildcard { inline namespace _v1
     {
-        bool match(const std::string & pattern, const std::string & string, std::size_t pattern_position = 0, std::size_t string_position = 0)
+        inline bool match(const std::string & pattern, const std::string & string, std::size_t pattern_position = 0, std::size_t string_position = 0)
         {
             if (pattern_position == pattern.size() || string_position == string.size())
             {
