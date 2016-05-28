@@ -22,6 +22,9 @@
 
 #include <reaver/mayfly.h>
 
+#include <queue>
+#include <future> // lol
+
 #include <reaver/optional.h>
 
 namespace test
@@ -149,11 +152,29 @@ MAYFLY_ADD_TESTCASE("then", []()
     }
 
     {
+        test::reaver::default_executor(test::reaver::make_executor<trivial_executor>());
+
+        auto ready = test::reaver::make_ready_future(1);
+        auto future = ready.then([](auto i){ return i * 2; });
+
+        MAYFLY_REQUIRE(future.try_get() == 2);
+    }
+
+    {
         auto pair = test::reaver::package([](){ return 1; });
         auto future = pair.future.then([](auto i){ return i * 2; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_REQUIRE(future.try_get() == 2);
+    }
+
+    {
+        test::reaver::default_executor(test::reaver::make_executor<trivial_executor>());
+
+        auto ready = test::reaver::make_ready_future();
+        auto future = ready.then([](){ return 2; });
 
         MAYFLY_REQUIRE(future.try_get() == 2);
     }
@@ -164,7 +185,7 @@ MAYFLY_ADD_TESTCASE("exceptional continuation", []()
     {
         auto pair = test::reaver::package([](){ throw 1; });
         auto future = pair.future.then([](){ return false; });
-        auto exceptional = pair.future.on_error([](std::exception_ptr ex){ return true; });
+        auto exceptional = pair.future.on_error([](std::exception_ptr){ return true; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
@@ -176,7 +197,7 @@ MAYFLY_ADD_TESTCASE("exceptional continuation", []()
     {
         auto pair = test::reaver::package([]() -> int { throw 1; });
         auto future = pair.future.then([](int){ return false; });
-        auto exceptional = pair.future.on_error([](std::exception_ptr ex){ return true; });
+        auto exceptional = pair.future.on_error([](std::exception_ptr){ return true; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
@@ -422,6 +443,13 @@ MAYFLY_ADD_TESTCASE("noncopyable value", []()
         auto pair = test::reaver::package([](){ return noncopyable{ 3 }; });
         pair.future.then([](auto){});
         MAYFLY_CHECK_THROWS_TYPE(test::reaver::multiple_noncopyable_continuations, pair.future.then([](auto){}));
+    }
+
+    {
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        auto future = test::reaver::async(exec, [](noncopyable n){ return n.i; }, noncopyable{ 6 });
+
+        MAYFLY_CHECK(future.try_get() == 6);
     }
 });
 
