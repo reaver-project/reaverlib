@@ -133,7 +133,9 @@ namespace reaver { inline namespace _v1
 
         virtual void push(function<void ()> f) override
         {
+            std::unique_lock<std::mutex> lock{ _lock };
             _queue.emplace(std::move(f));
+            _cond.notify_one();
         }
 
         std::size_t size() const
