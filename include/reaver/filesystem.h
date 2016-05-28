@@ -24,6 +24,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include "wildcard.h"
+
 namespace reaver
 {
     namespace filesystem { inline namespace _v1
@@ -67,6 +69,73 @@ namespace reaver
             }
 
             return relative;
+        }
+
+        inline std::vector<boost::filesystem::path> wildcard(const std::string & pat, const boost::filesystem::path & base = boost::filesystem::current_path())
+        {
+            auto pattern = make_relative(base / pat);
+            std::vector<boost::filesystem::path> state{ make_relative(base) };
+            auto end = boost::filesystem::directory_iterator{};
+
+            for (auto && segment : boost::filesystem::path(pattern))
+            {
+                auto last_state = std::move(state);
+
+                if (segment == "*")
+                {
+                    for (auto && candidate : last_state)
+                    {
+                        if (!boost::filesystem::is_directory(base / candidate))
+                        {
+                            continue;
+                        }
+
+                        for (auto it = boost::filesystem::directory_iterator{ base / std::move(candidate) }; it != end; ++it)
+                        {
+                            state.push_back(make_relative(*it, base));
+                        }
+                    }
+                }
+
+                else if (segment == "**")
+                {
+                    auto end = boost::filesystem::recursive_directory_iterator{};
+                    for (auto && candidate : last_state)
+                    {
+                        if (!boost::filesystem::is_directory(base / candidate))
+                        {
+                            continue;
+                        }
+
+                        state.push_back(candidate);
+                        for (auto it = boost::filesystem::recursive_directory_iterator{ base / std::move(candidate) }; it != end; ++it)
+                        {
+                            state.push_back(make_relative(*it, base));
+                        }
+                    }
+                }
+
+                else
+                {
+                    for (auto && candidate : last_state)
+                    {
+                        if (!boost::filesystem::is_directory(base / candidate))
+                        {
+                            continue;
+                        }
+
+                        for (auto it = boost::filesystem::directory_iterator{ base / std::move(candidate) }; it != end; ++it)
+                        {
+                            if (wildcard::match(segment.string(), it->path().filename().string()))
+                            {
+                                state.push_back(make_relative(*it, base));
+                            }
+                        }
+                    }
+                }
+            }
+
+            return state;
         }
     }}
 }
