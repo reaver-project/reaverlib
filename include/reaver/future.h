@@ -34,6 +34,8 @@
 #include "prelude/functor.h"
 #include "function.h"
 #include "executor.h"
+#include "default_executor.h"
+#include "static_if.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -91,12 +93,14 @@ namespace reaver { inline namespace _v1
         template<typename T, typename F, typename std::enable_if<std::is_void<T>::value || std::is_copy_constructible<T>::value, int>::type = 0>
         void _add_continuation(_shared_state<T> & state, F && f)
         {
+            std::lock_guard<std::mutex> lock{ state.continuations_lock };
             state.continuations.emplace_back(_continuation_type{ std::forward<F>(f) });
         }
 
         template<typename T, typename F, typename std::enable_if<!std::is_void<T>::value && !std::is_copy_constructible<T>::value, int>::type = 0>
         void _add_continuation(_shared_state<T> & state, F && f)
         {
+            std::lock_guard<std::mutex> lock{ state.continuations_lock };
             if (state.continuations)
             {
                 throw multiple_noncopyable_continuations{};
@@ -109,6 +113,7 @@ namespace reaver { inline namespace _v1
         template<typename T, typename F>
         void _add_exceptional_continuation(_shared_state<T> & state, F && f)
         {
+            std::lock_guard<std::mutex> lock{ state.continuations_lock };
             if (state.exceptional_continuations)
             {
                 throw multiple_exceptional_continuations{};
@@ -179,6 +184,8 @@ namespace reaver { inline namespace _v1
             std::atomic<std::size_t> shared_count{ 0 };
 
             std::shared_ptr<executor> scheduler;
+
+            std::mutex continuations_lock;
             then_t continuations;
             failed_then_t exceptional_continuations;
 
@@ -250,7 +257,7 @@ namespace reaver { inline namespace _v1
                         return scheduler;
                     }
 
-                    assert(!"I really don't know what to do this time.");
+                    return default_executor();
                 };
 
                 return get<0>(fmap(value, make_overload_set(
@@ -305,7 +312,7 @@ namespace reaver { inline namespace _v1
                         return scheduler;
                     }
 
-                    assert(!"what do again?");
+                    return default_executor();
                 };
 
                 return get<0>(fmap(value, make_overload_set(
@@ -351,22 +358,12 @@ namespace reaver { inline namespace _v1
             template<typename F>
             auto then(F && f)
             {
-                if (!scheduler)
-                {
-                    assert("here we need a default executor");
-                }
-
                 return then(scheduler, std::forward<F>(f));
             }
 
             template<typename F>
             auto on_error(F && f)
             {
-                if (!scheduler)
-                {
-                    assert("here we need a default executor");
-                }
-
                 return on_error(scheduler, std::forward<F>(f));
             }
         };
@@ -395,6 +392,8 @@ namespace reaver { inline namespace _v1
             std::atomic<std::size_t> shared_count{ 0 };
 
             std::shared_ptr<executor> scheduler;
+
+            std::mutex continuations_lock;
             then_t continuations;
             failed_then_t exceptional_continuations;
 
@@ -462,7 +461,7 @@ namespace reaver { inline namespace _v1
                         return scheduler;
                     }
 
-                    assert(!"I really don't know what to do this time.");
+                    return default_executor();
                 };
 
                 ++shared_count;
@@ -521,7 +520,7 @@ namespace reaver { inline namespace _v1
                         return scheduler;
                     }
 
-                    assert(!"what do again?");
+                    return default_executor();
                 };
 
                 return get<0>(fmap(value, make_overload_set(
@@ -567,22 +566,12 @@ namespace reaver { inline namespace _v1
             template<typename F>
             auto then(F && f)
             {
-                if (!scheduler)
-                {
-                    assert("here we need a default executor");
-                }
-
                 return then(scheduler, std::forward<F>(f));
             }
 
             template<typename F>
             auto on_error(F && f)
             {
-                if (!scheduler)
-                {
-                    assert("here we need a default executor");
-                }
-
                 return on_error(scheduler, std::forward<F>(f));
             }
         };
@@ -676,28 +665,63 @@ namespace reaver { inline namespace _v1
                 return;
             }
 
-            std::lock_guard<std::mutex> lock{ state->lock };
+            std::unique_lock<std::mutex> lock{ state->lock };
             state->scheduler = std::move(sched);
 
             try
             {
-                state->value = (*state->function)();
+                lock.unlock();
+                auto && ret_value = (*state->function)();
+                lock.lock();
+                state->value = std::move(ret_value);
+                if (state->promise_count != 1)
+                {
+                    lock.unlock();
+                }
             }
             catch (...)
             {
+                std::lock_guard<std::mutex> lock{ state->continuations_lock };
                 state->value = std::current_exception();
                 if (state->exceptional_continuations)
                 {
-                    fmap(state->exceptional_continuations, [](auto && cont){ cont(); return unit{}; });
+                    fmap(std::move(state->exceptional_continuations), [](auto && cont){ cont(); return unit{}; });
                 }
             }
 
-            fmap(state->continuations, [&](auto && cont) {
-                if (state->value.index() != 2)
+            auto conts = decltype(state->continuations){};
+
+            static_if(std::is_copy_constructible<T>{}, [&](auto) {
+                // shenanigans
+                while (
+                    [&]{
+                        std::lock_guard<std::mutex> lock{ state->continuations_lock };
+                        return !state->continuations.empty();
+                    }())
                 {
-                    cont();
+                    {
+                        std::lock_guard<std::mutex> lock{ state->continuations_lock };
+                        using std::swap;
+                        swap(conts, state->continuations);
+                    }
+
+                    fmap(conts, [&](auto && cont) {
+                        if (state->value.index() != 2)
+                        {
+                            cont();
+                        }
+                        return unit{};
+                    });
                 }
-                return unit{};
+            }).static_else([&](auto) {
+                std::lock_guard<std::mutex> lock{ state->continuations_lock };
+                fmap(state->continuations, [&](auto && cont) {
+                    if (state->value.index() != 2)
+                    {
+                        cont();
+                    }
+                    return unit{};
+                });
             });
 
             state->function = none;
@@ -717,16 +741,23 @@ namespace reaver { inline namespace _v1
             return;
         }
 
-        std::lock_guard<std::mutex> lock{ state->lock };
+        std::unique_lock<std::mutex> lock{ state->lock };
         state->scheduler = std::move(sched);
 
         try
         {
+            lock.unlock();
             (*state->function)();
+            lock.lock();
             state->value = ready;
+            if (state->promise_count != 1)
+            {
+                lock.unlock();
+            }
         }
         catch (...)
         {
+            std::lock_guard<std::mutex> lock{ state->continuations_lock };
             state->value = std::current_exception();
             if (state->exceptional_continuations)
             {
@@ -734,13 +765,28 @@ namespace reaver { inline namespace _v1
             }
         }
 
-        fmap(state->continuations, [&](auto && cont) {
-            if (state->value.index() != 2)
+        auto conts = decltype(state->continuations){};
+
+        // shenanigans
+        while (
+            [&]{
+                std::lock_guard<std::mutex> lock{ state->continuations_lock };
+                return !state->continuations.empty();
+            }())
+        {
             {
-                cont();
+                std::lock_guard<std::mutex> lock{ state->continuations_lock };
+                swap(conts, state->continuations);
             }
-            return unit{};
-        });
+
+            fmap(conts, [&](auto && cont) {
+                if (state->value.index() != 2)
+                {
+                    cont();
+                }
+                return unit{};
+            });
+        }
 
         state->function = none;
     }
@@ -1155,8 +1201,7 @@ namespace reaver { inline namespace _v1
     template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
     auto when_all(exception_policy policy, future<Ts>... futures)
     {
-        //return when_all(default, policy, std::move(futures)...);
-        assert(!"what do");
+        return when_all(default_executor(), policy, std::move(futures)...);
     }
 
     template<typename... Ts, typename std::enable_if<(sizeof...(Ts) > 0), int>::type = 0>
@@ -1244,7 +1289,7 @@ namespace reaver { inline namespace _v1
         state->futures = futures;
         state->keep_alive.reserve(futures.size());
 
-        fmap(state->futures, [&](auto future) {
+        fmap(state->futures, [&](auto & future) {
             auto scheduler = future.scheduler() ? future.scheduler() : sched;
 
             state->keep_alive.push_back(future.then(std::move(scheduler), [sched, state](auto &&... arg) {
@@ -1268,8 +1313,7 @@ namespace reaver { inline namespace _v1
     template<typename T>
     auto when_all(exception_policy policy, const std::vector<future<T>> & futures)
     {
-        //return when_all(default, policy, futures);
-        assert(!"what do");
+        return when_all(default_executor(), policy, futures);
     }
 
     template<typename T>
@@ -1288,6 +1332,35 @@ namespace reaver { inline namespace _v1
     auto fmap(future<T> fut, F && f)
     {
         return std::move(fut).then(std::forward<F>(f));
+    }
+
+    namespace _detail
+    {
+        // I wish C++ just allowed generalized lambda captures on packs
+        // why the heck isn't that a thing, C++?
+        template<typename F, typename... Args, std::size_t... Is>
+        auto _async_impl(std::index_sequence<Is...>, std::shared_ptr<executor> scheduler, F && f, Args &&... args)
+        {
+            auto pair = package([f = std::forward<F>(f), args = std::forward_as_tuple<Args...>(std::forward<Args>(args)...)]() mutable {
+                return std::forward<F>(f)(std::forward<Args>(std::get<Is>(args))...);
+            });
+
+            scheduler->push([scheduler = scheduler, task = std::move(pair.packaged_task)](){ task(scheduler); });
+
+            return std::move(pair.future);
+        }
+    }
+
+    template<typename F, typename... Args>
+    auto async(std::shared_ptr<executor> scheduler, F && f, Args &&... args)
+    {
+        return _detail::_async_impl(std::make_index_sequence<sizeof...(Args)>(), std::move(scheduler), std::forward<F>(f), std::forward<Args>(args)...);
+    }
+
+    template<typename F, typename... Args>
+    auto async(F && f, Args &&... args)
+    {
+        return _detail::_async_impl(std::make_index_sequence<sizeof...(Args)>(), default_executor(), std::forward<F>(f), std::forward<Args>(args)...);
     }
 }}
 
