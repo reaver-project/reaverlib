@@ -37,7 +37,9 @@ namespace reaver
 {
     inline namespace prelude { inline namespace functor { inline namespace _v1
     {
-        template<typename T, typename F, typename std::enable_if<is_vector<std::remove_cv_t<std::remove_reference_t<T>>>::value, int>::type = 0>
+        template<typename T, typename F,
+            typename std::enable_if<is_vector<std::remove_cv_t<std::remove_reference_t<T>>>::value, int>::type = 0,
+            typename = decltype(invoke(std::declval<F>(), *std::declval<T>().begin()))>
         auto fmap(T & vec, F && f)
         {
             std::vector<decltype(invoke(f, *vec.begin()))> ret;
@@ -46,12 +48,17 @@ namespace reaver
             return ret;
         }
 
-        template<typename T, typename F>
-        auto fmap(std::vector<T> && vec, F && f)
+        template<typename T, typename F,
+            typename std::enable_if<is_vector<std::remove_cv_t<std::remove_reference_t<T>>>::value, int>::type = 0
+#ifdef __clang__ // GCC (at least 5.3...) is too dumb to actually understand some of these cases...
+            , typename = decltype(invoke(std::declval<F>(), std::move(*std::declval<T>().begin())))
+#endif
+        >
+        auto fmap(T && vec, F && f)
         {
-            std::vector<decltype(invoke(f, *vec.begin()))> ret;
+            std::vector<decltype(invoke(f, std::move(*vec.begin())))> ret;
             ret.reserve(vec.size());
-            for (auto elem : vec) { ret.push_back(invoke(f, std::move(elem))); }
+            for (auto && elem : vec) { ret.push_back(invoke(f, std::move(elem))); }
             return ret;
         }
 
