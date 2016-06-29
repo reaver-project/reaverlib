@@ -50,7 +50,7 @@ namespace reaver
                     return;
                 }
 
-                _streamables.emplace_back('\n');
+                _streamables.emplace_back(static_cast<std::ostream & (*)(std::ostream &)>(&std::endl));
                 logger_friend::_write(_logger, _streamables);
             }
 
