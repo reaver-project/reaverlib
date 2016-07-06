@@ -556,6 +556,20 @@ MAYFLY_ADD_TESTCASE("vector", []()
     }
 });
 
+MAYFLY_ADD_TESTCASE("vector exception propagation", []()
+{
+    auto pair = test::reaver::package([](){ throw 1; });
+    auto futures = std::vector<test::reaver::future<>>{ std::move(pair.future) };
+
+    auto exec = test::reaver::make_executor<trivial_executor>();
+
+    auto final = test::reaver::when_all(exec, futures);
+
+    exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+    MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::exception_list, final.try_get());
+});
+
 MAYFLY_END_SUITE;
 
 MAYFLY_END_SUITE;
