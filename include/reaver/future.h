@@ -1304,6 +1304,23 @@ namespace reaver { inline namespace _v1
                 }
             }));
 
+            state->keep_alive.push_back(future.on_error([state, sched, policy](auto exception_ptr) {
+                switch (policy)
+                {
+                    case exception_policy::aggregate:
+                        state->exceptions.push_back(exception_ptr);
+                        if (--state->remaining == 0)
+                        {
+                            sched->push([sched, task = std::move(*state->task)](){ task(sched); });
+                        }
+                        break;
+
+                    case exception_policy::abort_on_first_failure:
+                        assert(!"implement this shit");
+                        break;
+                }
+            }));
+
             return unit{};
         });
 
