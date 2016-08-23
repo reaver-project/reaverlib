@@ -1075,6 +1075,93 @@ namespace reaver { inline namespace _v1
     namespace _detail
     {
         template<typename T>
+        struct _replace_void
+        {
+            using type = T;
+        };
+
+        template<>
+        struct _replace_void<void>
+        {
+            using type = ready_type;
+        };
+
+        template<typename T>
+        using _manual_promise_state = variant<typename _replace_void<T>::type, std::exception_ptr, none_t>;
+    }
+
+    template<typename T>
+    class manual_promise
+    {
+    public:
+        manual_promise(std::shared_ptr<_detail::_manual_promise_state<T>> state, packaged_task<T> task) : _state{ std::move(state) }, _task{ std::move(task) }
+        {
+        }
+
+        manual_promise(const manual_promise &) = default;
+        manual_promise(manual_promise &&) = default;
+        manual_promise & operator=(const manual_promise &) = default;
+        manual_promise & operator=(manual_promise &&) = default;
+
+        void set(typename _detail::_replace_void<T>::type value = {})
+        {
+            *_state = std::move(value);
+            _task();
+        }
+
+        void set(std::exception_ptr ex)
+        {
+            *_state = std::move(ex);
+            _task();
+        }
+
+    private:
+        std::shared_ptr<_detail::_manual_promise_state<T>> _state;
+        packaged_task<T> _task;
+    };
+
+    template<typename T>
+    struct future_promise_pair
+    {
+        manual_promise<T> promise;
+        class future<T> future;
+    };
+
+    template<typename T>
+    auto make_promise()
+    {
+        auto state = std::make_shared<_detail::_manual_promise_state<T>>(none);
+        auto packaged = package([state]{
+            assert(state->index() != 2);
+            if (state->index() == 1)
+            {
+                std::rethrow_exception(get<1>(*state));
+            }
+
+            return get<0>(std::move(*state));
+        });
+
+        return future_promise_pair<T>{ { std::move(state), std::move(packaged.packaged_task) }, std::move(packaged.future) };
+    }
+
+    template<>
+    auto make_promise<void>()
+    {
+        auto state = std::make_shared<_detail::_manual_promise_state<ready_type>>(none);
+        auto packaged = package([state]{
+            assert(state->index() != 2);
+            if (state->index() == 1)
+            {
+                std::rethrow_exception(get<1>(*state));
+            }
+        });
+
+        return future_promise_pair<void>{ { std::move(state), std::move(packaged.packaged_task) }, std::move(packaged.future) };
+    }
+
+    namespace _detail
+    {
+        template<typename T>
         struct _is_not_void : std::integral_constant<bool, !std::is_void<T>::value> {};
 
         template<typename... Args>

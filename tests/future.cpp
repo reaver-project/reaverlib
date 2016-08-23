@@ -572,5 +572,32 @@ MAYFLY_ADD_TESTCASE("vector exception propagation", []()
 
 MAYFLY_END_SUITE;
 
+MAYFLY_ADD_TESTCASE("manual promise", []()
+{
+    {
+        auto pair = test::reaver::make_promise<int>();
+        MAYFLY_REQUIRE(!pair.future.try_get());
+
+        pair.promise.set(1);
+        MAYFLY_REQUIRE(pair.future.try_get() == 1);
+    }
+
+    {
+        auto pair = test::reaver::make_promise<void>();
+        MAYFLY_REQUIRE(!pair.future.try_get());
+
+        pair.promise.set();
+        MAYFLY_REQUIRE(pair.future.try_get() == 1);
+    }
+
+    {
+        auto pair = test::reaver::make_promise<void>();
+        MAYFLY_REQUIRE(!pair.future.try_get());
+
+        pair.promise.set(std::make_exception_ptr(1));
+        MAYFLY_REQUIRE_THROWS_TYPE(int, pair.future.try_get());
+    }
+});
+
 MAYFLY_END_SUITE;
 
