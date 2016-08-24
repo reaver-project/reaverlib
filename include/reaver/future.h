@@ -725,6 +725,8 @@ namespace reaver { inline namespace _v1
             });
 
             state->function = none;
+            state->continuations = decltype(state->continuations){};
+            state->exceptional_continuations = decltype(state->exceptional_continuations){};
         }
 
     private:
@@ -789,7 +791,12 @@ namespace reaver { inline namespace _v1
         }
 
         state->function = none;
+        state->continuations = decltype(state->continuations){};
+        state->exceptional_continuations = decltype(state->exceptional_continuations){};
     }
+
+    template<typename T>
+    future<T> join(std::shared_ptr<executor>, future<future<T>>);
 
     template<typename T>
     class future
@@ -799,7 +806,7 @@ namespace reaver { inline namespace _v1
             _add_count();
         }
 
-        void _add_count()
+        void _add_count() const
         {
             if (_state)
             {
@@ -807,7 +814,7 @@ namespace reaver { inline namespace _v1
             }
         }
 
-        void _remove_count()
+        void _remove_count() const
         {
             if (_state)
             {
@@ -907,6 +914,12 @@ namespace reaver { inline namespace _v1
             return _state->on_error(std::forward<F>(f));
         }
 
+        void detach()
+        {
+            _add_count();
+            then([keep = _state](auto &&){});
+        }
+
         auto scheduler() const
         {
             std::lock_guard<std::mutex> lock{ _state->lock };
@@ -931,7 +944,7 @@ namespace reaver { inline namespace _v1
             _add_count();
         }
 
-        void _add_count()
+        void _add_count() const
         {
             if (_state)
             {
@@ -939,7 +952,7 @@ namespace reaver { inline namespace _v1
             }
         }
 
-        void _remove_count()
+        void _remove_count() const
         {
             if (_state)
             {
@@ -1039,6 +1052,12 @@ namespace reaver { inline namespace _v1
             return _state->on_error(std::forward<F>(f));
         }
 
+        void detach()
+        {
+            _add_count();
+            then([keep = _state]{});
+        }
+
         auto scheduler() const
         {
             std::lock_guard<std::mutex> lock{ _state->lock };
@@ -1103,16 +1122,26 @@ namespace reaver { inline namespace _v1
         manual_promise & operator=(const manual_promise &) = default;
         manual_promise & operator=(manual_promise &&) = default;
 
-        void set(typename _detail::_replace_void<T>::type value = {})
+        void set(std::shared_ptr<executor> sched, typename _detail::_replace_void<T>::type value = {}) const
         {
             *_state = std::move(value);
-            _task();
+            sched->push([sched, task = std::move(_task)]{ task(sched); });
         }
 
-        void set(std::exception_ptr ex)
+        void set(typename _detail::_replace_void<T>::type value = {}) const
+        {
+            set(default_executor(), std::move(value));
+        }
+
+        void set(std::shared_ptr<executor> sched, std::exception_ptr ex) const
         {
             *_state = std::move(ex);
-            _task();
+            sched->push([sched, task = std::move(_task)]{ task(sched); });
+        }
+
+        void set(std::exception_ptr ex) const
+        {
+            set(default_executor(), ex);
         }
 
     private:
@@ -1157,6 +1186,25 @@ namespace reaver { inline namespace _v1
         });
 
         return future_promise_pair<void>{ { std::move(state), std::move(packaged.packaged_task) }, std::move(packaged.future) };
+    }
+
+    template<typename T>
+    future<T> join(std::shared_ptr<executor> sched, future<future<T>> fut)
+    {
+        auto pair = make_promise<T>();
+        fut.then(sched, [promise = std::move(pair.promise), sched](auto && inner) {
+            inner.then(sched, [promise = std::move(promise), sched](typename _detail::_replace_void<T>::type value = {}) {
+                promise.set(std::move(sched), std::move(value));
+            }).detach();
+        }).detach();
+
+        return std::move(pair.future);
+    }
+
+    template<typename T>
+    future<T> join(future<future<T>> fut)
+    {
+        return join(default_executor(), std::move(fut));
     }
 
     namespace _detail
