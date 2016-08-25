@@ -1480,12 +1480,6 @@ namespace reaver { inline namespace _v1
         return when_all(std::move(sched), exception_policy::aggregate, futures);
     }
 
-    template<typename T, typename F>
-    auto fmap(future<T> fut, F && f)
-    {
-        return std::move(fut).then(std::forward<F>(f));
-    }
-
     namespace _detail
     {
         // I wish C++ just allowed generalized lambda captures on packs
