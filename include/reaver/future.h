@@ -1239,7 +1239,7 @@ namespace reaver { inline namespace _v1
     }
 
     template<>
-    auto make_promise<void>()
+    inline auto make_promise<void>()
     {
         auto state = std::make_shared<_detail::_manual_promise_state<ready_type>>(none);
         auto packaged = package([state]{
