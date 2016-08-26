@@ -901,7 +901,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto then(std::shared_ptr<executor> sched, F && f)
         {
-            return _detail::_unwrap([sched = sched]{ return sched; }, then(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+            return _detail::_unwrap([sched = sched]{ return sched; }, then(do_not_unwrap, sched, std::forward<F>(f)));
         }
 
         template<typename F>
@@ -918,7 +918,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto on_error(std::shared_ptr<executor> sched, F && f)
         {
-            return _detail::_unwrap([sched = sched]{ return sched; }, on_error(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+            return _detail::_unwrap([sched = sched]{ return sched; }, on_error(do_not_unwrap, sched, std::forward<F>(f)));
         }
 
         template<typename F>
@@ -1063,7 +1063,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto then(std::shared_ptr<executor> sched, F && f)
         {
-            return _detail::_unwrap([sched = sched]{ return sched; }, then(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+            return _detail::_unwrap([sched = sched]{ return sched; }, then(do_not_unwrap, sched, std::forward<F>(f)));
         }
 
         template<typename F>
@@ -1080,7 +1080,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto on_error(std::shared_ptr<executor> sched, F && f)
         {
-            return _detail::_unwrap([sched = sched]{ return sched; }, on_error(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+            return _detail::_unwrap([sched = sched]{ return sched; }, on_error(do_not_unwrap, sched, std::forward<F>(f)));
         }
 
         template<typename F>
