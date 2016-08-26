@@ -798,6 +798,23 @@ namespace reaver { inline namespace _v1
     template<typename T>
     future<T> join(std::shared_ptr<executor>, future<future<T>>);
 
+    namespace _detail
+    {
+        template<typename F, typename U>
+        static auto _unwrap(F, future<U> fut)
+        {
+            return std::move(fut);
+        }
+
+        template<typename F, typename U>
+        static auto _unwrap(F sched, future<future<U>> fut)
+        {
+            return join(sched(), std::move(fut));
+        }
+    }
+
+    constexpr struct do_not_unwrap_type {} do_not_unwrap{};
+
     template<typename T>
     class future
     {
@@ -871,7 +888,7 @@ namespace reaver { inline namespace _v1
         };
 
         template<typename F>
-        auto then(std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
+        auto then(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
         {
             if (!_state)
             {
@@ -882,7 +899,13 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto then(std::shared_ptr<executor> sched, F && f)
+        {
+            return _detail::_unwrap([sched = sched]{ return sched; }, then(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+        }
+
+        template<typename F>
+        auto on_error(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
         {
             if (!_state)
             {
@@ -893,7 +916,13 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto then(F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
+        auto on_error(std::shared_ptr<executor> sched, F && f)
+        {
+            return _detail::_unwrap([sched = sched]{ return sched; }, on_error(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+        }
+
+        template<typename F>
+        auto then(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
         {
             if (!_state)
             {
@@ -904,7 +933,13 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto then(F && f)
+        {
+            return _detail::_unwrap(&default_executor, then(do_not_unwrap, std::forward<F>(f)));
+        }
+
+        template<typename F>
+        auto on_error(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
         {
             if (!_state)
             {
@@ -912,6 +947,12 @@ namespace reaver { inline namespace _v1
             }
 
             return _state->on_error(std::forward<F>(f));
+        }
+
+        template<typename F>
+        auto on_error(F && f)
+        {
+            return _detail::_unwrap(&default_executor, on_error(do_not_unwrap, std::forward<F>(f)));
         }
 
         void detach()
@@ -1009,7 +1050,7 @@ namespace reaver { inline namespace _v1
         };
 
         template<typename F>
-        auto then(std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)())>
+        auto then(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)())>
         {
             if (!_state)
             {
@@ -1020,7 +1061,13 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto then(std::shared_ptr<executor> sched, F && f)
+        {
+            return _detail::_unwrap([sched = sched]{ return sched; }, then(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+        }
+
+        template<typename F>
+        auto on_error(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
         {
             if (!_state)
             {
@@ -1031,7 +1078,13 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto then(F && f) -> future<decltype(std::forward<F>(f)())>
+        auto on_error(std::shared_ptr<executor> sched, F && f)
+        {
+            return _detail::_unwrap([sched = sched]{ return sched; }, on_error(do_not_unwrap, std::move(sched), std::forward<F>(f)));
+        }
+
+        template<typename F>
+        auto then(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)())>
         {
             if (!_state)
             {
@@ -1042,7 +1095,13 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto then(F && f)
+        {
+            return _detail::_unwrap(&default_executor, then(do_not_unwrap, std::forward<F>(f)));
+        }
+
+        template<typename F>
+        auto on_error(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
         {
             if (!_state)
             {
@@ -1050,6 +1109,12 @@ namespace reaver { inline namespace _v1
             }
 
             return _state->on_error(std::forward<F>(f));
+        }
+
+        template<typename F>
+        auto on_error(F && f)
+        {
+            return _detail::_unwrap(&default_executor, on_error(do_not_unwrap, std::forward<F>(f)));
         }
 
         void detach()
