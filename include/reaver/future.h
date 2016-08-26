@@ -935,7 +935,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto then(F && f)
         {
-            return _detail::_unwrap(&default_executor, then(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, then(do_not_unwrap, std::forward<F>(f)));
         }
 
         template<typename F>
@@ -952,7 +952,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto on_error(F && f)
         {
-            return _detail::_unwrap(&default_executor, on_error(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, on_error(do_not_unwrap, std::forward<F>(f)));
         }
 
         void detach()
@@ -1097,7 +1097,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto then(F && f)
         {
-            return _detail::_unwrap(&default_executor, then(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, then(do_not_unwrap, std::forward<F>(f)));
         }
 
         template<typename F>
@@ -1114,7 +1114,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto on_error(F && f)
         {
-            return _detail::_unwrap(&default_executor, on_error(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, on_error(do_not_unwrap, std::forward<F>(f)));
         }
 
         void detach()
