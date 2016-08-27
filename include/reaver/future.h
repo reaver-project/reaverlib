@@ -978,7 +978,7 @@ namespace reaver { inline namespace _v1
     template<typename T>
     auto make_ready_future(T && t)
     {
-        return future<T>{ std::forward<T>(t) };
+        return future<std::remove_reference_t<T>>{ std::forward<T>(t) };
     }
 
     template<>
