@@ -126,7 +126,7 @@ namespace reaver { inline namespace _v1
         template<typename T>
         bool _is_valid(_shared_state<T> & state)
         {
-            return state.value.index() == 0 || state.function;
+            return state.value.index() != 2 || state.function;
         }
 
         template<typename T>
