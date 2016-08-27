@@ -877,6 +877,10 @@ namespace reaver { inline namespace _v1
         {
         }
 
+        explicit future(std::exception_ptr ex) : future{ std::make_shared<_detail::_shared_state<T>>(std::move(ex)) }
+        {
+        }
+
         ~future()
         {
             _remove_count();
@@ -1039,6 +1043,10 @@ namespace reaver { inline namespace _v1
         {
         }
 
+        explicit future(std::exception_ptr ex) : future{ std::make_shared<_detail::_shared_state<void>>(std::move(ex)) }
+        {
+        }
+
         ~future()
         {
             _remove_count();
@@ -1136,6 +1144,12 @@ namespace reaver { inline namespace _v1
     inline auto make_ready_future()
     {
         return future<>{ ready };
+    }
+
+    template<typename T, typename E>
+    inline auto make_exceptional_future(E && e)
+    {
+        return future<T>(std::make_exception_ptr(std::move(e)));
     }
 
     template<typename T>
