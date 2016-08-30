@@ -768,5 +768,38 @@ MAYFLY_ADD_TESTCASE("unwrap and not", []()
     }
 });
 
+MAYFLY_ADD_TESTCASE("unwrap with default executor", []()
+{
+    test::reaver::default_executor(test::reaver::make_executor<trivial_executor>());
+
+    {
+        auto fut1 = test::reaver::make_ready_future(123);
+        auto fut2 = fut1.then([](auto v){ return test::reaver::make_ready_future(v * 2); });
+
+        MAYFLY_REQUIRE(fut2.try_get() == 246);
+    }
+
+    {
+        auto fut1 = test::reaver::make_ready_future(123);
+        auto fut2 = fut1.then(test::reaver::do_not_unwrap, [](auto v){ return test::reaver::make_ready_future(v * 2); });
+
+        MAYFLY_REQUIRE(fut2.try_get()->try_get() == 246);
+    }
+
+    {
+        auto fut1 = test::reaver::make_ready_future();
+        auto fut2 = fut1.then([](){ return test::reaver::make_ready_future(); });
+
+        MAYFLY_REQUIRE(fut2.try_get());
+    }
+
+    {
+        auto fut1 = test::reaver::make_ready_future();
+        auto fut2 = fut1.then(test::reaver::do_not_unwrap, [](){ return test::reaver::make_ready_future(); });
+
+        MAYFLY_REQUIRE(fut2.try_get()->try_get());
+    }
+});
+
 MAYFLY_END_SUITE;
 

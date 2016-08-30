@@ -126,7 +126,7 @@ namespace reaver { inline namespace _v1
         template<typename T>
         bool _is_valid(_shared_state<T> & state)
         {
-            return state.value.index() == 0 || state.function;
+            return state.value.index() != 2 || state.function;
         }
 
         template<typename T>
@@ -877,6 +877,10 @@ namespace reaver { inline namespace _v1
         {
         }
 
+        explicit future(std::exception_ptr ex) : future{ std::make_shared<_detail::_shared_state<T>>(std::move(ex)) }
+        {
+        }
+
         ~future()
         {
             _remove_count();
@@ -935,7 +939,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto then(F && f)
         {
-            return _detail::_unwrap(&default_executor, then(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, then(do_not_unwrap, std::forward<F>(f)));
         }
 
         template<typename F>
@@ -952,7 +956,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto on_error(F && f)
         {
-            return _detail::_unwrap(&default_executor, on_error(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, on_error(do_not_unwrap, std::forward<F>(f)));
         }
 
         void detach()
@@ -974,7 +978,7 @@ namespace reaver { inline namespace _v1
     template<typename T>
     auto make_ready_future(T && t)
     {
-        return future<T>{ std::forward<T>(t) };
+        return future<std::remove_reference_t<T>>{ std::forward<T>(t) };
     }
 
     template<>
@@ -1039,6 +1043,10 @@ namespace reaver { inline namespace _v1
         {
         }
 
+        explicit future(std::exception_ptr ex) : future{ std::make_shared<_detail::_shared_state<void>>(std::move(ex)) }
+        {
+        }
+
         ~future()
         {
             _remove_count();
@@ -1097,7 +1105,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto then(F && f)
         {
-            return _detail::_unwrap(&default_executor, then(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, then(do_not_unwrap, std::forward<F>(f)));
         }
 
         template<typename F>
@@ -1114,7 +1122,7 @@ namespace reaver { inline namespace _v1
         template<typename F>
         auto on_error(F && f)
         {
-            return _detail::_unwrap(&default_executor, on_error(do_not_unwrap, std::forward<F>(f)));
+            return _detail::_unwrap([]{ return default_executor(); }, on_error(do_not_unwrap, std::forward<F>(f)));
         }
 
         void detach()
@@ -1136,6 +1144,12 @@ namespace reaver { inline namespace _v1
     inline auto make_ready_future()
     {
         return future<>{ ready };
+    }
+
+    template<typename T, typename E>
+    inline auto make_exceptional_future(E && e)
+    {
+        return future<T>(std::make_exception_ptr(std::move(e)));
     }
 
     template<typename T>
