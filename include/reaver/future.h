@@ -65,15 +65,6 @@ namespace reaver { inline namespace _v1
         }
     };
 
-    class multiple_exceptional_continuations : public exception
-    {
-    public:
-        multiple_exceptional_continuations() : exception{ logger::error }
-        {
-            *this << "attempted to attach multiple exceptional continuations to a future.";
-        }
-    };
-
     template<typename T = void>
     class future;
 
@@ -114,13 +105,7 @@ namespace reaver { inline namespace _v1
         void _add_exceptional_continuation(_shared_state<T> & state, F && f)
         {
             std::lock_guard<std::mutex> lock{ state.continuations_lock };
-            if (state.exceptional_continuations)
-            {
-                throw multiple_exceptional_continuations{};
-                return;
-            }
-
-            state.exceptional_continuations = _continuation_type{ std::forward<F>(f) };
+            state.exceptional_continuations.emplace_back(std::forward<F>(f));
         }
 
         template<typename T>
@@ -164,7 +149,7 @@ namespace reaver { inline namespace _v1
                 std::vector<_continuation_type>,
                 optional<_continuation_type>
             >;
-            using failed_then_t = optional<_continuation_type>;
+            using failed_then_t = std::vector<_continuation_type>;
 
             _shared_state(T t) : value{ std::move(t) }
             {
@@ -372,7 +357,7 @@ namespace reaver { inline namespace _v1
         struct _shared_state<void> : std::enable_shared_from_this<_shared_state<void>>
         {
             using then_t = std::vector<_continuation_type>;
-            using failed_then_t = optional<_continuation_type>;
+            using failed_then_t = std::vector<_continuation_type>;
 
             _shared_state(ready_type) : value{ ready }
             {
@@ -683,10 +668,7 @@ namespace reaver { inline namespace _v1
             {
                 std::lock_guard<std::mutex> lock{ state->continuations_lock };
                 state->value = std::current_exception();
-                if (state->exceptional_continuations)
-                {
-                    fmap(std::move(state->exceptional_continuations), [](auto && cont){ cont(); return unit{}; });
-                }
+                fmap(std::move(state->exceptional_continuations), [](auto && cont){ cont(); return unit{}; });
             }
 
             auto conts = decltype(state->continuations){};
@@ -761,10 +743,7 @@ namespace reaver { inline namespace _v1
         {
             std::lock_guard<std::mutex> lock{ state->continuations_lock };
             state->value = std::current_exception();
-            if (state->exceptional_continuations)
-            {
-                fmap(state->exceptional_continuations, [](auto && cont){ cont(); return unit{}; });
-            }
+            fmap(state->exceptional_continuations, [](auto && cont){ cont(); return unit{}; });
         }
 
         auto conts = decltype(state->continuations){};
