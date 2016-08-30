@@ -142,16 +142,57 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename T>
+        struct _replace_void
+        {
+            using type = T;
+        };
+
+        template<>
+        struct _replace_void<void>
+        {
+            using type = ready_type;
+        };
+
+        template<typename T>
+        struct _wrap_impl
+        {
+            template<typename F>
+            static auto wrap(F && f)
+            {
+                return std::forward<F>(f);
+            }
+        };
+
+        template<>
+        struct _wrap_impl<void>
+        {
+            template<typename F>
+            static auto wrap(F && f)
+            {
+                return [f = std::forward<F>(f)](ready_type) mutable {
+                    return std::forward<F>(f)();
+                };
+            }
+        };
+
+        template<typename T, typename F>
+        auto _wrap(F && f)
+        {
+            return _wrap_impl<T>::wrap(std::forward<F>(f));
+        }
+
+        template<typename T>
         struct _shared_state : public std::enable_shared_from_this<_shared_state<T>>
         {
+            using _replaced = typename _replace_void<T>::type;
             using then_t = std::conditional_t<
-                std::is_copy_constructible<T>::value,
+                std::is_copy_constructible<_replaced>::value,
                 std::vector<_continuation_type>,
                 optional<_continuation_type>
             >;
             using failed_then_t = std::vector<_continuation_type>;
 
-            _shared_state(T t) : value{ std::move(t) }
+            _shared_state(_replaced t) : value{ std::move(t) }
             {
             }
 
@@ -164,7 +205,7 @@ namespace reaver { inline namespace _v1
             }
 
             std::mutex lock;
-            variant<T, std::exception_ptr, none_t> value;
+            variant<_replaced, std::exception_ptr, none_t> value;
             std::atomic<std::size_t> promise_count{ 0 };
             std::atomic<std::size_t> shared_count{ 0 };
 
@@ -177,11 +218,11 @@ namespace reaver { inline namespace _v1
             // TODO: reaver::function
             optional<class function<T ()>> function;
 
-            optional<T> try_get()
+            optional<_replaced> try_get()
             {
                 std::lock_guard<std::mutex> l(lock);
                 return get<0>(fmap(_move_or_copy(value, shared_count == 1 && value.index() != 1), make_overload_set(
-                    [&](T t) {
+                    [&](_replaced t) {
                         if (shared_count == 1)
                         {
                             value = none;
@@ -195,13 +236,13 @@ namespace reaver { inline namespace _v1
                     },
 
                     [&](none_t) {
-                        return optional<T>();
+                        return optional<_replaced>();
                     }
                 )));
             }
 
         private:
-            T _get()
+            _replaced _get()
             {
                 assert(value.index() != 2);
 
@@ -220,7 +261,7 @@ namespace reaver { inline namespace _v1
 
         public:
             template<typename F>
-            auto then(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
+            auto then(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(_wrap<T>(std::forward<F>(f))(std::declval<_replaced>()))>
             {
                 std::lock_guard<std::mutex> l{ lock };
 
@@ -246,9 +287,9 @@ namespace reaver { inline namespace _v1
                 };
 
                 return get<0>(fmap(value, make_overload_set(
-                    [&](variant<const T &, std::exception_ptr>) {
+                    [&](variant<const _replaced &, std::exception_ptr>) {
                         auto pair = package([this, f = std::forward<F>(f)]() mutable {
-                            return std::forward<F>(f)(_get());
+                            return _wrap<T>(std::forward<F>(f))(_get());
                         });
 
                         // GCC is deeply confused when this is directly in the capture list
@@ -260,7 +301,7 @@ namespace reaver { inline namespace _v1
 
                     [&](none_t) {
                         auto pair = package([this, f = std::forward<F>(f)]() mutable {
-                            return std::forward<F>(f)(_get());
+                            return _wrap<T>(std::forward<F>(f))(_get());
                         });
 
                         // GCC is deeply confused when this is directly in the capture list
@@ -301,7 +342,7 @@ namespace reaver { inline namespace _v1
                 };
 
                 return get<0>(fmap(value, make_overload_set(
-                    [&](const T &) {
+                    [&](const _replaced &) {
                         auto pair = package([]() -> decltype(std::forward<F>(f)(std::declval<std::exception_ptr>())) { std::terminate(); });
                         return std::move(pair.future);
                     },
@@ -331,214 +372,6 @@ namespace reaver { inline namespace _v1
 
                         // GCC is deeply confused when this is directly in the capture list
                         auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
-
-                        _add_exceptional_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
-                            sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
-                        });
-                        return std::move(pair.future);
-                    }
-                )));
-            }
-
-            template<typename F>
-            auto then(F && f)
-            {
-                return then(scheduler, std::forward<F>(f));
-            }
-
-            template<typename F>
-            auto on_error(F && f)
-            {
-                return on_error(scheduler, std::forward<F>(f));
-            }
-        };
-
-        template<>
-        struct _shared_state<void> : std::enable_shared_from_this<_shared_state<void>>
-        {
-            using then_t = std::vector<_continuation_type>;
-            using failed_then_t = std::vector<_continuation_type>;
-
-            _shared_state(ready_type) : value{ ready }
-            {
-            }
-
-            _shared_state(std::exception_ptr ptr) : value{ ptr }
-            {
-            }
-
-            _shared_state() : value{ none }
-            {
-            }
-
-            mutable std::mutex lock;
-            variant<ready_type, std::exception_ptr, none_t> value;
-            std::atomic<std::size_t> promise_count{ 0 };
-            std::atomic<std::size_t> shared_count{ 0 };
-
-            std::shared_ptr<executor> scheduler;
-
-            std::mutex continuations_lock;
-            then_t continuations;
-            failed_then_t exceptional_continuations;
-
-            // TODO: reaver::function
-            optional<class function<void ()>> function;
-
-            bool try_get()
-            {
-                std::lock_guard<std::mutex> l(lock);
-                return get<0>(fmap(value, make_overload_set(
-                    [&](ready_type) {
-                        if (shared_count == 1)
-                        {
-                            value = none;
-                        }
-                        return true;
-                    },
-
-                    [&](std::exception_ptr ptr) {
-                        std::rethrow_exception(ptr);
-                        return unit{};
-                    },
-
-                    [&](none_t) {
-                        return false;
-                    }
-                )));
-            }
-
-        private:
-            void _get()
-            {
-                assert(value.index() != 2);
-
-                if (value.index() == 1)
-                {
-                    std::rethrow_exception(get<1>(value));
-                }
-
-                if (shared_count == 1)
-                {
-                    value = none;
-                }
-            }
-
-        public:
-            template<typename F>
-            auto then(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)())>
-            {
-                std::lock_guard<std::mutex> l{ lock };
-
-                if (!_is_valid(*this))
-                {
-                    assert(!"what do?");
-                }
-
-                auto sched = [this, provided = std::move(provided_sched)]() {
-                    if (provided)
-                    {
-                        return provided;
-                    }
-
-                    if (scheduler)
-                    {
-                        return scheduler;
-                    }
-
-                    return default_executor();
-                };
-
-                ++shared_count;
-
-                return get<0>(fmap(value, make_overload_set(
-                    [&](variant<ready_type, std::exception_ptr>) {
-                        auto pair = package([this, f = std::forward<F>(f)]() mutable {
-                            _get(); // will throw if in exceptional state
-                            return std::forward<F>(f)();
-                        });
-
-                        // GCC ICEs when this is in capture list directly
-                        auto state = shared_from_this();
-
-                        sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)](){ task(sched()); });
-                        return std::move(pair.future);
-                    },
-
-                    [&](none_t) {
-                        auto pair = package([this, f = std::forward<F>(f)]() mutable {
-                            _get(); // will throw if in exceptional state
-                            return std::forward<F>(f)();
-                        });
-
-                        // GCC ICEs when this is in capture list directly
-                        auto state = shared_from_this();
-
-                        _add_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
-                            sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
-                        });
-                        return std::move(pair.future);
-                    }
-                )));
-            }
-
-            template<typename F>
-            auto on_error(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
-            {
-                std::lock_guard<std::mutex> l{ lock };
-
-                if (!_is_valid(*this))
-                {
-                    assert(!"what do?");
-                }
-
-                ++shared_count;
-
-                auto sched = [this, provided = std::move(provided_sched)]() {
-                    if (provided)
-                    {
-                        return provided;
-                    }
-
-                    if (scheduler)
-                    {
-                        return scheduler;
-                    }
-
-                    return default_executor();
-                };
-
-                return get<0>(fmap(value, make_overload_set(
-                    [&](ready_type) {
-                        auto pair = package([]() -> decltype(std::forward<F>(f)(std::declval<std::exception_ptr>())) { std::terminate(); });
-                        return std::move(pair.future);
-                    },
-
-                    [&](std::exception_ptr ptr) {
-                        auto pair = package([this, f = std::forward<F>(f), ptr]() mutable {
-                            return std::forward<F>(f)(ptr);
-                        });
-
-                        // GCC ICEs when this is in capture list directly
-                        auto state = shared_from_this();
-
-                        sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)](){ task(sched()); });
-                        return std::move(pair.future);
-                    },
-
-                    [&](none_t) {
-                        auto pair = package([this, f = std::forward<F>(f)]() mutable {
-                            if (value.index() == 1)
-                            {
-                                auto ptr = get<1>(value);
-                                return std::forward<F>(f)(ptr);
-                            }
-                            assert(!"or maybe make the resulting future exceptional? this would be a solution, though not a stellar one");
-                            assert(!"I guess we should somehow propagate the value here, but there's no obvious way to do that");
-                        });
-
-                        // GCC ICEs when this is in capture list directly
-                        auto state = shared_from_this();
 
                         _add_exceptional_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
                             sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
@@ -871,7 +704,7 @@ namespace reaver { inline namespace _v1
         };
 
         template<typename F>
-        auto then(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
+        auto then(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f)
         {
             if (!_state)
             {
@@ -888,7 +721,7 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto on_error(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f)
         {
             if (!_state)
             {
@@ -905,7 +738,7 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto then(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)(std::declval<T>()))>
+        auto then(do_not_unwrap_type, F && f)
         {
             if (!_state)
             {
@@ -922,7 +755,7 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto on_error(do_not_unwrap_type, F && f)
         {
             if (!_state)
             {
@@ -1031,13 +864,13 @@ namespace reaver { inline namespace _v1
             _remove_count();
         }
 
-        bool try_get()
+        auto try_get()
         {
             return _state->try_get();
         };
 
         template<typename F>
-        auto then(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)())>
+        auto then(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f)
         {
             if (!_state)
             {
@@ -1054,7 +887,7 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto on_error(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f)
         {
             if (!_state)
             {
@@ -1071,7 +904,7 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto then(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)())>
+        auto then(do_not_unwrap_type, F && f)
         {
             if (!_state)
             {
@@ -1088,7 +921,7 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F>
-        auto on_error(do_not_unwrap_type, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+        auto on_error(do_not_unwrap_type, F && f)
         {
             if (!_state)
             {
@@ -1151,18 +984,6 @@ namespace reaver { inline namespace _v1
 
     namespace _detail
     {
-        template<typename T>
-        struct _replace_void
-        {
-            using type = T;
-        };
-
-        template<>
-        struct _replace_void<void>
-        {
-            using type = ready_type;
-        };
-
         template<typename T>
         using _manual_promise_state = variant<typename _replace_void<T>::type, std::exception_ptr, none_t>;
     }

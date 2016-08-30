@@ -589,7 +589,7 @@ MAYFLY_ADD_TESTCASE("manual promise", []()
         MAYFLY_REQUIRE(!pair.future.try_get());
 
         pair.promise.set(exec);
-        MAYFLY_REQUIRE(pair.future.try_get() == 1);
+        MAYFLY_REQUIRE(pair.future.try_get());
     }
 
     {
