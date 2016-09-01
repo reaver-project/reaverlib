@@ -486,6 +486,158 @@ namespace reaver { inline namespace _v1
                 }
             }
         }
+
+        template<typename T>
+        class _future_ptr
+        {
+            void _add_count() const
+            {
+                if (_ptr)
+                {
+                    ++_ptr->shared_count;
+                }
+            }
+
+            void _remove_count() const
+            {
+                if (_ptr)
+                {
+                    --_ptr->shared_count;
+                }
+            }
+
+        public:
+            _future_ptr(std::shared_ptr<_shared_state<T>> ptr) : _ptr{ std::move(ptr) }
+            {
+                _add_count();
+            }
+
+            _future_ptr(const _future_ptr & other) : _ptr{ other._ptr }
+            {
+                _add_count();
+            }
+
+            _future_ptr(_future_ptr && other) noexcept : _ptr{ std::move(other._ptr) }
+            {
+                other._ptr = {};
+            }
+
+            _future_ptr & operator=(const _future_ptr & other)
+            {
+                _remove_count();
+                _ptr = other._ptr;
+                _add_count();
+
+                return *this;
+            }
+
+            _future_ptr & operator=(_future_ptr && other) noexcept
+            {
+                _remove_count();
+                _ptr = std::move(other._ptr);
+                other._ptr = {};
+
+                return *this;
+            }
+
+            ~_future_ptr()
+            {
+                _remove_count();
+            }
+
+            operator bool() const
+            {
+                return _ptr != nullptr;
+            }
+
+            auto operator*()
+            {
+                return *_ptr;
+            }
+
+            auto operator*() const
+            {
+                return *_ptr;
+            }
+
+            auto operator->()
+            {
+                return _ptr.operator->();
+            }
+
+            auto operator->() const
+            {
+                return _ptr.operator->();
+            }
+
+        private:
+            std::shared_ptr<_shared_state<T>> _ptr;
+        };
+
+        template<typename T>
+        class _promise_ptr
+        {
+            void _add_promise()
+            {
+                auto ptr = _ptr.lock();
+                if (ptr)
+                {
+                    _detail::_add_promise(*ptr);
+                }
+            }
+
+            void _remove_promise()
+            {
+                auto ptr = _ptr.lock();
+                if (ptr)
+                {
+                    _detail::_remove_promise(*ptr);
+                }
+            }
+
+        public:
+            _promise_ptr(std::weak_ptr<_shared_state<T>> ptr) : _ptr{ std::move(ptr) }
+            {
+                _add_promise();
+            }
+
+            _promise_ptr(const _promise_ptr & other) : _ptr{ other._ptr }
+            {
+                _add_promise();
+            }
+
+            _promise_ptr(_promise_ptr && other) noexcept : _ptr{ other._ptr }
+            {
+                other._ptr = {};
+            }
+
+            _promise_ptr & operator=(const _promise_ptr & other)
+            {
+                _remove_promise();
+                _ptr = other._ptr;
+                _add_promise();
+            }
+
+            _promise_ptr & operator=(_promise_ptr && other) noexcept
+            {
+                _remove_promise();
+                _ptr = other._ptr;
+                other._ptr = {};
+            }
+
+            ~_promise_ptr()
+            {
+                _remove_promise();
+            }
+
+            auto lock() const
+            {
+                return _ptr.lock();
+            }
+
+        private:
+            std::weak_ptr<_shared_state<T>> _ptr;
+        };
     }
 
     template<typename T>
@@ -493,59 +645,16 @@ namespace reaver { inline namespace _v1
     {
         packaged_task(std::weak_ptr<_detail::_shared_state<T>> ptr) : _state{ std::move(ptr) }
         {
-            _add_promise();
-        }
-
-        void _add_promise()
-        {
-            auto state = _state.lock();
-            if (state)
-            {
-                _detail::_add_promise(*state);
-            }
-        }
-
-        void _remove_promise()
-        {
-            auto state = _state.lock();
-            if (state)
-            {
-                _detail::_remove_promise(*state);
-            }
         }
 
     public:
         template<typename F>
         friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
-        packaged_task(const packaged_task & other) : _state{ other._state }
-        {
-            _add_promise();
-        }
-
-        packaged_task(packaged_task && other) noexcept : _state{ other._state }
-        {
-            other._state = {};
-        }
-
-        packaged_task & operator=(const packaged_task & other)
-        {
-            _remove_promise();
-            _state = other._state;
-            _add_promise();
-        }
-
-        packaged_task & operator=(packaged_task && other) noexcept
-        {
-            _remove_promise();
-            _state = other._state;
-            other._state = {};
-        }
-
-        ~packaged_task()
-        {
-            _remove_promise();
-        }
+        packaged_task(const packaged_task &) = default;
+        packaged_task(packaged_task &&) = default;
+        packaged_task & operator=(const packaged_task &) = default;
+        packaged_task & operator=(packaged_task &&) = default;
 
         void operator()(std::shared_ptr<executor> sched = nullptr) const
         {
@@ -570,7 +679,7 @@ namespace reaver { inline namespace _v1
         }
 
     private:
-        std::weak_ptr<_detail::_shared_state<T>> _state;
+        _detail::_promise_ptr<T> _state;
     };
 
     template<>
@@ -621,23 +730,6 @@ namespace reaver { inline namespace _v1
     {
         future(std::shared_ptr<_detail::_shared_state<T>> state) : _state{ std::move(state) }
         {
-            _add_count();
-        }
-
-        void _add_count() const
-        {
-            if (_state)
-            {
-                ++_state->shared_count;
-            }
-        }
-
-        void _remove_count() const
-        {
-            if (_state)
-            {
-                --_state->shared_count;
-            }
         }
 
     public:
@@ -649,33 +741,10 @@ namespace reaver { inline namespace _v1
         template<typename U>
         friend future_promise_pair<U> make_promise();
 
-        future(const future & other) : _state{ other._state }
-        {
-            _add_count();
-        }
-
-        future(future && other) noexcept : _state{ std::move(other._state) }
-        {
-            other._state = {};
-        }
-
-        future & operator=(const future & other)
-        {
-            _remove_count();
-            _state = other._state;
-            _add_count();
-
-            return *this;
-        }
-
-        future & operator=(future && other) noexcept
-        {
-            _remove_count();
-            _state = std::move(other._state);
-            other._state = {};
-
-            return *this;
-        }
+        future(const future &) = default;
+        future(future &&) = default;
+        future & operator=(const future &) = default;
+        future & operator=(future &&) = default;
 
         explicit future(T value) : future{ std::make_shared<_detail::_shared_state<T>>(std::move(value)) }
         {
@@ -683,11 +752,6 @@ namespace reaver { inline namespace _v1
 
         explicit future(std::exception_ptr ex) : future{ std::make_shared<_detail::_shared_state<T>>(std::move(ex)) }
         {
-        }
-
-        ~future()
-        {
-            _remove_count();
         }
 
         auto try_get()
@@ -765,7 +829,6 @@ namespace reaver { inline namespace _v1
 
         void detach()
         {
-            _add_count();
             then([keep = _state](auto &&){});
         }
 
@@ -776,7 +839,7 @@ namespace reaver { inline namespace _v1
         }
 
     private:
-        std::shared_ptr<_detail::_shared_state<T>> _state;
+        _detail::_future_ptr<T> _state;
     };
 
     template<typename T>
@@ -982,59 +1045,16 @@ namespace reaver { inline namespace _v1
     {
         manual_promise(std::weak_ptr<_detail::_shared_state<T>> state) : _state{ std::move(state) }
         {
-            _add_promise();
-        }
-
-        void _add_promise()
-        {
-            auto state = _state.lock();
-            if (state)
-            {
-                _detail::_add_promise(*state);
-            }
-        }
-
-        void _remove_promise()
-        {
-            auto state = _state.lock();
-            if (state)
-            {
-                _detail::_remove_promise(*state);
-            }
         }
 
     public:
         template<typename U>
         friend future_promise_pair<U> make_promise();
 
-        manual_promise(const manual_promise & other) : _state{ other._state }
-        {
-            _add_promise();
-        }
-
-        manual_promise(manual_promise && other) noexcept : _state{ other._state }
-        {
-            other._state = {};
-        }
-
-        manual_promise & operator=(const manual_promise & other)
-        {
-            _remove_promise();
-            _state = other._state;
-            _add_promise();
-        }
-
-        manual_promise & operator=(manual_promise && other) noexcept
-        {
-            _remove_promise();
-            _state = other._state;
-            other._state = {};
-        }
-
-        ~manual_promise()
-        {
-            _remove_promise();
-        }
+        manual_promise(const manual_promise &) = default;
+        manual_promise(manual_promise &&) = default;
+        manual_promise & operator=(const manual_promise &) = default;
+        manual_promise & operator=(manual_promise &&) = default;
 
         void set(typename _detail::_replace_void<T>::type value = {}) const
         {
@@ -1061,7 +1081,7 @@ namespace reaver { inline namespace _v1
         }
 
     private:
-        std::weak_ptr<_detail::_shared_state<T>> _state;
+        _detail::_promise_ptr<T> _state;
     };
 
     template<typename T>
