@@ -241,7 +241,74 @@ namespace reaver { inline namespace _v1
                 )));
             }
 
+            void set(_replaced v)
+            {
+                {
+                    std::unique_lock<std::mutex> l{ lock };
+                    value = std::move(v);
+                }
+
+                _invoke_continuations();
+            }
+
+            void set(std::exception_ptr ex)
+            {
+                {
+                    std::unique_lock<std::mutex> l{ lock };
+                    value = std::move(ex);
+                }
+
+                auto conts = failed_then_t{};
+
+                while (
+                    [&]{
+                        std::lock_guard<std::mutex> lock{ continuations_lock };
+                        return !exceptional_continuations.empty();
+                    }())
+                {
+                    {
+                        std::lock_guard<std::mutex> lock{ continuations_lock };
+                        using std::swap;
+                        swap(conts, exceptional_continuations);
+                    }
+
+                    fmap(conts, [&](auto && cont) { cont(); return unit{}; });
+                }
+
+                _invoke_continuations();
+            }
+
         private:
+            void _invoke_continuations()
+            {
+                auto conts = then_t{};
+
+                static_if(std::is_copy_constructible<_replaced>{}, [&](auto) {
+                    // shenanigans
+                    while (
+                        [&]{
+                            std::lock_guard<std::mutex> lock{ continuations_lock };
+                            return !continuations.empty();
+                        }())
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock{ continuations_lock };
+                            using std::swap;
+                            swap(conts, continuations);
+                        }
+
+                        fmap(conts, [&](auto && cont) { cont(); return unit{}; });
+                    }
+                }).static_else([&](auto) {
+                    std::lock_guard<std::mutex> lock{ continuations_lock };
+                    fmap(continuations, [&](auto && cont) { cont(); return unit{}; });
+                });
+
+                function = none;
+                continuations = then_t{};
+                exceptional_continuations = failed_then_t{};
+            }
+
             _replaced _get()
             {
                 assert(value.index() != 2);
@@ -483,65 +550,17 @@ namespace reaver { inline namespace _v1
                 return;
             }
 
-            std::unique_lock<std::mutex> lock{ state->lock };
             state->scheduler = std::move(sched);
 
             try
             {
-                lock.unlock();
-                auto && ret_value = (*state->function)();
-                lock.lock();
-                state->value = std::move(ret_value);
-                if (state->promise_count != 1)
-                {
-                    lock.unlock();
-                }
+                auto && value = (*state->function)();
+                state->set(std::move(value));
             }
             catch (...)
             {
-                std::lock_guard<std::mutex> lock{ state->continuations_lock };
-                state->value = std::current_exception();
-                fmap(std::move(state->exceptional_continuations), [](auto && cont){ cont(); return unit{}; });
+                state->set(std::current_exception());
             }
-
-            auto conts = decltype(state->continuations){};
-
-            static_if(std::is_copy_constructible<T>{}, [&](auto) {
-                // shenanigans
-                while (
-                    [&]{
-                        std::lock_guard<std::mutex> lock{ state->continuations_lock };
-                        return !state->continuations.empty();
-                    }())
-                {
-                    {
-                        std::lock_guard<std::mutex> lock{ state->continuations_lock };
-                        using std::swap;
-                        swap(conts, state->continuations);
-                    }
-
-                    fmap(conts, [&](auto && cont) {
-                        if (state->value.index() != 2)
-                        {
-                            cont();
-                        }
-                        return unit{};
-                    });
-                }
-            }).static_else([&](auto) {
-                std::lock_guard<std::mutex> lock{ state->continuations_lock };
-                fmap(state->continuations, [&](auto && cont) {
-                    if (state->value.index() != 2)
-                    {
-                        cont();
-                    }
-                    return unit{};
-                });
-            });
-
-            state->function = none;
-            state->continuations = decltype(state->continuations){};
-            state->exceptional_continuations = decltype(state->exceptional_continuations){};
         }
 
     private:
@@ -558,53 +577,17 @@ namespace reaver { inline namespace _v1
             return;
         }
 
-        std::unique_lock<std::mutex> lock{ state->lock };
         state->scheduler = std::move(sched);
 
         try
         {
-            lock.unlock();
             (*state->function)();
-            lock.lock();
-            state->value = ready;
-            if (state->promise_count != 1)
-            {
-                lock.unlock();
-            }
+            state->set(ready);
         }
         catch (...)
         {
-            std::lock_guard<std::mutex> lock{ state->continuations_lock };
-            state->value = std::current_exception();
-            fmap(state->exceptional_continuations, [](auto && cont){ cont(); return unit{}; });
+            state->set(std::current_exception());
         }
-
-        auto conts = decltype(state->continuations){};
-
-        // shenanigans
-        while (
-            [&]{
-                std::lock_guard<std::mutex> lock{ state->continuations_lock };
-                return !state->continuations.empty();
-            }())
-        {
-            {
-                std::lock_guard<std::mutex> lock{ state->continuations_lock };
-                swap(conts, state->continuations);
-            }
-
-            fmap(conts, [&](auto && cont) {
-                if (state->value.index() != 2)
-                {
-                    cont();
-                }
-                return unit{};
-            });
-        }
-
-        state->function = none;
-        state->continuations = decltype(state->continuations){};
-        state->exceptional_continuations = decltype(state->exceptional_continuations){};
     }
 
     template<typename T>
