@@ -746,7 +746,7 @@ namespace reaver { inline namespace _v1
         future & operator=(const future &) = default;
         future & operator=(future &&) = default;
 
-        explicit future(T value) : future{ std::make_shared<_detail::_shared_state<T>>(std::move(value)) }
+        explicit future(typename _detail::_replace_void<T>::type value) : future{ std::make_shared<_detail::_shared_state<T>>(std::move(value)) }
         {
         }
 
@@ -829,7 +829,7 @@ namespace reaver { inline namespace _v1
 
         void detach()
         {
-            then([keep = _state](auto &&){});
+            then([keep = _state](auto &&... args){});
         }
 
         auto scheduler() const
@@ -847,169 +847,6 @@ namespace reaver { inline namespace _v1
     {
         return future<std::remove_reference_t<T>>{ std::forward<T>(t) };
     }
-
-    template<>
-    class future<void>
-    {
-        future(std::shared_ptr<_detail::_shared_state<void>> state) : _state{ std::move(state) }
-        {
-            _add_count();
-        }
-
-        void _add_count() const
-        {
-            if (_state)
-            {
-                ++_state->shared_count;
-            }
-        }
-
-        void _remove_count() const
-        {
-            if (_state)
-            {
-                --_state->shared_count;
-            }
-        }
-
-    public:
-        using value_type = void;
-
-        template<typename F>
-        friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
-
-        template<typename U>
-        friend future_promise_pair<U> make_promise();
-
-        future(const future & other) : _state{ other._state }
-        {
-            _add_count();
-        }
-
-        future(future && other) noexcept : _state{ std::move(other._state) }
-        {
-            other._state = {};
-        }
-
-        future & operator=(const future & other)
-        {
-            _remove_count();
-            _state = other._state;
-            _add_count();
-
-            return *this;
-        }
-
-        future & operator=(future && other) noexcept
-        {
-            _remove_count();
-            _state = std::move(other._state);
-            other._state = {};
-
-            return *this;
-        }
-
-        explicit future(ready_type) : future{ std::make_shared<_detail::_shared_state<void>>(ready) }
-        {
-        }
-
-        explicit future(std::exception_ptr ex) : future{ std::make_shared<_detail::_shared_state<void>>(std::move(ex)) }
-        {
-        }
-
-        ~future()
-        {
-            _remove_count();
-        }
-
-        auto try_get()
-        {
-            return _state->try_get();
-        };
-
-        template<typename F>
-        auto then(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f)
-        {
-            if (!_state)
-            {
-                assert(!"handle this somehow (new exception type!)");
-            }
-
-            return _state->then(std::move(sched), std::forward<F>(f));
-        }
-
-        template<typename F>
-        auto then(std::shared_ptr<executor> sched, F && f)
-        {
-            return _detail::_unwrap([sched = sched]{ return sched; }, then(do_not_unwrap, sched, std::forward<F>(f)));
-        }
-
-        template<typename F>
-        auto on_error(do_not_unwrap_type, std::shared_ptr<executor> sched, F && f)
-        {
-            if (!_state)
-            {
-                assert(!"handle this somehow (new exception type!)");
-            }
-
-            return _state->on_error(std::move(sched), std::forward<F>(f));
-        }
-
-        template<typename F>
-        auto on_error(std::shared_ptr<executor> sched, F && f)
-        {
-            return _detail::_unwrap([sched = sched]{ return sched; }, on_error(do_not_unwrap, sched, std::forward<F>(f)));
-        }
-
-        template<typename F>
-        auto then(do_not_unwrap_type, F && f)
-        {
-            if (!_state)
-            {
-                assert(!"handle this somehow (new exception type!)");
-            }
-
-            return _state->then(std::forward<F>(f));
-        }
-
-        template<typename F>
-        auto then(F && f)
-        {
-            return _detail::_unwrap([]{ return default_executor(); }, then(do_not_unwrap, std::forward<F>(f)));
-        }
-
-        template<typename F>
-        auto on_error(do_not_unwrap_type, F && f)
-        {
-            if (!_state)
-            {
-                assert(!"handle this somehow (new exception type!)");
-            }
-
-            return _state->on_error(std::forward<F>(f));
-        }
-
-        template<typename F>
-        auto on_error(F && f)
-        {
-            return _detail::_unwrap([]{ return default_executor(); }, on_error(do_not_unwrap, std::forward<F>(f)));
-        }
-
-        void detach()
-        {
-            _add_count();
-            then([keep = _state]{});
-        }
-
-        auto scheduler() const
-        {
-            std::lock_guard<std::mutex> lock{ _state->lock };
-            return _state->scheduler;
-        }
-
-    private:
-        std::shared_ptr<_detail::_shared_state<void>> _state;
-    };
 
     inline auto make_ready_future()
     {
