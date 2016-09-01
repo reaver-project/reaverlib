@@ -574,13 +574,11 @@ MAYFLY_END_SUITE;
 
 MAYFLY_ADD_TESTCASE("manual promise", []()
 {
-    auto exec = test::reaver::make_executor<trivial_executor>();
-
     {
         auto pair = test::reaver::make_promise<int>();
         MAYFLY_REQUIRE(!pair.future.try_get());
 
-        pair.promise.set(exec, 1);
+        pair.promise.set(1);
         MAYFLY_REQUIRE(pair.future.try_get() == 1);
     }
 
@@ -588,7 +586,7 @@ MAYFLY_ADD_TESTCASE("manual promise", []()
         auto pair = test::reaver::make_promise<void>();
         MAYFLY_REQUIRE(!pair.future.try_get());
 
-        pair.promise.set(exec);
+        pair.promise.set();
         MAYFLY_REQUIRE(pair.future.try_get());
     }
 
@@ -596,7 +594,7 @@ MAYFLY_ADD_TESTCASE("manual promise", []()
         auto pair = test::reaver::make_promise<void>();
         MAYFLY_REQUIRE(!pair.future.try_get());
 
-        pair.promise.set(exec, std::make_exception_ptr(1));
+        pair.promise.set(std::make_exception_ptr(1));
         MAYFLY_REQUIRE_THROWS_TYPE(int, pair.future.try_get());
     }
 });
@@ -614,7 +612,7 @@ MAYFLY_ADD_TESTCASE("join", []()
         MAYFLY_REQUIRE(!fut.try_get());
         exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
         MAYFLY_REQUIRE(!fut.try_get());
-        pair1.promise.set(exec, 123);
+        pair1.promise.set(123);
         MAYFLY_REQUIRE(fut.try_get() == 123);
     }
 
@@ -627,7 +625,7 @@ MAYFLY_ADD_TESTCASE("join", []()
         auto fut = test::reaver::join(exec, pair2.future);
 
         MAYFLY_REQUIRE(!fut.try_get());
-        pair1.promise.set(exec, 123);
+        pair1.promise.set(123);
         MAYFLY_REQUIRE(!fut.try_get());
         exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
         MAYFLY_REQUIRE(fut.try_get() == 123);
@@ -653,7 +651,7 @@ MAYFLY_ADD_TESTCASE("join", []()
 
         auto fut = test::reaver::join(exec, fut2);
         MAYFLY_REQUIRE(!fut.try_get());
-        pair1.promise.set(exec, 123);
+        pair1.promise.set(123);
         MAYFLY_REQUIRE(fut.try_get() == 123);
     }
 
@@ -681,7 +679,7 @@ MAYFLY_ADD_TESTCASE("void join", []()
         MAYFLY_REQUIRE(!fut.try_get());
         exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
         MAYFLY_REQUIRE(!fut.try_get());
-        pair1.promise.set(exec);
+        pair1.promise.set();
         MAYFLY_REQUIRE(fut.try_get());
     }
 
@@ -694,7 +692,7 @@ MAYFLY_ADD_TESTCASE("void join", []()
         auto fut = test::reaver::join(exec, pair2.future);
 
         MAYFLY_REQUIRE(!fut.try_get());
-        pair1.promise.set(exec);
+        pair1.promise.set();
         MAYFLY_REQUIRE(!fut.try_get());
         exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
         MAYFLY_REQUIRE(fut.try_get());
@@ -720,7 +718,7 @@ MAYFLY_ADD_TESTCASE("void join", []()
 
         auto fut = test::reaver::join(exec, fut2);
         MAYFLY_REQUIRE(!fut.try_get());
-        pair1.promise.set(exec);
+        pair1.promise.set();
         MAYFLY_REQUIRE(fut.try_get());
     }
 

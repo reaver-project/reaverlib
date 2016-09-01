@@ -74,6 +74,12 @@ namespace reaver { inline namespace _v1
     template<typename F>
     auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
+    template<typename T>
+    struct future_promise_pair;
+
+    template<typename T>
+    future_promise_pair<T> make_promise();
+
     namespace _detail
     {
         template<typename T>
@@ -640,6 +646,9 @@ namespace reaver { inline namespace _v1
         template<typename F>
         friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
+        template<typename U>
+        friend future_promise_pair<U> make_promise();
+
         future(const future & other) : _state{ other._state }
         {
             _add_count();
@@ -806,6 +815,9 @@ namespace reaver { inline namespace _v1
         template<typename F>
         friend auto package(F && f) -> future_package_pair<decltype(std::forward<F>(f)())>;
 
+        template<typename U>
+        friend future_promise_pair<U> make_promise();
+
         future(const future & other) : _state{ other._state }
         {
             _add_count();
@@ -965,50 +977,91 @@ namespace reaver { inline namespace _v1
         return future_package_pair<T>{ { state }, { std::move(state) } };
     };
 
-    namespace _detail
-    {
-        template<typename T>
-        using _manual_promise_state = variant<typename _replace_void<T>::type, std::exception_ptr, none_t>;
-    }
-
     template<typename T>
     class manual_promise
     {
-    public:
-        manual_promise(std::shared_ptr<_detail::_manual_promise_state<T>> state, packaged_task<T> task) : _state{ std::move(state) }, _task{ std::move(task) }
+        manual_promise(std::weak_ptr<_detail::_shared_state<T>> state) : _state{ std::move(state) }
         {
+            _add_promise();
         }
 
-        manual_promise(const manual_promise &) = default;
-        manual_promise(manual_promise &&) = default;
-        manual_promise & operator=(const manual_promise &) = default;
-        manual_promise & operator=(manual_promise &&) = default;
-
-        void set(std::shared_ptr<executor> sched, typename _detail::_replace_void<T>::type value = {}) const
+        void _add_promise()
         {
-            *_state = std::move(value);
-            sched->push([sched, task = std::move(_task)]{ task(sched); });
+            auto state = _state.lock();
+            if (state)
+            {
+                _detail::_add_promise(*state);
+            }
+        }
+
+        void _remove_promise()
+        {
+            auto state = _state.lock();
+            if (state)
+            {
+                _detail::_remove_promise(*state);
+            }
+        }
+
+    public:
+        template<typename U>
+        friend future_promise_pair<U> make_promise();
+
+        manual_promise(const manual_promise & other) : _state{ other._state }
+        {
+            _add_promise();
+        }
+
+        manual_promise(manual_promise && other) noexcept : _state{ other._state }
+        {
+            other._state = {};
+        }
+
+        manual_promise & operator=(const manual_promise & other)
+        {
+            _remove_promise();
+            _state = other._state;
+            _add_promise();
+        }
+
+        manual_promise & operator=(manual_promise && other) noexcept
+        {
+            _remove_promise();
+            _state = other._state;
+            other._state = {};
+        }
+
+        ~manual_promise()
+        {
+            _remove_promise();
         }
 
         void set(typename _detail::_replace_void<T>::type value = {}) const
         {
-            set(default_executor(), std::move(value));
-        }
+            auto state = _state.lock();
 
-        void set(std::shared_ptr<executor> sched, std::exception_ptr ex) const
-        {
-            *_state = std::move(ex);
-            sched->push([sched, task = std::move(_task)]{ task(sched); });
+            if (!state)
+            {
+                return;
+            }
+
+            state->set(std::move(value));
         }
 
         void set(std::exception_ptr ex) const
         {
-            set(default_executor(), ex);
+            auto state = _state.lock();
+
+            if (!state)
+            {
+                return;
+            }
+
+            state->set(std::move(ex));
         }
 
     private:
-        std::shared_ptr<_detail::_manual_promise_state<T>> _state;
-        packaged_task<T> _task;
+        std::weak_ptr<_detail::_shared_state<T>> _state;
     };
 
     template<typename T>
@@ -1019,35 +1072,12 @@ namespace reaver { inline namespace _v1
     };
 
     template<typename T>
-    auto make_promise()
+    future_promise_pair<T> make_promise()
     {
-        auto state = std::make_shared<_detail::_manual_promise_state<T>>(none);
-        auto packaged = package([state]{
-            assert(state->index() != 2);
-            if (state->index() == 1)
-            {
-                std::rethrow_exception(get<1>(*state));
-            }
+        auto state = std::make_shared<_detail::_shared_state<T>>();
+        state->function = []() -> T { assert(!"I need to handle this somehow"); };
 
-            return get<0>(std::move(*state));
-        });
-
-        return future_promise_pair<T>{ { std::move(state), std::move(packaged.packaged_task) }, std::move(packaged.future) };
-    }
-
-    template<>
-    inline auto make_promise<void>()
-    {
-        auto state = std::make_shared<_detail::_manual_promise_state<ready_type>>(none);
-        auto packaged = package([state]{
-            assert(state->index() != 2);
-            if (state->index() == 1)
-            {
-                std::rethrow_exception(get<1>(*state));
-            }
-        });
-
-        return future_promise_pair<void>{ { std::move(state), std::move(packaged.packaged_task) }, std::move(packaged.future) };
+        return { { state }, { (state) } };
     }
 
     template<typename T>
@@ -1055,8 +1085,8 @@ namespace reaver { inline namespace _v1
     {
         auto pair = make_promise<T>();
         fut.then(sched, [promise = std::move(pair.promise), sched](auto && inner) {
-            inner.then(sched, [promise = std::move(promise), sched](typename _detail::_replace_void<T>::type value = {}) {
-                promise.set(std::move(sched), std::move(value));
+            inner.then(std::move(sched), [promise = std::move(promise)](typename _detail::_replace_void<T>::type value = {}) {
+                promise.set(std::move(value));
             }).detach();
         }).detach();
 
