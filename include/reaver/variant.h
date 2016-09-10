@@ -59,100 +59,100 @@ namespace reaver { inline namespace _v1
         std::size_t actual;
     };
 
+    template<typename CRTP, typename... Ts>
+    class _variant;
+
+    template<typename T>
+    struct recursive_wrapper
+    {
+        recursive_wrapper() : _storage{ std::make_unique<T>() }
+        {
+        }
+
+        recursive_wrapper(const recursive_wrapper & other) : _storage{ std::make_unique<T>(*other._storage) }
+        {
+        }
+        recursive_wrapper(recursive_wrapper &&) noexcept = default;
+
+        recursive_wrapper & operator=(const recursive_wrapper & rhs)
+        {
+            _storage = std::make_unique<T>(*rhs._storage);
+            return *this;
+        }
+        recursive_wrapper & operator=(recursive_wrapper &&) noexcept = default;
+
+        recursive_wrapper & operator=(const T & t)
+        {
+            _storage = std::make_unique<T>(t);
+            return *this;
+        }
+
+        recursive_wrapper & operator=(T && t)
+        {
+            _storage = std::make_unique<T>(std::move(t));
+            return *this;
+        }
+
+        recursive_wrapper(T t) : _storage{ std::make_unique<T>(std::move(t)) }
+        {
+        }
+
+        operator T &()
+        {
+            return *_storage;
+        }
+
+        operator const T &() const
+        {
+            return *_storage;
+        }
+
+        T & operator*()
+        {
+            return *_storage;
+        }
+
+        const T & operator*() const
+        {
+            return *_storage;
+        }
+
+        T * operator->()
+        {
+            return &*_storage;
+        }
+
+        const T * operator->() const
+        {
+            return &*_storage;
+        }
+
+        auto index() const
+        {
+            return _storage->index();
+        }
+
+        bool operator==(const recursive_wrapper & rhs) const
+        {
+            return *_storage == *rhs;
+        }
+
+        bool operator!=(const recursive_wrapper & rhs) const
+        {
+            return *_storage != *rhs;
+        }
+
+        bool operator<(const recursive_wrapper & rhs) const
+        {
+            return *_storage < *rhs;
+        }
+
+    private:
+        std::unique_ptr<T> _storage;
+    };
+
     namespace _detail
     {
-        template<typename CRTP, typename... Ts>
-        class _variant;
-
-        template<typename T>
-        struct _recursive_wrapper
-        {
-            _recursive_wrapper() : _storage{ std::make_unique<T>() }
-            {
-            }
-
-            _recursive_wrapper(const _recursive_wrapper & other) : _storage{ std::make_unique<T>(*other._storage) }
-            {
-            }
-            _recursive_wrapper(_recursive_wrapper &&) noexcept = default;
-
-            _recursive_wrapper & operator=(const _recursive_wrapper & rhs)
-            {
-                _storage = std::make_unique<T>(*rhs._storage);
-                return *this;
-            }
-            _recursive_wrapper & operator=(_recursive_wrapper &&) noexcept = default;
-
-            _recursive_wrapper & operator=(const T & t)
-            {
-                _storage = std::make_unique<T>(t);
-                return *this;
-            }
-
-            _recursive_wrapper & operator=(T && t)
-            {
-                _storage = std::make_unique<T>(std::move(t));
-                return *this;
-            }
-
-            _recursive_wrapper(T t) : _storage{ std::make_unique<T>(std::move(t)) }
-            {
-            }
-
-            operator T &()
-            {
-                return *_storage;
-            }
-
-            operator const T &() const
-            {
-                return *_storage;
-            }
-
-            T & operator*()
-            {
-                return *_storage;
-            }
-
-            const T & operator*() const
-            {
-                return *_storage;
-            }
-
-            T * operator->()
-            {
-                return &*_storage;
-            }
-
-            const T * operator->() const
-            {
-                return &*_storage;
-            }
-
-            auto index() const
-            {
-                return _storage->index();
-            }
-
-            bool operator==(const _recursive_wrapper & rhs) const
-            {
-                return *_storage == *rhs;
-            }
-
-            bool operator!=(const _recursive_wrapper & rhs) const
-            {
-                return *_storage != *rhs;
-            }
-
-            bool operator<(const _recursive_wrapper & rhs) const
-            {
-                return *_storage < *rhs;
-            }
-
-        private:
-            std::unique_ptr<T> _storage;
-        };
-
         template<typename T>
         struct _dereference_wrapper
         {
@@ -166,7 +166,7 @@ namespace reaver { inline namespace _v1
         };
 
         template<typename T>
-        struct _dereference_wrapper<_recursive_wrapper<T>>
+        struct _dereference_wrapper<recursive_wrapper<T>>
         {
             using type = typename _dereference_wrapper<T>::type;
         };
@@ -346,19 +346,19 @@ namespace reaver { inline namespace _v1
 
             template<typename T, typename std::enable_if<
                 is_container<T>::value
-                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, Args>::value)...>::value
-                    && !std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, T>::value,
+                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, Args>::value)...>::value
+                    && !std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, T>::value,
                 int>::type = 0>
-            _variant(const T & t) : _variant{ tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>(std::begin(t), std::end(t)) }
+            _variant(const T & t) : _variant{ tpl::replace<T, CRTP, recursive_wrapper<CRTP>>(std::begin(t), std::end(t)) }
             {
             }
 
             template<typename T, typename std::enable_if<
                 is_container<T>::value
-                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, Args>::value)...>::value
-                    && !std::is_same<tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>, T>::value,
+                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, Args>::value)...>::value
+                    && !std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, T>::value,
                 int>::type = 0>
-            _variant(T && t) : _variant{ tpl::replace<T, CRTP, _recursive_wrapper<CRTP>>(std::make_move_iterator(std::begin(t)), std::make_move_iterator(std::end(t))) }
+            _variant(T && t) : _variant{ tpl::replace<T, CRTP, recursive_wrapper<CRTP>>(std::make_move_iterator(std::begin(t)), std::make_move_iterator(std::end(t))) }
             {
             }
 
@@ -842,9 +842,9 @@ namespace reaver { inline namespace _v1
         {
             class type;
 
-            class type : public _variant<type, replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>
+            class type : public _variant<type, replace_reference_t<tpl::replace<Ts, recursive_variant_tag, recursive_wrapper<type>>>...>
             {
-                using _base = _variant<type, replace_reference_t<tpl::replace<Ts, recursive_variant_tag, _recursive_wrapper<type>>>...>;
+                using _base = _variant<type, replace_reference_t<tpl::replace<Ts, recursive_variant_tag, recursive_wrapper<type>>>...>;
 
             public:
                 using _base::_base;
@@ -856,77 +856,74 @@ namespace reaver { inline namespace _v1
     template<typename... Ts>
     using recursive_variant = typename _detail::_make_recursive_variant<Ts...>::type;
 
-    template<typename T>
-    using recursive_wrapper = _detail::_recursive_wrapper<T>;
-
     template<std::size_t N, typename Variant>
-    decltype(auto) get(_detail::_recursive_wrapper<Variant> & variant)
+    decltype(auto) get(recursive_wrapper<Variant> & variant)
     {
         return get<N>(*variant);
     }
 
     template<std::size_t N, typename Variant>
-    decltype(auto) get(const _detail::_recursive_wrapper<Variant> & variant)
+    decltype(auto) get(const recursive_wrapper<Variant> & variant)
     {
         return get<N>(*variant);
     }
 
     template<std::size_t N, typename Variant>
-    decltype(auto) get(_detail::_recursive_wrapper<Variant> && variant)
+    decltype(auto) get(recursive_wrapper<Variant> && variant)
     {
         return get<N>(std::move(*variant));
     }
 
     template<typename Variant, typename F>
-    decltype(auto) fmap(_detail::_recursive_wrapper<Variant> & variant, F && f)
+    decltype(auto) fmap(recursive_wrapper<Variant> & variant, F && f)
     {
         return fmap(*variant, std::forward<F>(f));
     }
 
     template<typename Variant, typename F>
-    decltype(auto) fmap(const _detail::_recursive_wrapper<Variant> & variant, F && f)
+    decltype(auto) fmap(const recursive_wrapper<Variant> & variant, F && f)
     {
         return fmap(*variant, std::forward<F>(f));
     }
 
     template<typename Variant, typename F>
-    decltype(auto) fmap(_detail::_recursive_wrapper<Variant> && variant, F && f)
+    decltype(auto) fmap(recursive_wrapper<Variant> && variant, F && f)
     {
         return fmap(std::move(*variant), std::forward<F>(f));
     }
 
     template<typename T, typename U>
-    bool operator==(const _detail::_recursive_wrapper<T> & lhs, const U & rhs)
+    bool operator==(const recursive_wrapper<T> & lhs, const U & rhs)
     {
         return *lhs == rhs;
     }
 
     template<typename T, typename U>
-    bool operator==(const T & lhs, const _detail::_recursive_wrapper<U> & rhs)
+    bool operator==(const T & lhs, const recursive_wrapper<U> & rhs)
     {
         return lhs == *rhs;
     }
 
     template<typename T, typename U>
-    bool operator!=(const _detail::_recursive_wrapper<T> & lhs, const U & rhs)
+    bool operator!=(const recursive_wrapper<T> & lhs, const U & rhs)
     {
         return *lhs != rhs;
     }
 
     template<typename T, typename U>
-    bool operator!=(const T & lhs, const _detail::_recursive_wrapper<U> & rhs)
+    bool operator!=(const T & lhs, const recursive_wrapper<U> & rhs)
     {
         return lhs != *rhs;
     }
 
     template<typename T, typename U>
-    bool operator<(const _detail::_recursive_wrapper<T> & lhs, const U & rhs)
+    bool operator<(const recursive_wrapper<T> & lhs, const U & rhs)
     {
         return *lhs < rhs;
     }
 
     template<typename T, typename U>
-    bool operator<(const T & lhs, const _detail::_recursive_wrapper<U> & rhs)
+    bool operator<(const T & lhs, const recursive_wrapper<U> & rhs)
     {
         return lhs < *rhs;
     }
