@@ -127,21 +127,25 @@ namespace reaver { inline namespace _v1
             return &*_storage;
         }
 
+        template<typename U = T, typename = decltype(std::declval<U>().index())>
         auto index() const
         {
             return _storage->index();
         }
 
+        template<typename U = T, typename = decltype(std::declval<U>() == std::declval<U>())>
         bool operator==(const recursive_wrapper & rhs) const
         {
             return *_storage == *rhs;
         }
 
+        template<typename U = T, typename = decltype(std::declval<U>() != std::declval<U>())>
         bool operator!=(const recursive_wrapper & rhs) const
         {
             return *_storage != *rhs;
         }
 
+        template<typename U = T, typename = decltype(std::declval<U>() < std::declval<U>())>
         bool operator<(const recursive_wrapper & rhs) const
         {
             return *_storage < *rhs;
