@@ -80,6 +80,17 @@ namespace reaver
                 _worker.join();
             }
 
+            void sync()
+            {
+                std::mutex mtx;
+                std::condition_variable cond;
+
+                _async([&](){ cond.notify_one(); });
+
+                std::unique_lock<std::mutex> lock(mtx);
+                cond.wait(lock);
+            }
+
             void add_stream(stream_wrapper stream)
             {
                 _streams.push_back(std::move(stream));
