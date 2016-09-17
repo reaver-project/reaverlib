@@ -191,7 +191,7 @@ MAYFLY_ADD_TESTCASE("exceptional continuation", []()
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
 
         MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
-        MAYFLY_REQUIRE(exceptional.try_get() == true);
+        MAYFLY_REQUIRE(exceptional.try_get()->get_error() == true);
     }
 
     {
@@ -203,7 +203,19 @@ MAYFLY_ADD_TESTCASE("exceptional continuation", []()
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
 
         MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
-        MAYFLY_REQUIRE(exceptional.try_get() == true);
+        MAYFLY_REQUIRE(exceptional.try_get()->get_error() == true);
+    }
+
+    {
+        auto pair = test::reaver::package([](){ return 1; });
+        auto future = pair.future.then([](auto i){ return i + 2; })
+            .on_error([](auto ex){ MAYFLY_REQUIRE(false); })
+            .then([](auto && value){ return *value * 7; });
+
+        auto exec = test::reaver::make_executor<trivial_executor>();
+        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+
+        MAYFLY_REQUIRE(future.try_get() == 21);
     }
 });
 

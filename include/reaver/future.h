@@ -36,6 +36,7 @@
 #include "executor.h"
 #include "default_executor.h"
 #include "static_if.h"
+#include "expected.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -389,7 +390,8 @@ namespace reaver { inline namespace _v1
             }
 
             template<typename F>
-            auto on_error(std::shared_ptr<executor> provided_sched, F && f) -> future<decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>
+            auto on_error(std::shared_ptr<executor> provided_sched, F && f)
+                -> future<expected<_replaced, decltype(std::forward<F>(f)(std::declval<std::exception_ptr>()))>>
             {
                 std::lock_guard<std::mutex> l{ lock };
 
@@ -414,15 +416,32 @@ namespace reaver { inline namespace _v1
                     return default_executor();
                 };
 
-                return get<0>(fmap(value, make_overload_set(
-                    [&](const _replaced &) {
-                        auto pair = package([]() -> decltype(std::forward<F>(f)(std::declval<std::exception_ptr>())) { std::terminate(); });
-                        return std::move(pair.future);
+                auto call_with_void_argument = make_overload_set(
+                    [](auto && callback, auto && lazy_void, typename std::enable_if<std::is_void<decltype(lazy_void())>::value, int>::type = 0) {
+                        lazy_void();
+                        return callback();
                     },
 
-                    [&](std::exception_ptr ptr) {
-                        auto pair = package([this, f = std::forward<F>(f), ptr]() mutable {
-                            return std::forward<F>(f)(ptr);
+                    [](auto && callback, auto && lazy_nonvoid, typename std::enable_if<!std::is_void<decltype(lazy_nonvoid())>::value, int>::type = 0) {
+                        return callback(lazy_nonvoid());
+                    }
+                );
+
+                return get<0>(fmap(value, make_overload_set(
+                    [&](variant<const _replaced &, std::exception_ptr>) {
+                        auto pair = package([this, f = std::forward<F>(f), call_with_void_argument]() mutable {
+                            try
+                            {
+                                return make_expected_err_type<decltype(std::forward<F>(f)(std::current_exception()))>(_get());
+                            }
+
+                            catch (...)
+                            {
+                                return call_with_void_argument(
+                                    [&](auto &&... args){ return make_error<_replaced>(std::forward<decltype(args)>(args)...); },
+                                    [&](){ return std::forward<F>(f)(std::current_exception()); }
+                                );
+                            }
                         });
 
                         // GCC is deeply confused when this is directly in the capture list
@@ -433,20 +452,25 @@ namespace reaver { inline namespace _v1
                     },
 
                     [&](none_t) {
-                        auto pair = package([this, f = std::forward<F>(f)]() mutable {
-                            if (value.index() == 1)
+                        auto pair = package([this, f = std::forward<F>(f), call_with_void_argument]() mutable {
+                            try
                             {
-                                auto ptr = get<1>(value);
-                                return std::forward<F>(f)(ptr);
+                                return make_expected_err_type<decltype(std::forward<F>(f)(std::current_exception()))>(_get());
                             }
-                            assert(!"or maybe make the resulting future exceptional? this would be a solution, though not a stellar one");
-                            assert(!"I guess we should somehow propagate the value here, but there's no obvious way to do that");
+
+                            catch (...)
+                            {
+                                return call_with_void_argument(
+                                    [&](auto &&... args){ return make_error<_replaced>(std::forward<decltype(args)>(args)...); },
+                                    [&](){ return std::forward<F>(f)(std::current_exception()); }
+                                );
+                            }
                         });
 
                         // GCC is deeply confused when this is directly in the capture list
                         auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
 
-                        _add_exceptional_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
+                        _add_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
                             sched()->push([sched, task = std::move(task), state = std::move(state)](){ task(sched()); });
                         });
                         return std::move(pair.future);
@@ -1062,7 +1086,7 @@ namespace reaver { inline namespace _v1
                 auto scheduler = vf.scheduler() ? vf.scheduler() : sched;
 
                 state->futures.push_back(vf.then(std::move(scheduler), void_handler));
-                state->futures.push_back(vf.on_error(std::move(scheduler), on_error));
+                state->futures.push_back(vf.on_error(std::move(scheduler), on_error).then([](auto){}));
 
                 self(self, _detail::_int<index>(), rest...);
             },
@@ -1071,7 +1095,7 @@ namespace reaver { inline namespace _v1
                 auto scheduler = nvf.scheduler() ? nvf.scheduler() : sched;
 
                 state->futures.push_back(nvf.then(std::move(scheduler), nonvoid_handler(index)));
-                state->futures.push_back(nvf.on_error(std::move(scheduler), on_error));
+                state->futures.push_back(nvf.on_error(std::move(scheduler), on_error).then([](auto){}));
 
                 self(self, _detail::_int<index + 1>(), rest...);
             }
@@ -1203,7 +1227,7 @@ namespace reaver { inline namespace _v1
                         assert(!"implement this shit");
                         break;
                 }
-            }));
+            }).then([](auto){}));
 
             return unit{};
         });

@@ -98,6 +98,13 @@ namespace reaver { inline namespace _v1
         variant<T, _wrap_error> _value;
     };
 
+    template<typename T>
+    class expected<T, void> : public expected<T, unit>
+    {
+    public:
+        using expected<T, unit>::expected;
+    };
+
     template<typename T, typename Error = std::exception_ptr>
     expected<T, Error> make_expected(T t)
     {
@@ -114,6 +121,12 @@ namespace reaver { inline namespace _v1
     expected<T, Error> make_error(Error err)
     {
         return expected<T, Error>{ error_tag, std::move(err) };
+    }
+
+    template<typename T>
+    expected<T, void> make_error()
+    {
+        return expected<T, void>{ error_tag, unit{} };
     }
 
     template<typename T, typename Error, typename F>
