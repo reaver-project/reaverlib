@@ -836,6 +836,33 @@ namespace reaver { inline namespace _v1
         return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && comparators[lhs.index()](lhs, rhs));
     }
 
+    namespace _detail
+    {
+        template<typename... Ts>
+        struct _make_variant_type;
+
+        template<typename... Ts>
+        struct _make_variant_type<tpl::vector<Ts...>>
+        {
+            using type = variant<Ts...>;
+        };
+
+        template<typename... Ts, typename Head, typename... Tail>
+        struct _make_variant_type<tpl::vector<Ts...>, Head, Tail...>
+        {
+            using type = typename _make_variant_type<tpl::unique<Ts..., Head>, Tail...>::type;
+        };
+
+        template<typename... Ts, typename... HeadTs, typename... Tail>
+        struct _make_variant_type<tpl::vector<Ts...>, variant<HeadTs...>, Tail...>
+        {
+            using type = typename _make_variant_type<tpl::unique<Ts..., HeadTs...>, Tail...>::type;
+        };
+    }
+
+    template<typename... Ts>
+    using make_variant = typename _detail::_make_variant_type<tpl::vector<>, Ts...>::type;
+
     struct recursive_variant_tag{};
     using rvt = recursive_variant_tag;
 
