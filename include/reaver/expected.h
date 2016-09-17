@@ -25,6 +25,7 @@
 #include <exception>
 
 #include "variant.h"
+#include "prelude/monad.h"
 
 namespace reaver { inline namespace _v1
 {
@@ -162,12 +163,30 @@ namespace reaver { inline namespace _v1
         return { error_tag, std::move(exp.get_error()) };
     }
 
+    namespace _detail
+    {
+        template<typename T>
+        struct _unvariant_impl
+        {
+            using type = T;
+        };
+
+        template<typename T>
+        struct _unvariant_impl<variant<T>>
+        {
+            using type = T;
+        };
+
+        template<typename T>
+        using _unvariant = typename _unvariant_impl<T>::type;
+    }
+
     template<typename T, typename ErrorInner, typename ErrorOuter>
-    auto join(expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, variant<ErrorInner, ErrorOuter>>
+    auto join(expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, _detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>
     {
         if (exp && *exp)
         {
-            return make_expected_err_type<variant<ErrorInner, ErrorOuter>>(**exp);
+            return make_expected_err_type<_detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>(**exp);
         }
 
         if (exp)
@@ -179,11 +198,11 @@ namespace reaver { inline namespace _v1
     }
 
     template<typename T, typename ErrorInner, typename ErrorOuter>
-    auto join(const expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, variant<ErrorInner, ErrorOuter>>
+    auto join(const expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, _detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>
     {
         if (exp && *exp)
         {
-            return make_expected_err_type<variant<ErrorInner, ErrorOuter>>(**exp);
+            return make_expected_err_type<_detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>(**exp);
         }
 
         if (exp)
@@ -195,11 +214,11 @@ namespace reaver { inline namespace _v1
     }
 
     template<typename T, typename ErrorInner, typename ErrorOuter>
-    auto join(expected<expected<T, ErrorInner>, ErrorOuter> && exp) -> expected<T, variant<ErrorInner, ErrorOuter>>
+    auto join(expected<expected<T, ErrorInner>, ErrorOuter> && exp) -> expected<T, _detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>
     {
         if (exp && *exp)
         {
-            return make_expected_err_type<variant<ErrorInner, ErrorOuter>>(std::move(**exp));
+            return make_expected_err_type<_detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>(std::move(**exp));
         }
 
         if (exp)
