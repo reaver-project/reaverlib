@@ -108,13 +108,6 @@ namespace reaver { inline namespace _v1
             state.continuations = _continuation_type{ std::forward<F>(f) };
         }
 
-        template<typename T, typename F>
-        void _add_exceptional_continuation(_shared_state<T> & state, F && f)
-        {
-            std::lock_guard<std::mutex> lock{ state.continuations_lock };
-            state.exceptional_continuations.emplace_back(std::forward<F>(f));
-        }
-
         template<typename T>
         bool _is_valid(_shared_state<T> & state)
         {
@@ -197,7 +190,6 @@ namespace reaver { inline namespace _v1
                 std::vector<_continuation_type>,
                 optional<_continuation_type>
             >;
-            using failed_then_t = std::vector<_continuation_type>;
 
             _shared_state(_replaced t) : value{ std::move(t) }
             {
@@ -220,7 +212,6 @@ namespace reaver { inline namespace _v1
 
             std::mutex continuations_lock;
             then_t continuations;
-            failed_then_t exceptional_continuations;
 
             // TODO: reaver::function
             optional<class function<T ()>> function;
@@ -265,23 +256,6 @@ namespace reaver { inline namespace _v1
                     value = std::move(ex);
                 }
 
-                auto conts = failed_then_t{};
-
-                while (
-                    [&]{
-                        std::lock_guard<std::mutex> lock{ continuations_lock };
-                        return !exceptional_continuations.empty();
-                    }())
-                {
-                    {
-                        std::lock_guard<std::mutex> lock{ continuations_lock };
-                        using std::swap;
-                        swap(conts, exceptional_continuations);
-                    }
-
-                    fmap(conts, [&](auto && cont) { cont(); return unit{}; });
-                }
-
                 _invoke_continuations();
             }
 
@@ -313,7 +287,6 @@ namespace reaver { inline namespace _v1
 
                 function = none;
                 continuations = then_t{};
-                exceptional_continuations = failed_then_t{};
             }
 
             _replaced _get()
