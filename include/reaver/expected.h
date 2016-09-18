@@ -25,7 +25,6 @@
 #include <exception>
 
 #include "variant.h"
-#include "prelude/monad.h"
 
 namespace reaver { inline namespace _v1
 {
