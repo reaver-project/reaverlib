@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015-2016 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -25,7 +25,7 @@
 #include <vector>
 #include <memory>
 
-#include "../tmp.h"
+#include "../traits.h"
 #include "../tpl/vector.h"
 #include "fold.h"
 #include "../logic.h"

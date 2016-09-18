@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015-2016 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -23,6 +23,7 @@
 #pragma once
 
 #include <type_traits>
+#include <vector>
 
 #include "void_t.h"
 
@@ -59,5 +60,15 @@ namespace reaver { inline namespace _v1
 
     template<typename T, typename... Args>
     struct is_callable : _detail::_is_callable_impl<void, T, Args...> {};
+
+    template<typename>
+    struct is_vector : public std::false_type
+    {
+    };
+
+    template<typename T, typename A>
+    struct is_vector<std::vector<T, A>> : public std::true_type
+    {
+    };
 }}
 
