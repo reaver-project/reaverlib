@@ -30,7 +30,7 @@ namespace reaver { inline namespace _v1
     using std::invoke;
 #else
     template<typename F, typename... Args>
-    decltype(auto) invoke(F && f, Args &&... args)
+    decltype(auto) invoke(F && f, Args &&... args) -> decltype(std::__invoke(f, std::forward<Args>(args)...))
     {
         // GCC breaks when this is done correctly with std::forward on f
         return std::__invoke(f, std::forward<Args>(args)...);
