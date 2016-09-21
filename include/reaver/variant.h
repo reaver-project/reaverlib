@@ -251,7 +251,7 @@ namespace reaver { inline namespace _v1
                 template<typename T>
                 static void conversion_context(T);
 
-                template<typename Arg, typename T, typename = decltype(conversion_context<Arg>({ std::declval<T>() }))>
+                template<typename Arg, typename T, typename = decltype(conversion_context<Arg>(Arg{ std::declval<T>() }))>
                 static auto generate(choice<0>)
                 {
                     return [](_variant & v, T && t)
