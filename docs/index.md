@@ -10,7 +10,7 @@ and from Boost, or their standard library or Boost versions were not satisfying 
 
 ### Getting started
 
-To use ReaverLib, you'll need a fairly recent C++ compiler with a C++17 mode. Currently, Clang 3.7+ and GCC 5.1+ are supported, together with Boost 1.60.0+.
+To use ReaverLib, you'll need a fairly recent C++ compiler with a C++17 mode. Currently, Clang 3.7+ and GCC 6.1+ are supported, together with Boost 1.60.0+.
 
 ReaverLib is not a standalone library, since a lot of it requires some Boost features, but it is header only (if you discount the need to sometimes link some
 Boost libraries). To install ReaverLib, simply run
