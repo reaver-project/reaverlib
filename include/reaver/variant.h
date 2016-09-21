@@ -245,9 +245,6 @@ namespace reaver { inline namespace _v1
         private:
             struct _generator
             {
-                // needed for this to compile under GCC 5.1
-                _generator() {}
-
                 template<typename T>
                 static void conversion_context(T);
 
@@ -268,9 +265,6 @@ namespace reaver { inline namespace _v1
                 template<typename Arg, typename T>
                 struct to_generate
                 {
-                    // needed for this to compile under GCC 5.1
-                    to_generate() {}
-
                     template<typename U>
                     void operator()(_variant & v, U && t) const
                     {
