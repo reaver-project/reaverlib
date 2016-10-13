@@ -84,12 +84,12 @@ namespace reaver { inline namespace _v1
             return !*this;
         }
 
-        T & operator*()
+        auto & operator*()
         {
             return get();
         }
 
-        const T & operator*() const
+        const auto & operator*() const
         {
             return get();
         }
@@ -104,12 +104,12 @@ namespace reaver { inline namespace _v1
             return &get();
         }
 
-        T & get()
+        auto & get()
         {
             return reaver::get<0>(*this);
         }
 
-        const T & get() const
+        const auto & get() const
         {
             return reaver::get<0>(*this);
         }
