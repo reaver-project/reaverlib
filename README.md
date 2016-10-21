@@ -1,5 +1,7 @@
 # ReaverLib
 
+[![Join the chat at https://gitter.im/reaver-project/ReaverLib](https://badges.gitter.im/reaver-project/ReaverLib.svg)](https://gitter.im/reaver-project/ReaverLib?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ReaverLib is a collection of libraries used throughout the project, that should
 also be useful for people from outside of it.
 
