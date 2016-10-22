@@ -197,7 +197,9 @@ MAYFLY_ADD_TESTCASE("exceptional continuation", []()
     {
         auto pair = test::reaver::package([]() -> int { throw 1; });
         auto future = pair.future.then([](int){ return false; });
-        auto exceptional = pair.future.on_error([](std::exception_ptr){ return true; });
+        auto exceptional = pair.future
+            .then([](auto && value){ return value * 7; })
+            .on_error([](std::exception_ptr){ return true; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
         exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
