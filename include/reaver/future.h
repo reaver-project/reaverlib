@@ -203,10 +203,19 @@ namespace reaver { inline namespace _v1
             {
             }
 
+            ~_shared_state()
+            {
+                if (!value_accessed)
+                {
+                    std::terminate();
+                }
+            }
+
             std::mutex lock;
             variant<_replaced, std::exception_ptr, none_t> value;
             std::atomic<std::size_t> promise_count{ 0 };
             std::atomic<std::size_t> shared_count{ 0 };
+            std::atomic<bool> value_accessed{ true };
 
             std::shared_ptr<executor> scheduler;
 
@@ -219,6 +228,7 @@ namespace reaver { inline namespace _v1
             optional<_replaced> try_get()
             {
                 std::lock_guard<std::mutex> l(lock);
+                value_accessed = true;
                 return get<0>(fmap(_move_or_copy(value, shared_count == 1 && value.index() != 1), make_overload_set(
                     [&](_replaced t) {
                         if (shared_count == 1)
@@ -253,6 +263,7 @@ namespace reaver { inline namespace _v1
             {
                 {
                     std::unique_lock<std::mutex> l{ lock };
+                    value_accessed = false;
                     value = std::move(ex);
                 }
 
@@ -292,6 +303,8 @@ namespace reaver { inline namespace _v1
             _replaced _get()
             {
                 assert(value.index() != 2);
+
+                value_accessed = true;
 
                 if (value.index() == 1)
                 {
@@ -938,10 +951,14 @@ namespace reaver { inline namespace _v1
     future<T> join(std::shared_ptr<executor> sched, future<future<T>> fut)
     {
         auto pair = make_promise<T>();
-        fut.then(sched, [promise = std::move(pair.promise), sched](auto && inner) {
-            inner.then(std::move(sched), [promise = std::move(promise)](typename _detail::_replace_void<T>::type value = {}) {
+        fut.then(sched, [promise = pair.promise, sched](auto && inner) {
+            inner.then(sched, [promise = promise](typename _detail::_replace_void<T>::type value = {}) {
                 promise.set(std::move(value));
+            }).on_error(sched, [promise = promise](std::exception_ptr ex) {
+                promise.set(ex);
             }).detach();
+        }).on_error(sched, [promise = pair.promise](std::exception_ptr ex) {
+            promise.set(ex);
         }).detach();
 
         return std::move(pair.future);
@@ -1016,11 +1033,12 @@ namespace reaver { inline namespace _v1
             return _detail::_remove_optional(state->buffer, std::make_index_sequence<nonvoid::size>());
         });
         state->task = std::move(pair.packaged_task);
+        state->futures.reserve(sizeof...(futures));
 
         auto void_handler = [state, sched]() {
             if (--state->remaining == 0)
             {
-                sched->push([sched, task = std::move(*state->task)](){ task(sched); });
+                sched->push([sched, task = *state->task](){ task(sched); });
             }
         };
 
@@ -1030,7 +1048,7 @@ namespace reaver { inline namespace _v1
 
                 if (--state->remaining == 0)
                 {
-                    sched->push([sched, task = std::move(*state->task)](){ task(sched); });
+                    sched->push([sched, task = *state->task](){ task(sched); });
                 }
             };
         };
@@ -1042,7 +1060,7 @@ namespace reaver { inline namespace _v1
                     state->exceptions.push_back(exception_ptr);
                     if (--state->remaining == 0)
                     {
-                        sched->push([sched, task = std::move(*state->task)](){ task(sched); });
+                        sched->push([sched, task = *state->task](){ task(sched); });
                     }
                     break;
 
@@ -1052,29 +1070,36 @@ namespace reaver { inline namespace _v1
             }
         };
 
-        auto handler = make_overload_set(
-            [](auto /* self */, auto /* index */){},
+        auto promise_pair = make_promise<void>();
 
-            [&](auto self, auto index, future<void> & vf, auto &... rest) {
+        auto handler = make_overload_set(
+            [](auto && /* self */, auto /* index */){},
+
+            [&](auto && self, auto index, future<void> & vf, auto &... rest) {
                 auto scheduler = vf.scheduler() ? vf.scheduler() : sched;
 
-                state->futures.push_back(vf.then(std::move(scheduler), void_handler));
-                state->futures.push_back(vf.on_error(std::move(scheduler), on_error).then([](auto){}));
+                state->futures.push_back(promise_pair.future
+                    .then(scheduler, [vf = std::move(vf)]() mutable { return std::move(vf); })
+                    .then(scheduler, void_handler)
+                    .on_error(scheduler, on_error).then([](auto){}));
 
                 self(self, _detail::_int<index>(), rest...);
             },
 
-            [&](auto self, auto index, auto & nvf, auto &... rest) {
+            [&](auto && self, auto index, auto & nvf, auto &... rest) {
                 auto scheduler = nvf.scheduler() ? nvf.scheduler() : sched;
 
-                state->futures.push_back(nvf.then(std::move(scheduler), nonvoid_handler(index)));
-                state->futures.push_back(nvf.on_error(std::move(scheduler), on_error).then([](auto){}));
+                state->futures.push_back(promise_pair.future
+                    .then(scheduler, [nvf = std::move(nvf)]() mutable { return std::move(nvf); })
+                    .then(scheduler, nonvoid_handler(index))
+                    .on_error(scheduler, on_error).then([](auto){}));
 
                 self(self, _detail::_int<index + 1>(), rest...);
             }
         );
 
         handler(handler, _detail::_int<0>(), futures...);
+        promise_pair.promise.set();
 
         return std::move(pair.future);
     }
@@ -1103,7 +1128,7 @@ namespace reaver { inline namespace _v1
     }
 
     template<typename T>
-    auto when_all(std::shared_ptr<executor> sched, exception_policy policy, const std::vector<future<T>> & futures)
+    auto when_all(std::shared_ptr<executor> sched, exception_policy policy, std::vector<future<T>> futures)
     {
         using value_type = std::conditional_t<
             std::is_void<T>::value,
@@ -1170,40 +1195,44 @@ namespace reaver { inline namespace _v1
         state->futures = futures;
         state->keep_alive.reserve(futures.size());
 
-        fmap(state->futures, [&](auto & future) {
+        auto promise_pair = make_promise<void>();
+
+        fmap(state->futures, [&](auto && future) {
             auto scheduler = future.scheduler() ? future.scheduler() : sched;
 
-            state->keep_alive.push_back(future.then(std::move(scheduler), [sched, state](auto &&... arg) {
-                // GCC fails to understand that the argument pack can be empty...
-                // ...unless it has a name
-                // WTF.
-                swallow{ arg... };
+            state->keep_alive.push_back(promise_pair.future
+                .then(scheduler, [future]() mutable { return std::move(future); })
+                .then(scheduler, [sched, state](auto &&... arg) {
+                    // GCC fails to understand that the argument pack can be empty...
+                    // ...unless it has a name
+                    // WTF.
+                    swallow{ arg... };
 
-                if (--state->remaining == 0)
-                {
-                    sched->push([sched, task = std::move(*state->task)](){ task(sched); });
-                }
-            }));
+                    if (--state->remaining == 0)
+                    {
+                        sched->push([sched, task = std::move(*state->task)](){ task(sched); });
+                    }
+                }).on_error(scheduler, [state, sched, policy](auto exception_ptr) {
+                    switch (policy)
+                    {
+                        case exception_policy::aggregate:
+                            state->exceptions.push_back(exception_ptr);
+                            if (--state->remaining == 0)
+                            {
+                                sched->push([sched, task = std::move(*state->task)](){ task(sched); });
+                            }
+                            break;
 
-            state->keep_alive.push_back(future.on_error([state, sched, policy](auto exception_ptr) {
-                switch (policy)
-                {
-                    case exception_policy::aggregate:
-                        state->exceptions.push_back(exception_ptr);
-                        if (--state->remaining == 0)
-                        {
-                            sched->push([sched, task = std::move(*state->task)](){ task(sched); });
-                        }
-                        break;
-
-                    case exception_policy::abort_on_first_failure:
-                        assert(!"implement this shit");
-                        break;
-                }
-            }).then([](auto){}));
+                        case exception_policy::abort_on_first_failure:
+                            assert(!"implement this shit");
+                            break;
+                    }
+                }).then([](auto){}));
 
             return unit{};
         });
+
+        promise_pair.promise.set();
 
         return std::move(pair.future);
     }
