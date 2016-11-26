@@ -184,15 +184,6 @@ namespace reaver { inline namespace _v1
             return std::forward<T>(t);
         }
 
-        struct _max
-        {
-            template<typename T, typename U>
-            constexpr decltype(auto) operator()(T && t, U && u) const
-            {
-                return t > u ? std::forward<T>(t) : std::forward<U>(u);
-            }
-        };
-
         template<typename CRTP, typename... Args>
         class _variant
         {
@@ -517,12 +508,7 @@ namespace reaver { inline namespace _v1
             }
 
         private:
-            using _storage_type = std::aligned_storage_t<
-                foldl(_detail::_max{}, sizeof(Args)...),
-                foldl(_detail::_max{}, alignof(Args)...)
-            >;
-
-            _storage_type _storage;
+            std::aligned_union_t<0, Args...>  _storage;
             std::size_t _tag = -1;
         };
 
