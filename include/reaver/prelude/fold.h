@@ -24,6 +24,7 @@
 
 #include <utility>
 #include <numeric>
+#include <iterator>
 
 namespace reaver
 {
