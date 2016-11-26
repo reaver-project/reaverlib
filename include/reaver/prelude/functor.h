@@ -27,7 +27,6 @@
 
 #include "../traits.h"
 #include "../tpl/vector.h"
-#include "fold.h"
 #include "../logic.h"
 #include "../tpl/unique.h"
 #include "../tpl/rebind.h"

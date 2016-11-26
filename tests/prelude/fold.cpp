@@ -22,6 +22,8 @@
 
 #include <reaver/mayfly.h>
 
+#include <numeric>
+
 namespace test
 {
 #include "prelude/fold.h"
