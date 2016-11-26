@@ -38,6 +38,11 @@ MAYFLY_ADD_TESTCASE("construction and destruction", []()
         const auto & ref = object;
         MAYFLY_REQUIRE(ref.reference() == 1);
     }
+
+    {
+        test::reaver::manual_object<int> object{ 1 };
+        MAYFLY_REQUIRE(object.reference() == 1);
+    }
 });
 
 MAYFLY_ADD_TESTCASE("copy and move", []()

@@ -33,6 +33,16 @@ namespace reaver { inline namespace _v1
     public:
         manual_object() = default;
 
+        manual_object(const T & value)
+        {
+            emplace(value);
+        }
+
+        manual_object(T && value)
+        {
+            emplace(std::move(value));
+        }
+
         template<typename... Ts>
         void emplace(Ts &&... ts)
         {
