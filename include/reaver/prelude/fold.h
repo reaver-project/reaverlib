@@ -23,6 +23,7 @@
 #pragma once
 
 #include <utility>
+#include <numeric>
 
 namespace reaver
 {
@@ -50,6 +51,18 @@ namespace reaver
         inline constexpr auto foldl(F && f, T && t, U && u, Ts &&... ts)
         {
             return foldl(f, f(std::forward<T>(t), std::forward<U>(u)), std::forward<Ts>(ts)...);
+        }
+
+        template<typename Container, typename Init, typename F, typename = decltype(std::rbegin(std::declval<Container>()))>
+        inline constexpr auto foldr(Container && cont, Init && init, F && f)
+        {
+            return std::accumulate(std::rbegin(cont), std::rend(cont), std::forward<Init>(init), std::forward<F>(f));
+        }
+
+        template<typename Container, typename Init, typename F, typename = decltype(std::begin(std::declval<Container>()))>
+        inline constexpr auto foldl(Container && cont, Init && init, F && f)
+        {
+            return std::accumulate(std::begin(cont), std::end(cont), std::forward<Init>(init), std::forward<F>(f));
         }
     }}
 }
