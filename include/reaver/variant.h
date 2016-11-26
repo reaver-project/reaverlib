@@ -31,7 +31,6 @@
 #include <functional>
 
 #include "logic.h"
-#include "prelude/fold.h"
 #include "tpl/vector.h"
 #include "tpl/nth.h"
 #include "exception.h"
