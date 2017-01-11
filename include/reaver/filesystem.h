@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2014 Michał "Griwes" Dominiak
+ * Copyright © 2014, 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -28,9 +28,12 @@
 
 namespace reaver
 {
-    namespace filesystem { inline namespace _v1
+namespace filesystem
+{
+    inline namespace _v1
     {
-        inline boost::filesystem::path make_relative(const boost::filesystem::path & path, const boost::filesystem::path & base = boost::filesystem::current_path())
+        inline boost::filesystem::path make_relative(const boost::filesystem::path & path,
+            const boost::filesystem::path & base = boost::filesystem::current_path())
         {
             auto absolute_base = boost::filesystem::absolute(base);
             auto absolute_path = boost::filesystem::absolute(path);
@@ -137,5 +140,20 @@ namespace reaver
 
             return state;
         }
-    }}
+
+        inline std::vector<boost::filesystem::path> all_symlinked_paths(boost::filesystem::path path)
+        {
+            std::vector<boost::filesystem::path> ret;
+            ret.push_back(path);
+
+            while (boost::filesystem::is_symlink(path))
+            {
+                path = boost::filesystem::canonical(boost::filesystem::read_symlink(path), path.parent_path());
+                ret.push_back(path);
+            }
+
+            return ret;
+        }
+    }
+}
 }
