@@ -28,3 +28,11 @@ install_package mayfly develop
 
 make test -j${core_number} -l${core_number}
 ./tests/test -j ${core_number} -l 3 -r teamcity
+
+# also test if compiles when installed as the system version
+# not sure if rerunning tests again in here makes much sense, so not doing that for now
+# might revisit this decision later
+
+make install
+make test -j${core_number} -l${core_number}
+
