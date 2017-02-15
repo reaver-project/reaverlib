@@ -22,10 +22,12 @@
 
 #pragma once
 
-#include <utility>
 #include <type_traits>
+#include <utility>
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     template<typename T>
     class manual_object
@@ -79,5 +81,5 @@ namespace reaver { inline namespace _v1
     private:
         std::aligned_storage_t<sizeof(T), alignof(T)> _storage;
     };
-}}
-
+}
+}

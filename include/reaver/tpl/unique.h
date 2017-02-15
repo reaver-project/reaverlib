@@ -24,12 +24,14 @@
 
 #include <type_traits>
 
-#include "vector.h"
 #include "../logic.h"
+#include "vector.h"
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         namespace _detail
         {
@@ -39,11 +41,9 @@ namespace reaver
             template<typename... Inserted, typename Head, typename... Tail>
             struct _unique<tpl::vector<Inserted...>, Head, Tail...>
             {
-                using type = typename std::conditional<
-                    all_of<true, !std::is_same<Head, Inserted>::value...>::value,
+                using type = typename std::conditional<all_of<true, !std::is_same<Head, Inserted>::value...>::value,
                     typename _unique<tpl::vector<Inserted..., Head>, Tail...>::type,
-                    typename _unique<tpl::vector<Inserted...>, Tail...>::type
-                >::type;
+                    typename _unique<tpl::vector<Inserted...>, Tail...>::type>::type;
             };
 
             template<typename... Inserted>
@@ -55,5 +55,6 @@ namespace reaver
 
         template<typename... Ts>
         using unique = typename _detail::_unique<tpl::vector<>, Ts...>::type;
-    }}
+    }
+}
 }

@@ -24,95 +24,63 @@
 
 namespace test
 {
-#   include "static_if.h"
+#include "static_if.h"
 }
 
 MAYFLY_BEGIN_SUITE("static_if");
 
-MAYFLY_ADD_TESTCASE("if", [](){
+MAYFLY_ADD_TESTCASE("if", []() {
     int i = 0;
 
-    test::reaver::static_if(std::true_type{}, [&](auto &&) {
-        ++i;
-    });
+    test::reaver::static_if(std::true_type{}, [&](auto &&) { ++i; });
 
     MAYFLY_REQUIRE(i == 1);
 
-    test::reaver::static_if(std::false_type{}, [&](auto &&) {
-        ++i;
-    });
+    test::reaver::static_if(std::false_type{}, [&](auto &&) { ++i; });
 
     MAYFLY_REQUIRE(i == 1);
 });
 
-MAYFLY_ADD_TESTCASE("if-else", [](){
+MAYFLY_ADD_TESTCASE("if-else", []() {
     int i = 0;
 
-    test::reaver::static_if(std::true_type{}, [&](auto &&) {
-        i = 1;
-    }).static_else([&](auto &&... args) {
-        i = 2;
-    });
+    test::reaver::static_if(std::true_type{}, [&](auto &&) { i = 1; }).static_else([&](auto &&... args) { i = 2; });
 
     MAYFLY_REQUIRE(i == 1);
 
-    test::reaver::static_if(std::false_type{}, [&](auto &&) {
-        i = 1;
-    }).static_else([&](auto &&... args) {
-        i = 2;
-    });
+    test::reaver::static_if(std::false_type{}, [&](auto &&) { i = 1; }).static_else([&](auto &&... args) { i = 2; });
 
     MAYFLY_REQUIRE(i == 2);
 });
 
-MAYFLY_ADD_TESTCASE("if-elseif", [](){
+MAYFLY_ADD_TESTCASE("if-elseif", []() {
     int i = 0;
 
-    test::reaver::static_if(std::false_type{}, [&](auto &&) {
-        i = 1;
-    }).static_else_if(std::true_type{}, [&](auto &&) {
-        i = 2;
-    });
+    test::reaver::static_if(std::false_type{}, [&](auto &&) { i = 1; }).static_else_if(std::true_type{}, [&](auto &&) { i = 2; });
 
     MAYFLY_REQUIRE(i == 2);
 
-    test::reaver::static_if(std::false_type{}, [&](auto &&) {
-        i = 0;
-    }).static_else_if(std::false_type{}, [&](auto &&) {
-        i = 1;
-    });
+    test::reaver::static_if(std::false_type{}, [&](auto &&) { i = 0; }).static_else_if(std::false_type{}, [&](auto &&) { i = 1; });
 
     MAYFLY_REQUIRE(i == 2);
 });
 
-MAYFLY_ADD_TESTCASE("if-elseif-else", [](){
+MAYFLY_ADD_TESTCASE("if-elseif-else", []() {
     int i = 0;
 
-    test::reaver::static_if(std::false_type{}, [&](auto &&) {
-        i = 1;
-    }).static_else_if(std::true_type{}, [&](auto &&) {
-        i = 2;
-    }).static_else([&](auto &&) {
+    test::reaver::static_if(std::false_type{}, [&](auto &&) { i = 1; }).static_else_if(std::true_type{}, [&](auto &&) { i = 2; }).static_else([&](auto &&) {
         i = 3;
     });
 
     MAYFLY_REQUIRE(i == 2);
 
-    test::reaver::static_if(std::false_type{}, [&](auto &&) {
-        i = 0;
-    }).static_else_if(std::false_type{}, [&](auto &&) {
-        i = 1;
-    }).static_else([&](auto &&) {
+    test::reaver::static_if(std::false_type{}, [&](auto &&) { i = 0; }).static_else_if(std::false_type{}, [&](auto &&) { i = 1; }).static_else([&](auto &&) {
         i = 3;
     });
 
     MAYFLY_REQUIRE(i == 3);
 
-    test::reaver::static_if(std::true_type{}, [&](auto &&) {
-        i = 0;
-    }).static_else_if(std::true_type{}, [&](auto &&) {
-        i = 1;
-    }).static_else([&](auto &&) {
+    test::reaver::static_if(std::true_type{}, [&](auto &&) { i = 0; }).static_else_if(std::true_type{}, [&](auto &&) { i = 1; }).static_else([&](auto &&) {
         MAYFLY_REQUIRE(false); // should never be called
         i = 2;
     });
@@ -121,4 +89,3 @@ MAYFLY_ADD_TESTCASE("if-elseif-else", [](){
 });
 
 MAYFLY_END_SUITE;
-

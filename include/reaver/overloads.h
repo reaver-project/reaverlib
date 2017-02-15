@@ -24,15 +24,23 @@
 
 #include <utility>
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     template<unsigned I>
-    struct choice : choice<I + 1> {};
+    struct choice : choice<I + 1>
+    {
+    };
 
     template<>
-    struct choice<10> {};
+    struct choice<10>
+    {
+    };
 
-    struct select_overload : choice<0> {};
+    struct select_overload : choice<0>
+    {
+    };
 
     template<typename T, typename... Ts>
     struct overload_set : T, overload_set<Ts...>
@@ -60,4 +68,5 @@ namespace reaver { inline namespace _v1
     {
         return overload_set<Ts...>{ std::forward<Ts>(ts)... };
     }
-}}
+}
+}

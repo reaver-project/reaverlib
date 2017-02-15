@@ -26,7 +26,9 @@
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         namespace _detail
         {
@@ -51,11 +53,9 @@ namespace reaver
             template<typename... Filtered, typename Head, typename... Tail, template<typename> typename Predicate>
             struct _filter_impl<vector<Filtered...>, vector<Head, Tail...>, Predicate>
             {
-                using type = typename _filter_impl<typename std::conditional<
-                    Predicate<Head>::value,
-                    vector<Filtered..., Head>,
-                    vector<Filtered...>
-                >::type, vector<Tail...>, Predicate>::type;
+                using type = typename _filter_impl<typename std::conditional<Predicate<Head>::value, vector<Filtered..., Head>, vector<Filtered...>>::type,
+                    vector<Tail...>,
+                    Predicate>::type;
             };
 
             template<typename... Elements, template<typename> typename Predicate>
@@ -67,6 +67,6 @@ namespace reaver
 
         template<typename Vector, template<typename> typename Predicate>
         using filter = typename _detail::_filter<Vector, Predicate>::type;
-    }}
+    }
 }
-
+}

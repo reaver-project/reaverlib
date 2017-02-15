@@ -22,19 +22,17 @@
 
 #include <reaver/mayfly.h>
 
-
 #include <boost/functional/hash.hpp>
 namespace test
 {
-#   include "logger.h"
+#include "logger.h"
 }
 
 #include <sstream>
 
 MAYFLY_BEGIN_SUITE("logger");
 
-MAYFLY_ADD_TESTCASE("basic printing to stringstream", []
-{
+MAYFLY_ADD_TESTCASE("basic printing to stringstream", [] {
     std::ostringstream stream;
 
     {

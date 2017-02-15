@@ -29,16 +29,13 @@ namespace test
 
 MAYFLY_BEGIN_SUITE("tls");
 
-MAYFLY_ADD_TESTCASE("tls in a single thread", []()
-{
+MAYFLY_ADD_TESTCASE("tls in a single thread", []() {
     test::reaver::tls_variable<std::uintptr_t> v;
     v = 123;
     MAYFLY_CHECK(v == 123);
 });
 
-
-MAYFLY_ADD_TESTCASE("tls in multiple threads", []()
-{
+MAYFLY_ADD_TESTCASE("tls in multiple threads", []() {
     MAYFLY_MAIN_THREAD;
 
     test::reaver::tls_variable<std::uintptr_t> v;
@@ -58,4 +55,3 @@ MAYFLY_ADD_TESTCASE("tls in multiple threads", []()
 });
 
 MAYFLY_END_SUITE;
-

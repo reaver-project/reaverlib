@@ -21,30 +21,28 @@
  **/
 
 #include <unordered_set>
-#include <reaver/exception.h>
 #include <reaver/error.h>
+#include <reaver/exception.h>
 #include <reaver/optional.h>
 
 namespace test
 {
-#   include "error.h"
+#include "error.h"
 }
 
 #include <reaver/mayfly.h>
 
 MAYFLY_BEGIN_SUITE("error engine");
 
-MAYFLY_ADD_TESTCASE("reaching limit", []()
-{
+MAYFLY_ADD_TESTCASE("reaching limit", []() {
     test::reaver::error_engine engine{ 2 };
     engine.push(test::reaver::exception{ test::reaver::logger::error });
     MAYFLY_CHECK_NOTHROW(engine.push(test::reaver::exception{ test::reaver::logger::warning }));
     MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, engine.push(test::reaver::exception{ test::reaver::logger::error }));
 });
 
-MAYFLY_ADD_TESTCASE("without reaching limit", []()
-{
-    MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, [](){
+MAYFLY_ADD_TESTCASE("without reaching limit", []() {
+    MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, []() {
         test::reaver::error_engine engine{ 2 };
         engine.push(test::reaver::exception{ test::reaver::logger::warning });
         MAYFLY_CHECK_NOTHROW(engine.push(test::reaver::exception{ test::reaver::logger::error }));
@@ -56,11 +54,10 @@ MAYFLY_ADD_TESTCASE("without reaching limit", []()
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpessimizing-move"
 
-MAYFLY_ADD_TESTCASE("moved-from should not throw", []()
-{
-    MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, [](){
+MAYFLY_ADD_TESTCASE("moved-from should not throw", []() {
+    MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, []() {
         reaver::optional<test::reaver::error_engine> engine;
-        MAYFLY_CHECK_NOTHROW(engine = [](){
+        MAYFLY_CHECK_NOTHROW(engine = []() {
             test::reaver::error_engine engine{ 2 };
             engine.push(test::reaver::exception{ test::reaver::logger::error });
 
@@ -73,12 +70,10 @@ MAYFLY_ADD_TESTCASE("moved-from should not throw", []()
 
 #pragma GCC diagnostic pop
 
-MAYFLY_ADD_TESTCASE("reducing limit below current count", []()
-{
+MAYFLY_ADD_TESTCASE("reducing limit below current count", []() {
     test::reaver::error_engine engine{ 2 };
     engine.push(test::reaver::exception{ test::reaver::logger::error });
     MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, engine.set_error_limit(1));
 });
 
 MAYFLY_END_SUITE;
-

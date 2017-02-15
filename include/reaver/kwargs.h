@@ -22,14 +22,16 @@
 
 #pragma once
 
-#include <utility>
 #include <array>
+#include <utility>
 
 #include "relaxed_constexpr.h"
 
 namespace reaver
 {
-    namespace kwargs { inline namespace _v1
+namespace kwargs
+{
+    inline namespace _v1
     {
         template<typename T>
         struct kwarg
@@ -101,7 +103,8 @@ namespace reaver
                 return get<K>(std::forward<First>(first));
             }
 
-            throw std::out_of_range("there are not enough keyword arguments with selected key in the pack");
+            throw std::out_of_range("there are not enough keyword arguments "
+                                    "with selected key in the pack");
         }
 
         namespace _detail
@@ -150,5 +153,6 @@ namespace reaver
 
             return array;
         }
-    }}
+    }
+}
 }

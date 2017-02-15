@@ -22,13 +22,15 @@
 
 #pragma once
 
-#include <map>
 #include <functional>
+#include <map>
 #include <utility>
 
 #include "exception.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     namespace _detail
     {
@@ -47,7 +49,7 @@ namespace reaver { inline namespace _v1
         template<typename Handle, typename Ret, typename... Args>
         struct _call
         {
-            static std::map<Handle, Ret> call(std::map<Handle, std::function<Ret (Args...)>> callbacks, Args... args)
+            static std::map<Handle, Ret> call(std::map<Handle, std::function<Ret(Args...)>> callbacks, Args... args)
             {
                 std::map<Handle, Ret> ret;
 
@@ -63,7 +65,7 @@ namespace reaver { inline namespace _v1
         template<typename Handle, typename... Args>
         struct _call<Handle, void, Args...>
         {
-            static void call(std::map<Handle, std::function<void (Args...)>> callbacks, Args... args)
+            static void call(std::map<Handle, std::function<void(Args...)>> callbacks, Args... args)
             {
                 for (const auto & x : callbacks)
                 {
@@ -125,7 +127,7 @@ namespace reaver { inline namespace _v1
     class callbacks;
 
     template<typename Ret, typename... Args>
-    class callbacks<Ret (Args...)> : public _detail::_traits<Ret, Args...>
+    class callbacks<Ret(Args...)> : public _detail::_traits<Ret, Args...>
     {
     public:
         class handle
@@ -187,7 +189,7 @@ namespace reaver { inline namespace _v1
             _handle._id = rhs._handle._id;
         }
 
-        handle operator+=(std::function<Ret (Args...)> f)
+        handle operator+=(std::function<Ret(Args...)> f)
         {
             handle h = ++_handle;
             _callbacks.emplace(h, std::move(f));
@@ -212,7 +214,7 @@ namespace reaver { inline namespace _v1
             }
         }
 
-        callbacks operator+(std::function<Ret (Args...)> f) const
+        callbacks operator+(std::function<Ret(Args...)> f) const
         {
             callbacks ret{ *this };
             ret += std::move(f);
@@ -237,22 +239,22 @@ namespace reaver { inline namespace _v1
             _callbacks.clear();
         }
 
-        typename std::map<handle, std::function<Ret (Args...)>>::iterator begin()
+        typename std::map<handle, std::function<Ret(Args...)>>::iterator begin()
         {
             return _callbacks.begin();
         }
 
-        typename std::map<handle, std::function<Ret (Args...)>>::const_iterator begin() const
+        typename std::map<handle, std::function<Ret(Args...)>>::const_iterator begin() const
         {
             return _callbacks.begin();
         }
 
-        typename std::map<handle, std::function<Ret (Args...)>>::iterator end()
+        typename std::map<handle, std::function<Ret(Args...)>>::iterator end()
         {
             return _callbacks.end();
         }
 
-        typename std::map<handle, std::function<Ret (Args...)>>::const_iterator end() const
+        typename std::map<handle, std::function<Ret(Args...)>>::const_iterator end() const
         {
             return _callbacks.end();
         }
@@ -268,7 +270,8 @@ namespace reaver { inline namespace _v1
         }
 
     private:
-        std::map<handle, std::function<Ret (Args...)>> _callbacks;
+        std::map<handle, std::function<Ret(Args...)>> _callbacks;
         handle _handle;
     };
-}}
+}
+}

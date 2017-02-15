@@ -24,14 +24,18 @@
 
 #include "function.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class executor
     {
     public:
-        virtual ~executor() {}
+        virtual ~executor()
+        {
+        }
 
-        virtual void push(reaver::function<void ()> f) = 0;
+        virtual void push(reaver::function<void()> f) = 0;
     };
-}}
-
+}
+}

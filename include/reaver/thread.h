@@ -26,7 +26,9 @@
 
 #include "exception.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     enum class joinable_thread_policies
     {
@@ -40,7 +42,9 @@ namespace reaver { inline namespace _v1
     public:
         joinable_thread_destructed(std::thread::id id) : exception{ logger::crash }
         {
-            *this << "attempted to destroy a thread object holding a joinable thread with id " << id;
+            *this << "attempted to destroy a thread object holding a joinable "
+                     "thread with id "
+                  << id;
         }
     };
 
@@ -89,4 +93,5 @@ namespace reaver { inline namespace _v1
     using joining_thread = thread<joinable_thread_policies::join_on_destruction>;
     using detaching_thread = thread<joinable_thread_policies::detach_on_destruction>;
     using throwing_thread = thread<joinable_thread_policies::throw_on_destruction>;
-}}
+}
+}

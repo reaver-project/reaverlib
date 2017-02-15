@@ -24,19 +24,20 @@
 
 namespace test
 {
-#   include "prelude/monad.h"
+#include "prelude/monad.h"
 }
 
 MAYFLY_BEGIN_SUITE("prelude");
 MAYFLY_BEGIN_SUITE("monad");
 
-MAYFLY_ADD_TESTCASE("std::vector", [](){
-    MAYFLY_REQUIRE(test::reaver::mbind(std::vector<int>{ 1, 2, 3 }, [](auto i){ return std::vector<float>{ i * 0.5f, i * 1.f }; }) == std::vector<float>{ 0.5, 1, 1, 2, 1.5, 3 });
+MAYFLY_ADD_TESTCASE("std::vector", []() {
+    MAYFLY_REQUIRE(test::reaver::mbind(std::vector<int>{ 1, 2, 3 }, [](auto i) {
+        return std::vector<float>{ i * 0.5f, i * 1.f };
+    }) == std::vector<float>{ 0.5, 1, 1, 2, 1.5, 3 });
 
     std::vector<int> v{ 1, 2, 3 };
-    MAYFLY_REQUIRE(test::reaver::mbind(v, [](auto i){ return std::vector<float>{ i * 0.5f, i * 1.f }; }) == std::vector<float>{ 0.5, 1, 1, 2, 1.5, 3 });
+    MAYFLY_REQUIRE(test::reaver::mbind(v, [](auto i) { return std::vector<float>{ i * 0.5f, i * 1.f }; }) == std::vector<float>{ 0.5, 1, 1, 2, 1.5, 3 });
 });
 
 MAYFLY_END_SUITE;
 MAYFLY_END_SUITE;
-

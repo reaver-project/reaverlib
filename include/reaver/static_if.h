@@ -26,7 +26,9 @@
 
 #include "unit.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     namespace _detail
     {
@@ -75,13 +77,13 @@ namespace reaver { inline namespace _v1
             template<typename Else>
             auto static_else(Else && else_) const
             {
-                return _static_if<true && !ForeverFalse, Else, ForeverFalse>{ std::forward<Else>(else_) };
+                return _static_if < true && !ForeverFalse, Else, ForeverFalse > { std::forward<Else>(else_) };
             }
 
             template<typename Condition_, typename ElseIf>
             auto static_else_if(Condition_ cond, ElseIf && else_if) const
             {
-                return _static_if<cond() && !ForeverFalse, ElseIf, ForeverFalse>{ std::forward<ElseIf>(else_if) };
+                return _static_if < cond() && !ForeverFalse, ElseIf, ForeverFalse > { std::forward<ElseIf>(else_if) };
             }
         };
     }
@@ -91,5 +93,5 @@ namespace reaver { inline namespace _v1
     {
         return _detail::_static_if<b(), Then>{ std::forward<Then>(then) };
     }
-}}
-
+}
+}

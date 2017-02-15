@@ -22,86 +22,125 @@
 
 #pragma once
 
-#include <unordered_map>
 #include <type_traits>
+#include <unordered_map>
 
-#include <boost/type_index.hpp>
-#include <boost/functional/hash.hpp>
 #include <boost/any.hpp>
+#include <boost/functional/hash.hpp>
+#include <boost/type_index.hpp>
 
-#include "../unit.h"
-#include "../swallow.h"
-#include "../overloads.h"
 #include "../logic.h"
-#include "../void_t.h"
+#include "../overloads.h"
 #include "../subset.h"
+#include "../swallow.h"
+#include "../unit.h"
+#include "../void_t.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     namespace _detail
     {
         template<typename Tag, typename = void>
-        struct _has_identity_construct : public std::false_type {};
+        struct _has_identity_construct : public std::false_type
+        {
+        };
 
         template<typename T>
-        struct _has_identity_construct<T, void_t<decltype(T::construct(std::declval<typename T::type>()))>> : public std::true_type {};
+        struct _has_identity_construct<T, void_t<decltype(T::construct(std::declval<typename T::type>()))>> : public std::true_type
+        {
+        };
 
         template<typename Tag, typename From, typename = void>
-        struct _has_construct : public std::false_type {};
+        struct _has_construct : public std::false_type
+        {
+        };
 
         template<typename T, typename U>
-        struct _has_construct<T, U, void_t<decltype(T::construct(std::declval<U>()))>> : public std::true_type {};
+        struct _has_construct<T, U, void_t<decltype(T::construct(std::declval<U>()))>> : public std::true_type
+        {
+        };
 
         template<typename... Args>
-        struct _has_static_cast_impl : public std::false_type {};
+        struct _has_static_cast_impl : public std::false_type
+        {
+        };
 
         template<typename T, typename U>
-        struct _has_static_cast_impl<void_t<decltype(static_cast<typename T::type>(std::declval<U>()))>, T, U> : public std::true_type {};
+        struct _has_static_cast_impl<void_t<decltype(static_cast<typename T::type>(std::declval<U>()))>, T, U> : public std::true_type
+        {
+        };
 
         template<typename Tag, typename... From>
-        struct _has_static_cast : _has_static_cast_impl<void, Tag, From...> {};
+        struct _has_static_cast : _has_static_cast_impl<void, Tag, From...>
+        {
+        };
 
         template<typename... Args>
-        struct _has_exact_match_impl : public std::false_type {};
+        struct _has_exact_match_impl : public std::false_type
+        {
+        };
 
         template<typename T, typename... Args>
-        struct _has_exact_match_impl<void_t<decltype(static_cast<decltype(T::construct(std::declval<Args>()...)) (*)(Args...)>(&T::construct))>, T, Args...> : public std::true_type {};
+        struct _has_exact_match_impl<void_t<decltype(static_cast<decltype(T::construct(std::declval<Args>()...)) (*)(Args...)>(&T::construct))>, T, Args...>
+            : public std::true_type
+        {
+        };
 
         template<typename Tag, typename... From>
-        struct _has_exact_match : _has_exact_match_impl<void, Tag, std::remove_reference_t<From>...> {};
+        struct _has_exact_match : _has_exact_match_impl<void, Tag, std::remove_reference_t<From>...>
+        {
+        };
 
         template<typename... Args>
-        struct _is_construct_callable_impl : public std::false_type {};
+        struct _is_construct_callable_impl : public std::false_type
+        {
+        };
 
         template<typename T, typename... Args>
-        struct _is_construct_callable_impl<void_t<decltype(T::construct(std::declval<Args>()...))>, T, Args...> : public std::true_type {};
+        struct _is_construct_callable_impl<void_t<decltype(T::construct(std::declval<Args>()...))>, T, Args...> : public std::true_type
+        {
+        };
 
         template<typename Tag, typename... Args>
-        struct _is_construct_callable : public _is_construct_callable_impl<void, Tag, Args...> {};
+        struct _is_construct_callable : public _is_construct_callable_impl<void, Tag, Args...>
+        {
+        };
 
         template<typename... Args>
-        struct _is_constructible_impl : public std::false_type {};
+        struct _is_constructible_impl : public std::false_type
+        {
+        };
 
         template<typename T, typename... Args>
-        struct _is_constructible_impl<void_t<decltype(typename T::type{ std::declval<Args>()... })>, T, Args...> : public std::true_type {};
+        struct _is_constructible_impl<void_t<decltype(typename T::type{ std::declval<Args>()... })>, T, Args...> : public std::true_type
+        {
+        };
 
         template<typename Tag, typename... Args>
-        struct _is_constructible : public _is_constructible_impl<void, Tag, Args...> {};
+        struct _is_constructible : public _is_constructible_impl<void, Tag, Args...>
+        {
+        };
 
         template<typename... Args>
-        struct _is_same : std::false_type {};
+        struct _is_same : std::false_type
+        {
+        };
 
         template<typename T, typename U>
-        struct _is_same<T, U> : public std::is_same<
-            typename std::remove_reference<typename std::remove_cv<T>::type>::type,
-            typename std::remove_reference<typename std::remove_cv<U>::type>::type
-        > {};
+        struct _is_same<T, U> : public std::is_same<typename std::remove_reference<typename std::remove_cv<T>::type>::type,
+                                    typename std::remove_reference<typename std::remove_cv<U>::type>::type>
+        {
+        };
 
         template<template<typename...> class Trait, typename T, typename TypeList>
         struct _apply_on_type_list;
 
         template<template<typename...> class Trait, typename T, typename... Types>
-        struct _apply_on_type_list<Trait, T, std::tuple<Types...>> : Trait<T, Types...> {};
+        struct _apply_on_type_list<Trait, T, std::tuple<Types...>> : Trait<T, Types...>
+        {
+        };
     }
 
     class configuration
@@ -137,8 +176,7 @@ namespace reaver { inline namespace _v1
         template<typename T, typename std::enable_if<std::is_void<decltype(T::default_value, void())>::value, int>::type = 0>
         auto _get(choice<0>)
         {
-            return [&]() -> decltype(auto)
-            {
+            return [&]() -> decltype(auto) {
                 if (_map.find(boost::typeindex::type_id<T>()) == _map.end())
                 {
                     set<T>(typename T::type{ T::default_value });
@@ -154,48 +192,74 @@ namespace reaver { inline namespace _v1
         }
 
         // necessary forms:
-        // 0 - _map[boost::typeindex::type_id<T>()] = T::construct(std::move(value)), when identity construct exists
-        // 1 - _map[boost::typeindex::type_id<T>()] = std::move(value), when the target type is passed and no identity construct exists
-        // 2 - _map[boost::typeindex::type_id<T>()] = T::construct(std::forward<Arg>(arg)), with perfect match of argument type (modulo cref-qualifiers)
-        // 4 - _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(std::forward<Arg>(arg)), if no perfectly matching construct
-        // 5 - _map[boost::typeindex::type_id<T>()] = T::construct(std::forward<Args>(args)...), if matching construct exists
-        // 6 - _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<Args>(args)... }, if possible
+        // 0 - _map[boost::typeindex::type_id<T>()] =
+        // T::construct(std::move(value)), when identity
+        // construct exists
+        // 1 - _map[boost::typeindex::type_id<T>()] = std::move(value), when the
+        // target type is
+        // passed and no identity construct exists
+        // 2 - _map[boost::typeindex::type_id<T>()] =
+        // T::construct(std::forward<Arg>(arg)), with
+        // perfect match of argument type (modulo cref-qualifiers)
+        // 4 - _map[boost::typeindex::type_id<T>()] = static_cast<typename
+        // T::type>(std::forward<Arg>(arg)), if no perfectly matching construct
+        // 5 - _map[boost::typeindex::type_id<T>()] =
+        // T::construct(std::forward<Args>(args)...), if
+        // matching construct exists
+        // 6 - _map[boost::typeindex::type_id<T>()] = typename T::type{
+        // std::forward<Args>(args)...
+        // }, if possible
 
-        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_same, typename T::type, TypeList>::value
-            && _detail::_has_identity_construct<T>::value, int>::type = 0>
+        template<typename T,
+            typename TypeList,
+            typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_same, typename T::type, TypeList>::value
+                    && _detail::_has_identity_construct<T>::value,
+                int>::type = 0>
         auto _set(choice<0>)
         {
-            return [&](typename T::type value){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::move(value))); };
+            return [&](typename T::type value) { _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::move(value))); };
         }
 
-        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_same, typename T::type, TypeList>::value, int>::type = 0>
+        template<typename T,
+            typename TypeList,
+            typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_same, typename T::type, TypeList>::value, int>::type = 0>
         auto _set(choice<1>)
         {
-            return [&](typename T::type value){ _map[boost::typeindex::type_id<T>()] = std::move(value); };
+            return [&](typename T::type value) { _map[boost::typeindex::type_id<T>()] = std::move(value); };
         }
 
-        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_exact_match, T, TypeList>::value, int>::type = 0>
+        template<typename T,
+            typename TypeList,
+            typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_exact_match, T, TypeList>::value, int>::type = 0>
         auto _set(choice<2>)
         {
-            return [&](auto &&... arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg)...)); };
+            return [&](
+                auto &&... arg) { _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg)...)); };
         }
 
-        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_static_cast, T, TypeList>::value, int>::type = 0>
+        template<typename T,
+            typename TypeList,
+            typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_static_cast, T, TypeList>::value, int>::type = 0>
         auto _set(choice<3>)
         {
-            return [&](auto && arg){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(std::forward<decltype(arg)>(arg)); };
+            return [&](auto && arg) { _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(std::forward<decltype(arg)>(arg)); };
         }
 
-        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_construct_callable, T, TypeList>::value, int>::type = 0>
+        template<typename T,
+            typename TypeList,
+            typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_construct_callable, T, TypeList>::value, int>::type = 0>
         auto _set(choice<4>)
         {
-            return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(args)>(args)...)); };
+            return [&](
+                auto &&... args) { _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(args)>(args)...)); };
         }
 
-        template<typename T, typename TypeList, typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_constructible, T, TypeList>::value, int>::type = 0>
+        template<typename T,
+            typename TypeList,
+            typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_constructible, T, TypeList>::value, int>::type = 0>
         auto _set(choice<5>)
         {
-            return [&](auto &&... args){ _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<decltype(args)>(args)... }; };
+            return [&](auto &&... args) { _map[boost::typeindex::type_id<T>()] = typename T::type{ std::forward<decltype(args)>(args)... }; };
         }
 
         std::unordered_map<boost::typeindex::type_index, boost::any, boost::hash<boost::typeindex::type_index>> _map;
@@ -216,16 +280,16 @@ namespace reaver { inline namespace _v1
         }
 
     public:
-        template<typename... Other, typename std::enable_if<
-            !is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value &&
-            !is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value,
-        int>::type = 0>
+        template<typename... Other,
+            typename std::enable_if<!is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value
+                    && !is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value,
+                int>::type = 0>
         bound_configuration(const bound_configuration<Other...> & other) = delete;
 
-        template<typename... Other, typename std::enable_if<
-            !is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value &&
-            !is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value,
-        int>::type = 0>
+        template<typename... Other,
+            typename std::enable_if<!is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value
+                    && !is_subset<tpl::vector<Other...>, tpl::vector<Allowed...>>::value,
+                int>::type = 0>
         bound_configuration(bound_configuration<Other...> && other) = delete;
 
         template<typename... Other, typename std::enable_if<is_subset<tpl::vector<Allowed...>, tpl::vector<Other...>>::value, int>::type = 0>
@@ -324,5 +388,5 @@ namespace reaver { inline namespace _v1
         template<typename... Args>
         void get(Args &&...) const;
     };
-}}
-
+}
+}

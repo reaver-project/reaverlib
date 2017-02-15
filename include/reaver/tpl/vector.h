@@ -24,13 +24,15 @@
 
 #include <cstddef>
 
+#include "../id.h"
 #include "../swallow.h"
 #include "../unit.h"
-#include "../id.h"
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         template<typename... Elements>
         struct vector
@@ -44,5 +46,6 @@ namespace reaver
                 return {};
             }
         };
-    }}
+    }
+}
 }

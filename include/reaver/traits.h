@@ -27,39 +27,47 @@
 
 #include "void_t.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     template<typename T, typename _ = void>
-    struct is_container : std::false_type {};
+    struct is_container : std::false_type
+    {
+    };
 
     template<typename T>
-    struct is_container<
-            T,
-            void_t<
-                typename T::value_type,
-                typename T::size_type,
-                typename T::allocator_type,
-                typename T::iterator,
-                typename T::const_iterator,
-                decltype(std::declval<T>().size()),
-                decltype(std::declval<T>().begin()),
-                decltype(std::declval<T>().end()),
-                decltype(std::declval<T>().cbegin()),
-                decltype(std::declval<T>().cend())
-            >
-        > : public std::true_type {};
+    struct is_container<T,
+        void_t<typename T::value_type,
+            typename T::size_type,
+            typename T::allocator_type,
+            typename T::iterator,
+            typename T::const_iterator,
+            decltype(std::declval<T>().size()),
+            decltype(std::declval<T>().begin()),
+            decltype(std::declval<T>().end()),
+            decltype(std::declval<T>().cbegin()),
+            decltype(std::declval<T>().cend())>> : public std::true_type
+    {
+    };
 
     namespace _detail
     {
         template<typename... Args>
-        struct _is_callable_impl : std::false_type {};
+        struct _is_callable_impl : std::false_type
+        {
+        };
 
         template<typename T, typename... Args>
-        struct _is_callable_impl<void_t<decltype(std::declval<T>()(std::declval<Args>()...))>, T, Args...> : std::true_type {};
+        struct _is_callable_impl<void_t<decltype(std::declval<T>()(std::declval<Args>()...))>, T, Args...> : std::true_type
+        {
+        };
     };
 
     template<typename T, typename... Args>
-    struct is_callable : _detail::_is_callable_impl<void, T, Args...> {};
+    struct is_callable : _detail::_is_callable_impl<void, T, Args...>
+    {
+    };
 
     template<typename>
     struct is_vector : public std::false_type
@@ -70,5 +78,5 @@ namespace reaver { inline namespace _v1
     struct is_vector<std::vector<T, A>> : public std::true_type
     {
     };
-}}
-
+}
+}

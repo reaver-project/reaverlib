@@ -22,12 +22,14 @@
 
 #pragma once
 
-#include <mutex>
-#include <condition_variable>
-#include <thread>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class semaphore
     {
@@ -79,4 +81,5 @@ namespace reaver { inline namespace _v1
         std::condition_variable _condition;
         std::atomic<std::size_t> _count;
     };
-}}
+}
+}

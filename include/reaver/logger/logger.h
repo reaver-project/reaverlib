@@ -22,50 +22,53 @@
 
 #pragma once
 
-#include <vector>
+#include <condition_variable>
 #include <functional>
+#include <iostream>
 #include <mutex>
 #include <thread>
-#include <iostream>
-#include <condition_variable>
+#include <vector>
 
+#include "../style.h"
 #include "action.h"
 #include "level_registry.h"
-#include "../style.h"
 
 namespace reaver
 {
-    namespace logger { inline namespace _v1
+namespace logger
+{
+    inline namespace _v1
     {
         class logger
         {
         public:
-            logger(base_level level = info) : _level{ level }, _worker{ [=]()
-                {
-                    while (!_quit)
-                    {
-                        std::vector<std::function<void()>> functions;
+            logger(base_level level = info)
+                : _level{ level }, _worker{ [=]() {
+                      while (!_quit)
+                      {
+                          std::vector<std::function<void()>> functions;
 
-                        {
-                            std::unique_lock<std::mutex> lock{ _lock };
-                            if (_queue.empty())
-                            {
-                                _cv.wait(lock);
-                            }
-                            std::swap(functions, _queue);
-                        }
+                          {
+                              std::unique_lock<std::mutex> lock{ _lock };
+                              if (_queue.empty())
+                              {
+                                  _cv.wait(lock);
+                              }
+                              std::swap(functions, _queue);
+                          }
 
-                        for (auto && f : functions)
-                        {
-                            f();
-                        }
-                    }
+                          for (auto && f : functions)
+                          {
+                              f();
+                          }
+                      }
 
-                    for (auto & stream : _streams)
-                    {
-                        stream << style::style();
-                    }
-                } }, _streams{}
+                      for (auto & stream : _streams)
+                      {
+                          stream << style::style();
+                      }
+                  } },
+                  _streams{}
             {
             }
 
@@ -76,7 +79,7 @@ namespace reaver
 
             ~logger()
             {
-                _async([=](){ _quit = true; });
+                _async([=]() { _quit = true; });
                 _worker.join();
             }
 
@@ -85,7 +88,7 @@ namespace reaver
                 std::mutex mtx;
                 std::condition_variable cond;
 
-                _async([&](){ cond.notify_one(); });
+                _async([&]() { cond.notify_one(); });
 
                 std::unique_lock<std::mutex> lock(mtx);
                 cond.wait(lock);
@@ -137,8 +140,7 @@ namespace reaver
 
         void logger_friend::_write(logger & l, std::vector<streamable> vec)
         {
-            l._async([vec = std::move(vec), &l]()
-            {
+            l._async([vec = std::move(vec), &l]() {
                 for (auto & stream : l._streams)
                 {
                     for (const auto & x : vec)
@@ -160,5 +162,6 @@ namespace reaver
         {
             return default_logger()(Level{});
         }
-    }}
+    }
+}
 }

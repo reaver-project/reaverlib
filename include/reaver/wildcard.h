@@ -26,7 +26,9 @@
 
 namespace reaver
 {
-    namespace wildcard { inline namespace _v1
+namespace wildcard
+{
+    inline namespace _v1
     {
         inline bool match(const std::string & pattern, const std::string & string, std::size_t pattern_position = 0, std::size_t string_position = 0)
         {
@@ -57,5 +59,6 @@ namespace reaver
 
             return false;
         }
-    }}
+    }
+}
 }

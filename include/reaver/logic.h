@@ -24,7 +24,9 @@
 
 #include <type_traits>
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     template<bool... Bools>
     struct any_of;
@@ -58,5 +60,5 @@ namespace reaver { inline namespace _v1
     struct all_of<true> : std::true_type
     {
     };
-}}
-
+}
+}

@@ -22,19 +22,23 @@
 
 #pragma once
 
-#include <ostream>
 #include <memory>
+#include <ostream>
 
 namespace reaver
 {
-    namespace logger { inline namespace _v1
+namespace logger
+{
+    inline namespace _v1
     {
         namespace _detail
         {
             class _stream_wrapper_impl
             {
             public:
-                virtual ~_stream_wrapper_impl() {}
+                virtual ~_stream_wrapper_impl()
+                {
+                }
 
                 virtual std::ostream & get() = 0;
             };
@@ -96,5 +100,6 @@ namespace reaver
         private:
             std::unique_ptr<_detail::_stream_wrapper_impl> _impl;
         };
-    }}
+    }
+}
 }

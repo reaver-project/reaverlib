@@ -22,4 +22,3 @@
 
 #include "configuration/configuration.h"
 #include "configuration/default.h"
-

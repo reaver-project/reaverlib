@@ -24,7 +24,9 @@
 
 #include <functional>
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
 #if (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 3700) || (defined(__GNUC__) && __GNUC__ >= 6)
     using std::invoke;
@@ -36,5 +38,5 @@ namespace reaver { inline namespace _v1
         return std::__invoke(f, std::forward<Args>(args)...);
     }
 #endif
-}}
-
+}
+}

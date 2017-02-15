@@ -26,7 +26,9 @@
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         namespace _detail
         {
@@ -42,6 +44,6 @@ namespace reaver
 
         template<typename Vector, template<typename...> typename Function>
         using map = typename _detail::_map<Vector, Function>::type;
-    }}
+    }
 }
-
+}

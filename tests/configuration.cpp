@@ -26,77 +26,76 @@
 
 namespace test
 {
-#   include "configuration.h"
+#include "configuration.h"
 }
 
 namespace
 {
-    // storing data
-    struct simple_tag
+// storing data
+struct simple_tag
+{
+    using type = int;
+};
+
+struct another_tag
+{
+    using type = int;
+};
+
+// automatic conversions
+struct automatically_constructing_tag
+{
+    using type = bool;
+};
+
+// object construction
+struct explicitly_constructing_tag
+{
+    using type = std::string;
+
+    static type construct(int i)
     {
-        using type = int;
-    };
+        return std::to_string(i);
+    }
 
-    struct another_tag
+    static type construct(bool b)
     {
-        using type = int;
-    };
+        return b ? "true" : "false";
+    }
+};
 
-    // automatic conversions
-    struct automatically_constructing_tag
+struct identity_constructing_tag
+{
+    using type = std::string;
+
+    static type construct(std::string s)
     {
-        using type = bool;
-    };
+        s += " buzz";
+        return s;
+    }
+};
 
-    // object construction
-    struct explicitly_constructing_tag
+struct naughty_tag
+{
+    using type = bool;
+
+    template<typename... Args>
+    static int construct(Args &&...)
     {
-        using type = std::string;
+        return 0;
+    }
+};
 
-        static type construct(int i)
-        {
-            return std::to_string(i);
-        }
-
-        static type construct(bool b)
-        {
-            return b ? "true" : "false";
-        }
-    };
-
-    struct identity_constructing_tag
-    {
-        using type = std::string;
-
-        static type construct(std::string s)
-        {
-            s += " buzz";
-            return s;
-        }
-    };
-
-    struct naughty_tag
-    {
-        using type = bool;
-
-        template<typename... Args>
-        static int construct(Args &&...)
-        {
-            return 0;
-        }
-    };
-
-    struct tag_with_default
-    {
-        using type = int;
-        static constexpr int default_value = 1;
-    };
+struct tag_with_default
+{
+    using type = int;
+    static constexpr int default_value = 1;
+};
 }
 
 MAYFLY_BEGIN_SUITE("configuration");
 
-MAYFLY_ADD_TESTCASE("storing data", []
-{
+MAYFLY_ADD_TESTCASE("storing data", [] {
     test::reaver::configuration config;
 
     config.set<simple_tag>(1);
@@ -110,8 +109,7 @@ MAYFLY_ADD_TESTCASE("storing data", []
     MAYFLY_CHECK(config.get<another_tag>() == 3);
 });
 
-MAYFLY_ADD_TESTCASE("automatic conversions", []
-{
+MAYFLY_ADD_TESTCASE("automatic conversions", [] {
     test::reaver::configuration config;
 
     config.set<automatically_constructing_tag>(1);
@@ -124,8 +122,7 @@ MAYFLY_ADD_TESTCASE("automatic conversions", []
     MAYFLY_CHECK(config.get<automatically_constructing_tag>() == false);
 });
 
-MAYFLY_ADD_TESTCASE("object construction", []
-{
+MAYFLY_ADD_TESTCASE("object construction", [] {
     test::reaver::configuration config;
 
     config.set<explicitly_constructing_tag>(std::string{ "foobar" });
@@ -147,8 +144,7 @@ MAYFLY_ADD_TESTCASE("object construction", []
     MAYFLY_CHECK(config.get(identity_constructing_tag{}) == "fizz buzz");
 });
 
-MAYFLY_ADD_TESTCASE("naughty tag", []
-{
+MAYFLY_ADD_TESTCASE("naughty tag", [] {
     test::reaver::configuration config;
 
     config.set<naughty_tag>(false);
@@ -161,8 +157,7 @@ MAYFLY_ADD_TESTCASE("naughty tag", []
     MAYFLY_REQUIRE_NOTHROW(config.get<naughty_tag>());
 });
 
-MAYFLY_ADD_TESTCASE("tag with default value", []
-{
+MAYFLY_ADD_TESTCASE("tag with default value", [] {
     test::reaver::configuration config;
 
     MAYFLY_REQUIRE(config.get<tag_with_default>() == tag_with_default::default_value);
@@ -175,66 +170,60 @@ MAYFLY_BEGIN_SUITE("bound");
 
 namespace
 {
-    template<typename Tag, typename Config, typename std::enable_if<std::is_void<decltype(
-        std::declval<Config>().template set<Tag>(std::declval<typename Tag::type>()),
-        void()
-    )>::value, int>::type = 0>
-    bool check_invalid_set(test::reaver::choice<0>)
-    {
-        return false;
-    }
-
-    template<typename Tag, typename Config>
-    bool check_invalid_set(test::reaver::choice<1>)
-    {
-        return true;
-    }
-
-    template<typename Tag, typename Config, typename std::enable_if<std::is_void<decltype(
-        std::declval<Config>().template get<Tag>(std::declval<typename Tag::type>()),
-        void()
-    )>::value, int>::type = 0>
-    bool check_invalid_get(test::reaver::choice<0>)
-    {
-        return false;
-    }
-
-    template<typename Tag, typename Config>
-    bool check_invalid_get(test::reaver::choice<1>)
-    {
-        return true;
-    }
-
-    template<typename Tag, typename Config, typename std::enable_if<std::is_void<decltype(
-        std::declval<Config>().template add<Tag>(std::declval<typename Tag::type>()),
-        void()
-    )>::value, int>::type = 0>
-    bool check_invalid_add(test::reaver::choice<0>)
-    {
-        return false;
-    }
-
-    template<typename Tag, typename Config>
-    bool check_invalid_add(test::reaver::choice<1>)
-    {
-        return true;
-    }
+template<typename Tag,
+    typename Config,
+    typename std::enable_if<std::is_void<decltype(std::declval<Config>().template set<Tag>(std::declval<typename Tag::type>()), void())>::value, int>::type = 0>
+bool check_invalid_set(test::reaver::choice<0>)
+{
+    return false;
 }
 
-MAYFLY_ADD_TESTCASE("invalid set", []
+template<typename Tag, typename Config>
+bool check_invalid_set(test::reaver::choice<1>)
 {
+    return true;
+}
+
+template<typename Tag,
+    typename Config,
+    typename std::enable_if<std::is_void<decltype(std::declval<Config>().template get<Tag>(std::declval<typename Tag::type>()), void())>::value, int>::type = 0>
+bool check_invalid_get(test::reaver::choice<0>)
+{
+    return false;
+}
+
+template<typename Tag, typename Config>
+bool check_invalid_get(test::reaver::choice<1>)
+{
+    return true;
+}
+
+template<typename Tag,
+    typename Config,
+    typename std::enable_if<std::is_void<decltype(std::declval<Config>().template add<Tag>(std::declval<typename Tag::type>()), void())>::value, int>::type = 0>
+bool check_invalid_add(test::reaver::choice<0>)
+{
+    return false;
+}
+
+template<typename Tag, typename Config>
+bool check_invalid_add(test::reaver::choice<1>)
+{
+    return true;
+}
+}
+
+MAYFLY_ADD_TESTCASE("invalid set", [] {
     MAYFLY_REQUIRE(check_invalid_set<simple_tag, test::reaver::bound_configuration<>>(test::reaver::select_overload{}));
     MAYFLY_REQUIRE(check_invalid_set<another_tag, test::reaver::bound_configuration<simple_tag>>(test::reaver::select_overload{}));
 });
 
-MAYFLY_ADD_TESTCASE("invalid get", []
-{
+MAYFLY_ADD_TESTCASE("invalid get", [] {
     MAYFLY_REQUIRE(check_invalid_get<simple_tag, test::reaver::bound_configuration<>>(test::reaver::select_overload{}));
     MAYFLY_REQUIRE(check_invalid_get<another_tag, test::reaver::bound_configuration<simple_tag>>(test::reaver::select_overload{}));
 });
 
-MAYFLY_ADD_TESTCASE("add to bound configuration", []
-{
+MAYFLY_ADD_TESTCASE("add to bound configuration", [] {
     test::reaver::bound_configuration<> config;
     auto extended_config = config.add<simple_tag>(1);
 
@@ -247,13 +236,10 @@ MAYFLY_ADD_TESTCASE("add to bound configuration", []
     MAYFLY_REQUIRE(more_extended.get<another_tag>() == 2);
 });
 
-MAYFLY_ADD_TESTCASE("invalid add", []
-{
-    MAYFLY_REQUIRE(check_invalid_add<simple_tag, test::reaver::bound_configuration<simple_tag>>(test::reaver::select_overload{}));
-});
+MAYFLY_ADD_TESTCASE("invalid add",
+    [] { MAYFLY_REQUIRE(check_invalid_add<simple_tag, test::reaver::bound_configuration<simple_tag>>(test::reaver::select_overload{})); });
 
-MAYFLY_ADD_TESTCASE("construct from unbound", []
-{
+MAYFLY_ADD_TESTCASE("construct from unbound", [] {
     test::reaver::configuration config;
     MAYFLY_REQUIRE_NOTHROW(test::reaver::bound_configuration<> bound = config);
 
@@ -262,8 +248,7 @@ MAYFLY_ADD_TESTCASE("construct from unbound", []
     MAYFLY_REQUIRE_THROWS_TYPE(std::out_of_range, test::reaver::bound_configuration<simple_tag, another_tag> bound = config);
 });
 
-MAYFLY_ADD_TESTCASE("construct from bound", []
-{
+MAYFLY_ADD_TESTCASE("construct from bound", [] {
     test::reaver::bound_configuration<> empty;
     auto one = empty.add<simple_tag>(1);
     auto two = one.add<another_tag>(2);
@@ -279,21 +264,22 @@ MAYFLY_ADD_TESTCASE("construct from bound", []
 
 namespace
 {
-    template<typename BoundType, typename Argument, typename std::enable_if<std::is_void<decltype(BoundType{ std::declval<Argument>() }, void())>::value, int>::type = 0>
-    bool check_invalid_construct(test::reaver::choice<0>)
-    {
-        return false;
-    }
-
-    template<typename...>
-    bool check_invalid_construct(test::reaver::choice<1>)
-    {
-        return true;
-    }
+template<typename BoundType,
+    typename Argument,
+    typename std::enable_if<std::is_void<decltype(BoundType{ std::declval<Argument>() }, void())>::value, int>::type = 0>
+bool check_invalid_construct(test::reaver::choice<0>)
+{
+    return false;
 }
 
-MAYFLY_ADD_TESTCASE("invalid construct from bound", []
+template<typename...>
+bool check_invalid_construct(test::reaver::choice<1>)
 {
+    return true;
+}
+}
+
+MAYFLY_ADD_TESTCASE("invalid construct from bound", [] {
     test::reaver::bound_configuration<> empty;
     auto one = empty.add<simple_tag>(1);
 

@@ -20,32 +20,29 @@
  *
  **/
 
-#include <unordered_set>
 #include <numeric>
+#include <unordered_set>
 
 #include <reaver/logger.h>
 
 namespace test
 {
-#   include "../include/reaver/exception.h"
+#include "../include/reaver/exception.h"
 }
 
 #include <reaver/mayfly.h>
 
 MAYFLY_BEGIN_SUITE("exception");
 
-MAYFLY_ADD_TESTCASE("validity of construction", []()
-{
+MAYFLY_ADD_TESTCASE("validity of construction", []() {
     MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_exception_level, test::reaver::exception{ test::reaver::logger::debug });
     MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_exception_level, test::reaver::exception{ test::reaver::logger::trace });
     MAYFLY_CHECK_NOTHROW(test::reaver::exception{ test::reaver::logger::error });
 });
 
-MAYFLY_ADD_TESTCASE("what", []()
-{
+MAYFLY_ADD_TESTCASE("what", []() {
     using namespace std::string_literals;
     MAYFLY_CHECK((test::reaver::exception{ test::reaver::logger::always } << "abc" << 1).what() == "abc1\n"s);
 });
 
 MAYFLY_END_SUITE;
-

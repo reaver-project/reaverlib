@@ -22,17 +22,19 @@
 
 #include <type_traits>
 
-#include "../swallow.h"
 #include "../id.h"
-#include "../unit.h"
-#include "vector.h"
-#include "nth.h"
-#include "concat.h"
 #include "../static_assert.h"
+#include "../swallow.h"
+#include "../unit.h"
+#include "concat.h"
+#include "nth.h"
+#include "vector.h"
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         namespace _detail
         {
@@ -64,7 +66,7 @@ namespace reaver
             template<typename... Elements, std::size_t Position, typename Type>
             struct _insert_nth<vector<Elements...>, Position, Type>
             {
-                using type = typename _insert_nth_helper<vector<Elements...>, Position, Type, Position < sizeof...(Elements)>::type;
+                using type = typename _insert_nth_helper < vector<Elements...>, Position, Type, Position<sizeof...(Elements)>::type;
             };
 
             template<typename Vector, template<typename...> typename Comparator, typename... Elements>
@@ -82,7 +84,13 @@ namespace reaver
                 using type = typename _sorted_insert<vector<Head>, Comparator, Tail...>::type;
             };
 
-            template<std::size_t Position, std::size_t Begin, std::size_t End, typename Vector, template<typename...> typename Comparator, typename Type, typename = void>
+            template<std::size_t Position,
+                std::size_t Begin,
+                std::size_t End,
+                typename Vector,
+                template<typename...> typename Comparator,
+                typename Type,
+                typename = void>
             struct _sorted_position_impl;
 
             template<std::size_t Begin, std::size_t End, typename Vector, template<typename...> typename Comparator, typename Type>
@@ -107,19 +115,29 @@ namespace reaver
             struct _sorted_position_impl<Position, Begin, End, vector<Elements...>, Comparator, Type, typename std::enable_if<Position != ~0ull>::type>
             {
             private:
-                static constexpr const std::size_t condition1 = Comparator<nth<vector<Elements...>, Position - 1>, Type>::value || Position == Begin || Position == End;
+                static constexpr const std::size_t condition1 =
+                    Comparator<nth<vector<Elements...>, Position - 1>, Type>::value || Position == Begin || Position == End;
                 static constexpr const std::size_t condition2 = Comparator<Type, nth<vector<Elements...>, Position>>::value
                     || (!Comparator<Type, nth<vector<Elements...>, Position>>::value && !Comparator<nth<vector<Elements...>, Position>, Type>::value)
                     || Position == Begin || Position == End;
 
             public:
-                static constexpr const std::size_t value = Comparator<nth<vector<Elements...>, sizeof...(Elements) - 1>, Type>::value
-                    ? sizeof...(Elements) // greater than the last element should be placed at the end
-                    : (condition1
-                        ? (condition2
-                            ? Position
-                            : _sorted_position_impl<condition2 ? -1 : (Position + (End - Position) / 2), Position, End, vector<Elements...>, Comparator, Type>::value)
-                        : _sorted_position_impl<condition1 ? -1 : (Position - (Position - Begin) / 2), Begin, Position, vector<Elements...>, Comparator, Type>::value);
+                static constexpr const std::size_t value = Comparator<nth<vector<Elements...>, sizeof...(Elements) - 1>,
+                                                               Type>::value
+                    ? sizeof...(Elements) // greater than the last element
+                                          // should be placed at the end
+                    : (condition1 ? (condition2 ? Position : _sorted_position_impl < condition2 ? -1 : (Position + (End - Position) / 2),
+                                        Position,
+                                        End,
+                                        vector<Elements...>,
+                                        Comparator,
+                                        Type > ::value)
+                                  : _sorted_position_impl < condition1 ? -1 : (Position - (Position - Begin) / 2),
+                          Begin,
+                          Position,
+                          vector<Elements...>,
+                          Comparator,
+                          Type > ::value);
             };
 
             template<typename Vector, template<typename...> typename Comparator, typename Type>
@@ -130,7 +148,10 @@ namespace reaver
             template<typename... Sorted, template<typename...> typename Comparator, typename Head, typename... Tail>
             struct _sorted_insert<vector<Sorted...>, Comparator, Head, Tail...>
             {
-                using type = typename _sorted_insert<typename _insert_nth<vector<Sorted...>, _sorted_position<vector<Sorted...>, Comparator, Head>::value, Head>::type, Comparator, Tail...>::type;
+                using type =
+                    typename _sorted_insert<typename _insert_nth<vector<Sorted...>, _sorted_position<vector<Sorted...>, Comparator, Head>::value, Head>::type,
+                        Comparator,
+                        Tail...>::type;
             };
 
             template<typename... Sorted, template<typename...> typename Comparator>
@@ -151,6 +172,6 @@ namespace reaver
 
         template<typename Vector, template<typename...> typename Comparator>
         using sort = typename _detail::_sort<Vector, Comparator>::type;
-    }}
+    }
 }
-
+}

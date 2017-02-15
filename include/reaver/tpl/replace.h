@@ -24,7 +24,9 @@
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         namespace _detail
         {
@@ -55,6 +57,6 @@ namespace reaver
 
         template<typename Original, typename Find, typename Replace>
         using replace = typename _detail::_replace<Original, Find, Replace>::type;
-    }}
+    }
 }
-
+}

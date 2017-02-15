@@ -24,13 +24,12 @@
 
 namespace test
 {
-#   include "manual.h"
+#include "manual.h"
 }
 
 MAYFLY_BEGIN_SUITE("manual object");
 
-MAYFLY_ADD_TESTCASE("construction and destruction", []()
-{
+MAYFLY_ADD_TESTCASE("construction and destruction", []() {
     {
         test::reaver::manual_object<int> object;
         object.emplace(1);
@@ -45,8 +44,7 @@ MAYFLY_ADD_TESTCASE("construction and destruction", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("copy and move", []()
-{
+MAYFLY_ADD_TESTCASE("copy and move", []() {
     struct test_subject
     {
         test_subject(std::string str) : buf(std::move(str))
@@ -80,8 +78,7 @@ MAYFLY_ADD_TESTCASE("copy and move", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("destruction", []()
-{
+MAYFLY_ADD_TESTCASE("destruction", []() {
     struct test_subject
     {
         test_subject(bool & flag) : flag{ flag }
@@ -125,4 +122,3 @@ MAYFLY_ADD_TESTCASE("destruction", []()
 });
 
 MAYFLY_END_SUITE;
-

@@ -22,17 +22,19 @@
 
 #pragma once
 
-#include "logger.h"
 #include "exception.h"
+#include "logger.h"
 #include "swallow.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class error_engine_exception : public exception
     {
     public:
-        error_engine_exception(std::vector<exception> errors, std::size_t error_count, std::size_t warning_count) : exception{ logger::fatal }, errors{ std::move(errors) },
-            error_count{ error_count}, warning_count{ warning_count }
+        error_engine_exception(std::vector<exception> errors, std::size_t error_count, std::size_t warning_count)
+            : exception{ logger::fatal }, errors{ std::move(errors) }, error_count{ error_count }, warning_count{ warning_count }
         {
         }
 
@@ -43,7 +45,8 @@ namespace reaver { inline namespace _v1
                 e.print(l);
             }
 
-            l() << error_count << " error" << (error_count != 1 ? "s" : "") << " and " << warning_count << " warning" << (warning_count != 1 ? "s" : "") << " generated.";
+            l() << error_count << " error" << (error_count != 1 ? "s" : "") << " and " << warning_count << " warning" << (warning_count != 1 ? "s" : "")
+                << " generated.";
         }
 
         const std::vector<exception> errors;
@@ -54,8 +57,8 @@ namespace reaver { inline namespace _v1
     class error_engine
     {
     public:
-        error_engine(std::size_t max_errors = 20, logger::base_level error_level = logger::base_level::error) : _max_errors{ max_errors },
-            _error_level{ error_level }
+        error_engine(std::size_t max_errors = 20, logger::base_level error_level = logger::base_level::error)
+            : _max_errors{ max_errors }, _error_level{ error_level }
         {
         }
 
@@ -190,8 +193,8 @@ namespace reaver { inline namespace _v1
                 e.print(l);
             }
 
-            l() << _error_count << " error" << (_error_count != 1 ? "s" : "") << " and " << _warning_count << " warning"
-                << (_warning_count != 1 ? "s" : "") << " generated.";
+            l() << _error_count << " error" << (_error_count != 1 ? "s" : "") << " and " << _warning_count << " warning" << (_warning_count != 1 ? "s" : "")
+                << " generated.";
         }
 
         operator bool() const
@@ -223,5 +226,5 @@ namespace reaver { inline namespace _v1
         logger::base_level _error_level;
         mutable bool _reported = false;
     };
-}}
-
+}
+}

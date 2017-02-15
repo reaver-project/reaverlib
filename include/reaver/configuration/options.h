@@ -23,27 +23,29 @@
 #pragma once
 
 #include <cstddef>
-#include <type_traits>
 #include <memory>
+#include <type_traits>
 #include <unordered_map>
 
+#include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/optional.hpp>
 
 #include "../configuration.h"
-#include "../swallow.h"
-#include "../unit.h"
+#include "../exception.h"
 #include "../id.h"
 #include "../logger.h"
-#include "../exception.h"
-#include "../tpl/sort.h"
-#include "../tpl/filter.h"
 #include "../overloads.h"
+#include "../swallow.h"
+#include "../tpl/filter.h"
+#include "../tpl/sort.h"
+#include "../unit.h"
 
 namespace reaver
 {
-    namespace options { inline namespace _v1
+namespace options
+{
+    inline namespace _v1
     {
         static constexpr struct positional_type
         {
@@ -84,7 +86,9 @@ namespace reaver
             template<typename Option, typename std::enable_if<Option::options.position_specified, int>::type = 0>
             void append()
             {
-                if (boost::range::find_if(_positional_options, [](const auto & elem){ return dynamic_cast<_positional_impl<Option> *>(elem.get()) != nullptr; }) != _positional_options.end())
+                if (boost::range::find_if(
+                        _positional_options, [](const auto & elem) { return dynamic_cast<_positional_impl<Option> *>(elem.get()) != nullptr; })
+                    != _positional_options.end())
                 {
                     throw duplicate_option{ Option::name };
                 }
@@ -95,7 +99,7 @@ namespace reaver
             template<typename Option, typename std::enable_if<!Option::options.position_specified, int>::type = 0>
             void append()
             {
-                if (boost::range::find_if(_options, [](const auto & elem){ return dynamic_cast<_impl<Option> *>(elem.get()) != nullptr; }) != _options.end())
+                if (boost::range::find_if(_options, [](const auto & elem) { return dynamic_cast<_impl<Option> *>(elem.get()) != nullptr; }) != _options.end())
                 {
                     throw duplicate_option{ Option::name };
                 }
@@ -323,6 +327,7 @@ namespace reaver
             static constexpr std::size_t count = 1;
             static constexpr option_set options = {};
             static constexpr bool is_void = false;
+
         private:
             static _detail::_option_registrar<CRTP, Register> _registrar;
         };
@@ -342,13 +347,27 @@ namespace reaver
         template<typename CRTP, typename ValueType, bool Register>
         _detail::_option_registrar<CRTP, Register> option<CRTP, ValueType, Register>::_registrar;
 
-#       define opt_name(X) static constexpr const char * name = X
-#       define opt_desc(X) static constexpr const char * description = X
-#       define opt_name_desc(X, Y) opt_name(X); opt_desc(Y)
-#       define new_opt(name, type, name_string) struct name : ::reaver::options::opt<name, type> { opt_name(name_string); }
-#       define new_opt_desc(name, type, name_string, desc_string) struct name : ::reaver::options::opt<name, type> { opt_name_desc(name_string, desc_string); }
-#       define new_opt_ext(name, type, ...) struct name : ::reaver::options::opt<name, type> { __VA_ARGS__ }
-#       define opt_options(...) static constexpt ::reaver::options::option_set options = { __VA_ARGS__ }
+#define opt_name(X) static constexpr const char * name = X
+#define opt_desc(X) static constexpr const char * description = X
+#define opt_name_desc(X, Y)                                                                                                                                    \
+    opt_name(X);                                                                                                                                               \
+    opt_desc(Y)
+#define new_opt(name, type, name_string)                                                                                                                       \
+    struct name : ::reaver::options::opt<name, type>                                                                                                           \
+    {                                                                                                                                                          \
+        opt_name(name_string);                                                                                                                                 \
+    }
+#define new_opt_desc(name, type, name_string, desc_string)                                                                                                     \
+    struct name : ::reaver::options::opt<name, type>                                                                                                           \
+    {                                                                                                                                                          \
+        opt_name_desc(name_string, desc_string);                                                                                                               \
+    }
+#define new_opt_ext(name, type, ...)                                                                                                                           \
+    struct name : ::reaver::options::opt<name, type>                                                                                                           \
+    {                                                                                                                                                          \
+        __VA_ARGS__                                                                                                                                            \
+    }
+#define opt_options(...) static constexpt::reaver::options::option_set options = { __VA_ARGS__ }
 
         inline auto parse_argv(int argc, const char * const * argv, const option_registry & registry = default_option_registry())
         {
@@ -405,21 +424,27 @@ namespace reaver
             }
 
             template<typename T>
-            struct _is_vector : std::false_type {};
+            struct _is_vector : std::false_type
+            {
+            };
 
             template<typename T>
-            struct _is_vector<std::vector<T>> : std::true_type {};
+            struct _is_vector<std::vector<T>> : std::true_type
+            {
+            };
 
-            template<typename T, typename Value, typename std::enable_if<_is_vector<typename _po_type<T>::type>::value && T::options.allows_composing, int>::type = 0>
+            template<typename T,
+                typename Value,
+                typename std::enable_if<_is_vector<typename _po_type<T>::type>::value && T::options.allows_composing, int>::type = 0>
             auto _handle_vector_impl(choice<0>)
             {
-                return [](Value value){ return value->composing(); };
+                return [](Value value) { return value->composing(); };
             }
 
             template<typename T, typename Value>
             auto _handle_vector_impl(choice<1>)
             {
-                return [](Value value){ return value; };
+                return [](Value value) { return value; };
             }
 
             template<typename T, typename Value>
@@ -431,7 +456,8 @@ namespace reaver
             template<typename T, typename std::enable_if<!T::is_void, int>::type = 0>
             unit _handle(boost::program_options::options_description & desc)
             {
-                desc.add_options()(T::name, _handle_vector<T>(boost::program_options::value<typename _remove_optional<typename _po_type<T>::type>::type>()), T::description);
+                desc.add_options()(
+                    T::name, _handle_vector<T>(boost::program_options::value<typename _remove_optional<typename _po_type<T>::type>::type>()), T::description);
 
                 return {};
             }
@@ -468,9 +494,9 @@ namespace reaver
             struct _compare_positionals
             {
                 static_assert_(!(T::options.position.required_position < U::options.position.required_position
-                        && T::options.position.required_position + T::options.position.count > U::options.position.required_position)
+                                   && T::options.position.required_position + T::options.position.count > U::options.position.required_position)
                     && !(U::options.position.required_position < T::options.position.required_position
-                        && U::options.position.required_position + U::options.position.count > T::options.position.required_position));
+                           && U::options.position.required_position + U::options.position.count > T::options.position.required_position));
                 static constexpr bool value = T::options.position.required_position < U::options.position.required_position;
             };
 
@@ -478,13 +504,8 @@ namespace reaver
             auto _handle_positional(id<Args>...)
             {
                 boost::program_options::positional_options_description desc;
-                tpl::sort<
-                    tpl::filter<
-                        tpl::vector<Args...>,
-                        _is_positional
-                    >,
-                    _compare_positionals
-                >::map([&](auto tpl_id){ _handle_positional<typename decltype(tpl_id)::type>(desc);  });
+                tpl::sort<tpl::filter<tpl::vector<Args...>, _is_positional>, _compare_positionals>::map(
+                    [&](auto tpl_id) { _handle_positional<typename decltype(tpl_id)::type>(desc); });
                 return desc;
             }
 
@@ -504,33 +525,45 @@ namespace reaver
             }
 
             template<typename>
-            struct _is_optional : std::false_type {};
+            struct _is_optional : std::false_type
+            {
+            };
 
             template<typename T>
-            struct _is_optional<boost::optional<T>> : std::true_type {};
+            struct _is_optional<boost::optional<T>> : std::true_type
+            {
+            };
 
-            template<typename Head, typename... Tail, typename Config, typename std::enable_if<_is_optional<typename Head::type>::value || _is_vector<typename Head::type>::value, int>::type = 0>
+            template<typename Head,
+                typename... Tail,
+                typename Config,
+                typename std::enable_if<_is_optional<typename Head::type>::value || _is_vector<typename Head::type>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
-                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(
-                    map.count(_name(Head::name))
-                        ? map[_name(Head::name)].template as<typename _remove_optional<typename _po_type<Head>::type>::type>()
-                        : typename Head::type{}));
+                return _get<Tail...>(map,
+                    std::forward<Config>(config).template add<Head>(map.count(_name(Head::name))
+                            ? map[_name(Head::name)].template as<typename _remove_optional<typename _po_type<Head>::type>::type>()
+                            : typename Head::type{}));
             }
 
             template<typename T, typename = void>
-            struct _has_default : std::false_type {};
+            struct _has_default : std::false_type
+            {
+            };
 
             template<typename T>
-            struct _has_default<T, void_t<decltype(T::default_value)>> : std::true_type {};
+            struct _has_default<T, void_t<decltype(T::default_value)>> : std::true_type
+            {
+            };
 
             template<typename Head, typename... Tail, typename Config, typename std::enable_if<_has_default<Head>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
                 if (map.count(_name(Head::name)))
                 {
-                    return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map.at(_name(Head::name)).template as<
-                        typename _remove_optional<typename _po_type<Head>::type>::type>()));
+                    return _get<Tail...>(map,
+                        std::forward<Config>(config).template add<Head>(
+                            map.at(_name(Head::name)).template as<typename _remove_optional<typename _po_type<Head>::type>::type>()));
                 }
 
                 return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(decltype(Head::default_value){ Head::default_value }));
@@ -538,14 +571,16 @@ namespace reaver
 
             // TODO: convert all these to choice<N>/select_overload somehow
             // right now it's getting ridiculous
-            template<typename Head, typename... Tail, typename Config, typename std::enable_if<
-                !Head::is_void
-                && !_is_optional<typename Head::type>::value
-                && !_has_default<Head>::value
-                && !_is_vector<typename Head::type>::value, int>::type = 0>
+            template<typename Head,
+                typename... Tail,
+                typename Config,
+                typename std::enable_if<!Head::is_void && !_is_optional<typename Head::type>::value && !_has_default<Head>::value
+                        && !_is_vector<typename Head::type>::value,
+                    int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
-                return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map.at(_name(Head::name)).template as<typename _po_type<Head>::type>()));
+                return _get<Tail...>(
+                    map, std::forward<Config>(config).template add<Head>(map.at(_name(Head::name)).template as<typename _po_type<Head>::type>()));
             }
 
             template<typename... Args, typename Config>
@@ -566,14 +601,18 @@ namespace reaver
             all.add(visible).add(hidden);
 
             boost::program_options::variables_map variables;
-            boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(all).positional(positional)
-                .style(boost::program_options::command_line_style::allow_short
-                    | boost::program_options::command_line_style::allow_long
-                    | boost::program_options::command_line_style::allow_sticky
-                    | boost::program_options::command_line_style::allow_dash_for_short
-                    | boost::program_options::command_line_style::long_allow_next
-                    | boost::program_options::command_line_style::short_allow_next
-                    | boost::program_options::command_line_style::allow_long_disguise).run(), variables);
+            boost::program_options::store(
+                boost::program_options::command_line_parser(argc, argv)
+                    .options(all)
+                    .positional(positional)
+                    .style(boost::program_options::command_line_style::allow_short | boost::program_options::command_line_style::allow_long
+                        | boost::program_options::command_line_style::allow_sticky
+                        | boost::program_options::command_line_style::allow_dash_for_short
+                        | boost::program_options::command_line_style::long_allow_next
+                        | boost::program_options::command_line_style::short_allow_next
+                        | boost::program_options::command_line_style::allow_long_disguise)
+                    .run(),
+                variables);
 
             return _detail::_get<Args...>(variables, bound_configuration<>{});
         }
@@ -583,6 +622,6 @@ namespace reaver
         {
             return parse_argv(argc, argv, id<Args>{}...);
         }
-    }}
+    }
 }
-
+}

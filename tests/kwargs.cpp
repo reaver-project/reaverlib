@@ -26,52 +26,48 @@
 
 namespace
 {
-    using namespace reaver::kwargs;
+using namespace reaver::kwargs;
 
-    struct argx : kwarg<int>
-    {
-        using kwarg::kwarg;
-    };
+struct argx : kwarg<int>
+{
+    using kwarg::kwarg;
+};
 
-    struct argy : kwarg<std::string>
-    {
-        using kwarg::kwarg;
-    };
+struct argy : kwarg<std::string>
+{
+    using kwarg::kwarg;
+};
 
-    struct argz : kwarg<int>
-    {
-        using kwarg::kwarg;
-    };
+struct argz : kwarg<int>
+{
+    using kwarg::kwarg;
+};
 }
 
 MAYFLY_BEGIN_SUITE("keyword arguments");
 
-MAYFLY_ADD_TESTCASE("get", []
-{
+MAYFLY_ADD_TESTCASE("get", [] {
     MAYFLY_REQUIRE(reaver::kwargs::get<argx>(argx{ 1 }, argy{ "foo" }, argz{ 2 }) == 1);
     MAYFLY_REQUIRE(reaver::kwargs::get<argy>(argx{ 1 }, argy{ "foo" }, argz{ 2 }) == "foo");
     MAYFLY_REQUIRE(reaver::kwargs::get<argz>(argx{ 1 }, argy{ "foo" }, argz{ 2 }) == 2);
 });
 
-MAYFLY_ADD_TESTCASE("get_or", []
-{
+MAYFLY_ADD_TESTCASE("get_or", [] {
     MAYFLY_REQUIRE(reaver::kwargs::get_or<argx>(0, argx{ 1 }, argy{ "foo" }, argz{ 2 }) == 1);
     MAYFLY_REQUIRE(reaver::kwargs::get_or<argy>("", argx{ 1 }, argy{ "foo" }, argz{ 2 }) == "foo");
     MAYFLY_REQUIRE(reaver::kwargs::get_or<argz>(0, argx{ 1 }, argy{ "foo" }, argz{ 2 }) == 2);
     MAYFLY_REQUIRE(reaver::kwargs::get_or<argx>(0, argy{ "foo" }, argz{ 2 }) == 0);
 });
 
-MAYFLY_ADD_TESTCASE("get_nth", []
-{
+MAYFLY_ADD_TESTCASE("get_nth", [] {
     MAYFLY_REQUIRE(reaver::kwargs::get_nth<argx>(0, argx{ 1 }, argx{ 2 }, argy{ "foo" }, argx{ 3 }) == 1);
     MAYFLY_REQUIRE(reaver::kwargs::get_nth<argx>(1, argx{ 1 }, argx{ 2 }, argy{ "foo" }, argx{ 3 }) == 2);
     MAYFLY_REQUIRE(reaver::kwargs::get_nth<argx>(2, argx{ 1 }, argx{ 2 }, argy{ "foo" }, argx{ 3 }) == 3);
     MAYFLY_REQUIRE_THROWS_TYPE(std::out_of_range, reaver::kwargs::get_nth<argx>(1, argx{ 1 }));
 });
 
-MAYFLY_ADD_TESTCASE("get_all", []
-{
-    MAYFLY_REQUIRE(reaver::kwargs::get_all<argx>(argx{ 1 }, argx{ 2 }, argz{ 3 }, argy{ "foo" }, argx{ 4 }) == std::array<int, 3>{{ 1, 2, 4 }});
+MAYFLY_ADD_TESTCASE("get_all", [] {
+    MAYFLY_REQUIRE(reaver::kwargs::get_all<argx>(argx{ 1 }, argx{ 2 }, argz{ 3 }, argy{ "foo" }, argx{ 4 }) == std::array<int, 3>{ { 1, 2, 4 } });
 });
 
 MAYFLY_END_SUITE;

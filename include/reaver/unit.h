@@ -24,7 +24,7 @@
 
 namespace reaver
 {
-    struct unit
-    {
-    };
+struct unit
+{
+};
 }

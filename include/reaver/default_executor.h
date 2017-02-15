@@ -24,11 +24,17 @@
 
 #include "thread_pool.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
 {
-    // defaults to a thread pool with thread count of std::thread::hardware_concurrency()
-    // the recommended way to make it be a thread pool with a different thread count is to create it manually and pass into this function
-    // after the first call to default_executor, the default executor cannot be changed
+inline namespace _v1
+{
+    // defaults to a thread pool with thread count of
+    // std::thread::hardware_concurrency()
+    // the recommended way to make it be a thread pool with a different thread
+    // count is to create it
+    // manually and pass into this function
+    // after the first call to default_executor, the default executor cannot be
+    // changed
     inline std::shared_ptr<executor> default_executor(std::shared_ptr<executor> custom = nullptr)
     {
         static auto de = [&]() -> std::shared_ptr<executor> {
@@ -42,5 +48,5 @@ namespace reaver { inline namespace _v1
 
         return de;
     }
-}}
-
+}
+}

@@ -26,7 +26,9 @@
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         namespace _detail
         {
@@ -54,6 +56,6 @@ namespace reaver
 
         template<typename... Vectors>
         using concat = typename _detail::_concat<Vectors...>::type;
-    }}
+    }
 }
-
+}
