@@ -24,7 +24,9 @@
 
 #include "tpl/vector.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     template<typename Checked, typename Set>
     struct is_subset : public std::false_type
@@ -60,5 +62,5 @@ namespace reaver { inline namespace _v1
     struct is_subset<tpl::vector<Checked...>, tpl::vector<Set...>> : public all_of<is_subset<tpl::vector<Checked>, tpl::vector<Set...>>::value...>
     {
     };
-}}
-
+}
+}

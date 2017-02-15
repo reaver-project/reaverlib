@@ -34,69 +34,68 @@ MAYFLY_BEGIN_SUITE("fold");
 
 namespace
 {
-    struct foo
+struct foo
+{
+    template<typename T>
+    bool operator==(T)
     {
-        template<typename T>
-        bool operator==(T)
-        {
-            return false;
-        }
+        return false;
+    }
 
-        bool operator==(foo)
-        {
-            return true;
-        }
-    };
-
-    struct bar
+    bool operator==(foo)
     {
-        template<typename T>
-        bool operator==(T)
-        {
-            return false;
-        }
+        return true;
+    }
+};
 
-        bool operator==(bar)
-        {
-            return true;
-        }
-    };
-
-    struct baz
+struct bar
+{
+    template<typename T>
+    bool operator==(T)
     {
-        template<typename T>
-        bool operator==(T)
-        {
-            return false;
-        }
+        return false;
+    }
 
-        bool operator==(baz)
-        {
-            return true;
-        }
-    };
-
-    struct f
+    bool operator==(bar)
     {
-        template<typename T, typename U>
-        auto operator()(T, U)
-        {
-            return T{};
-        }
-    };
+        return true;
+    }
+};
 
-    struct g
+struct baz
+{
+    template<typename T>
+    bool operator==(T)
     {
-        template<typename T, typename U>
-        auto operator()(T, U)
-        {
-            return U{};
-        }
-    };
+        return false;
+    }
+
+    bool operator==(baz)
+    {
+        return true;
+    }
+};
+
+struct f
+{
+    template<typename T, typename U>
+    auto operator()(T, U)
+    {
+        return T{};
+    }
+};
+
+struct g
+{
+    template<typename T, typename U>
+    auto operator()(T, U)
+    {
+        return U{};
+    }
+};
 }
 
-MAYFLY_ADD_TESTCASE("foldr", []()
-{
+MAYFLY_ADD_TESTCASE("foldr", []() {
     MAYFLY_CHECK(test::reaver::foldr(std::plus<>{}, 0) == 0);
     MAYFLY_CHECK(test::reaver::foldr(std::plus<>{}, 1, 2, 3, 4) == 10);
 
@@ -104,8 +103,7 @@ MAYFLY_ADD_TESTCASE("foldr", []()
     MAYFLY_CHECK(test::reaver::foldr(g{}, foo{}, bar{}, baz{}) == foo{});
 });
 
-MAYFLY_ADD_TESTCASE("foldl", []()
-{
+MAYFLY_ADD_TESTCASE("foldl", []() {
     MAYFLY_CHECK(test::reaver::foldl(std::plus<>{}, 0) == 0);
     MAYFLY_CHECK(test::reaver::foldl(std::plus<>{}, 1, 2, 3, 4) == 10);
 
@@ -115,4 +113,3 @@ MAYFLY_ADD_TESTCASE("foldl", []()
 
 MAYFLY_END_SUITE;
 MAYFLY_END_SUITE;
-

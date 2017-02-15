@@ -22,19 +22,20 @@
 
 #pragma once
 
-#include <utility>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "exception.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     namespace _posix
     {
-        extern "C"
-        {
-#           include <dlfcn.h>
+        extern "C" {
+#include <dlfcn.h>
         }
     }
 
@@ -102,10 +103,11 @@ namespace reaver { inline namespace _v1
     class plugin_function;
 
     template<typename Ret, typename... Args>
-    class plugin_function<Ret (Args...)>
+    class plugin_function<Ret(Args...)>
     {
     public:
-        plugin_function(std::shared_ptr<plugin> plugin, const std::string & name) : _plugin{ std::move(plugin) }, _function{ _plugin->get_symbol<signature>(name) }
+        plugin_function(std::shared_ptr<plugin> plugin, const std::string & name)
+            : _plugin{ std::move(plugin) }, _function{ _plugin->get_symbol<signature>(name) }
         {
         }
 
@@ -124,7 +126,7 @@ namespace reaver { inline namespace _v1
             return lhs._function == rhs._function;
         }
 
-        using signature = Ret (Args...);
+        using signature = Ret(Args...);
 
         template<typename T>
         friend struct std::hash;
@@ -133,17 +135,17 @@ namespace reaver { inline namespace _v1
         std::shared_ptr<plugin> _plugin;
         signature * _function;
     };
-}}
+}
+}
 
 namespace std
 {
-    template<typename T>
-    struct hash<reaver::plugin_function<T>>
+template<typename T>
+struct hash<reaver::plugin_function<T>>
+{
+    std::size_t operator()(const reaver::plugin_function<T> & t) const
     {
-        std::size_t operator()(const reaver::plugin_function<T> & t) const
-        {
-            return std::hash<T *>()(t._function);
-        }
-    };
+        return std::hash<T *>()(t._function);
+    }
 };
-
+};

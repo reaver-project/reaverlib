@@ -21,8 +21,7 @@
  **/
 
 #ifdef __clang__
-# define static_assert_(...) static_assert(__VA_ARGS__)
+#define static_assert_(...) static_assert(__VA_ARGS__)
 #else
-# define static_assert_(...) static_assert(__VA_ARGS__, #__VA_ARGS__)
+#define static_assert_(...) static_assert(__VA_ARGS__, #__VA_ARGS__)
 #endif
-

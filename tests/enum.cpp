@@ -24,41 +24,24 @@
 
 namespace test
 {
-#   define REAVER_ROOT_NAMESPACE ::test::reaver
-#   include "enum.h"
+#define REAVER_ROOT_NAMESPACE ::test::reaver
+#include "enum.h"
 }
 
 MAYFLY_BEGIN_SUITE("reflected enum");
 
 namespace
 {
-    reflected_enum(test,
-        foo,
-        bar,
-        baz = 5,
-        buzz = 1,
-        fizz
-    );
+reflected_enum(test, foo, bar, baz = 5, buzz = 1, fizz);
 
-    reflected_enum(another,
-        foo,
-        bar,
-        baz
-    );
+reflected_enum(another, foo, bar, baz);
 }
 
-MAYFLY_ADD_TESTCASE("enum_values", []
-{
-    MAYFLY_REQUIRE(enum_values<test>() == std::vector<test>{ test::foo, test::bar, test::baz, test::buzz, test::fizz });
-});
+MAYFLY_ADD_TESTCASE("enum_values", [] { MAYFLY_REQUIRE(enum_values<test>() == std::vector<test>{ test::foo, test::bar, test::baz, test::buzz, test::fizz }); });
 
-MAYFLY_ADD_TESTCASE("enum_strings", []
-{
-    MAYFLY_REQUIRE(enum_strings<test>() == std::vector<std::string>{ "foo", "bar", "baz", "buzz", "fizz" });
-});
+MAYFLY_ADD_TESTCASE("enum_strings", [] { MAYFLY_REQUIRE(enum_strings<test>() == std::vector<std::string>{ "foo", "bar", "baz", "buzz", "fizz" }); });
 
-MAYFLY_ADD_TESTCASE("to_string", []
-{
+MAYFLY_ADD_TESTCASE("to_string", [] {
     MAYFLY_CHECK(to_string(test::foo) == "foo");
     MAYFLY_CHECK(to_string(test::bar) == "bar");
     MAYFLY_CHECK(to_string(test::baz) == "baz");
@@ -66,8 +49,7 @@ MAYFLY_ADD_TESTCASE("to_string", []
     MAYFLY_CHECK(to_string(test::fizz) == "fizz");
 });
 
-MAYFLY_ADD_TESTCASE("from_string", []
-{
+MAYFLY_ADD_TESTCASE("from_string", [] {
     MAYFLY_CHECK(from_string<test>("foo") == test::foo);
     MAYFLY_CHECK(from_string<test>("bar") == test::bar);
     MAYFLY_CHECK(from_string<test>("baz") == test::baz);
@@ -75,12 +57,12 @@ MAYFLY_ADD_TESTCASE("from_string", []
     MAYFLY_CHECK(from_string<test>("fizz") == test::fizz);
 });
 
-// this is a sanity test to check for potential problems with inlineness and multiple definitions and such
-MAYFLY_ADD_TESTCASE("another enum", []
-{
+// this is a sanity test to check for potential problems with inlineness and
+// multiple definitions
+// and such
+MAYFLY_ADD_TESTCASE("another enum", [] {
     MAYFLY_REQUIRE(to_string(another::bar) == "bar");
     MAYFLY_REQUIRE(from_string<another>("foo") == another::foo);
 });
 
 MAYFLY_END_SUITE;
-

@@ -26,8 +26,7 @@
 
 MAYFLY_BEGIN_SUITE("filesystem");
 
-MAYFLY_ADD_TESTCASE("make_relative", []
-{
+MAYFLY_ADD_TESTCASE("make_relative", [] {
     MAYFLY_CHECK(reaver::filesystem::make_relative("/foo/bar/baz", "/foo/bar") == "baz");
     MAYFLY_CHECK(reaver::filesystem::make_relative("/foo/bar/biz", "/foo/bar/baz") == "../biz");
     MAYFLY_CHECK(reaver::filesystem::make_relative("/foo/bar/baz/buzz", "/foo/bar") == "baz/buzz");

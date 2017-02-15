@@ -24,12 +24,14 @@
 
 #include <cstddef>
 
-#include "vector.h"
 #include "../static_assert.h"
+#include "vector.h"
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         namespace _detail
         {
@@ -52,6 +54,6 @@ namespace reaver
 
         template<typename Vector, std::size_t N>
         using nth = typename _detail::_nth<Vector, N>::type;
-    }}
+    }
 }
-
+}

@@ -22,17 +22,19 @@
 
 #pragma once
 
-#include <vector>
 #include <atomic>
+#include <vector>
 
-#include "level_registry.h"
-#include "streamable.h"
-#include "logger_friend.h"
 #include "../style.h"
+#include "level_registry.h"
+#include "logger_friend.h"
+#include "streamable.h"
 
 namespace reaver
 {
-    namespace logger { inline namespace _v1
+namespace logger
+{
+    inline namespace _v1
     {
         template<typename Level = always_type>
         class action : public logger_friend
@@ -79,5 +81,6 @@ namespace reaver
 
             std::vector<streamable> _streamables;
         };
-    }}
+    }
+}
 }

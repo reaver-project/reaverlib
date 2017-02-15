@@ -23,4 +23,3 @@
 #pragma once
 
 #define relaxed_constexpr constexpr
-

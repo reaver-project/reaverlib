@@ -22,13 +22,15 @@
 
 #pragma once
 
-#include <utility>
-#include <numeric>
 #include <iterator>
+#include <numeric>
+#include <utility>
 
 namespace reaver
 {
-    inline namespace prelude { inline namespace _v1
+inline namespace prelude
+{
+    inline namespace _v1
     {
         template<typename F, typename T>
         inline constexpr auto foldr(F &&, T && t)
@@ -65,6 +67,6 @@ namespace reaver
         {
             return std::accumulate(std::begin(cont), std::end(cont), std::forward<Init>(init), std::forward<F>(f));
         }
-    }}
+    }
 }
-
+}

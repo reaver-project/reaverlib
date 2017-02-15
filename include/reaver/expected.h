@@ -26,9 +26,13 @@
 
 #include "variant.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
 {
-    constexpr struct error_tag_type {} error_tag{};
+inline namespace _v1
+{
+    constexpr struct error_tag_type
+    {
+    } error_tag{};
 
     template<typename T, typename Error = std::exception_ptr>
     class expected
@@ -49,34 +53,24 @@ namespace reaver { inline namespace _v1
 
         T & operator*()
         {
-            return get<0>(fmap(_value, make_overload_set(
-                [](T & value) -> T & { return value; },
-                [](_wrap_error & err) -> T & { throw err.value; }
-            )));
+            return get<0>(fmap(_value, make_overload_set([](T & value) -> T & { return value; }, [](_wrap_error & err) -> T & { throw err.value; })));
         }
 
         const T & operator*() const
         {
-            return get<0>(fmap(_value, make_overload_set(
-                [](const T & value) -> const T & { return value; },
-                [](const _wrap_error & err) -> const T & { throw err.value; }
-            )));
+            return get<0>(fmap(
+                _value, make_overload_set([](const T & value) -> const T & { return value; }, [](const _wrap_error & err) -> const T & { throw err.value; })));
         }
 
         T * operator->()
         {
-            return &get<0>(fmap(_value, make_overload_set(
-                [](T & value) -> T & { return value; },
-                [](_wrap_error & err) -> T & { throw err.value; }
-            )));
+            return &get<0>(fmap(_value, make_overload_set([](T & value) -> T & { return value; }, [](_wrap_error & err) -> T & { throw err.value; })));
         }
 
         const T * operator->() const
         {
-            return &get<0>(fmap(_value, make_overload_set(
-                [](const T & value) -> const T & { return value; },
-                [](const _wrap_error & err) -> const T & { throw err.value; }
-            )));
+            return &get<0>(fmap(
+                _value, make_overload_set([](const T & value) -> const T & { return value; }, [](const _wrap_error & err) -> const T & { throw err.value; })));
         }
 
         explicit operator bool() const
@@ -227,5 +221,5 @@ namespace reaver { inline namespace _v1
 
         return { error_tag, std::move(exp.get_error()) };
     }
-}}
-
+}
+}

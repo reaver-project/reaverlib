@@ -28,17 +28,15 @@
 
 namespace reaver
 {
-    namespace tpl { inline namespace _v1
+namespace tpl
+{
+    inline namespace _v1
     {
         template<typename... Ts>
         struct index_of;
 
         template<typename Head, typename... Tail, typename T>
-        struct index_of<tpl::vector<Head, Tail...>, T>
-            : std::integral_constant<
-                std::size_t,
-                index_of<tpl::vector<Tail...>, T>::value + 1
-            >
+        struct index_of<tpl::vector<Head, Tail...>, T> : std::integral_constant<std::size_t, index_of<tpl::vector<Tail...>, T>::value + 1>
         {
         };
 
@@ -46,5 +44,6 @@ namespace reaver
         struct index_of<tpl::vector<T, Tail...>, T> : std::integral_constant<std::size_t, 0>
         {
         };
-    }}
+    }
+}
 }

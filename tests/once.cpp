@@ -24,22 +24,20 @@
 
 namespace test
 {
-#   include "once.h"
+#include "once.h"
 }
 
 MAYFLY_BEGIN_SUITE("once");
 
-MAYFLY_ADD_TESTCASE("once function is called exactly once", []()
-{
+MAYFLY_ADD_TESTCASE("once function is called exactly once", []() {
     int i = 0;
 
     for (int j = 0; j < 3; ++j)
     {
-        test::reaver::once([&](){ ++i; });
+        test::reaver::once([&]() { ++i; });
     }
 
     MAYFLY_REQUIRE(i == 1);
 });
 
 MAYFLY_END_SUITE;
-

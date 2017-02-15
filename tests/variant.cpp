@@ -20,11 +20,11 @@
  *
  **/
 
-#include <reaver/mayfly.h>
 #include <reaver/logic.h>
+#include <reaver/mayfly.h>
 
-#include <string>
 #include <memory>
+#include <string>
 
 namespace test
 {
@@ -38,8 +38,7 @@ struct alignas(4096) foo
     int i;
 };
 
-MAYFLY_ADD_TESTCASE("size and alignment", []()
-{
+MAYFLY_ADD_TESTCASE("size and alignment", []() {
     {
         using type = test::reaver::variant<int>;
         MAYFLY_CHECK(sizeof(type) > sizeof(int));
@@ -59,8 +58,7 @@ MAYFLY_ADD_TESTCASE("size and alignment", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("construction and inspection without references", []()
-{
+MAYFLY_ADD_TESTCASE("construction and inspection without references", []() {
     test::reaver::variant<int, bool> v1 = 1;
     MAYFLY_CHECK(v1.index() == 0);
     MAYFLY_CHECK(test::reaver::get<0>(v1) == 1);
@@ -71,8 +69,7 @@ MAYFLY_ADD_TESTCASE("construction and inspection without references", []()
     MAYFLY_CHECK(test::reaver::get<1>(v2) == false);
 });
 
-MAYFLY_ADD_TESTCASE("copy construction", []()
-{
+MAYFLY_ADD_TESTCASE("copy construction", []() {
     {
         std::string value(128, 'a');
 
@@ -120,8 +117,7 @@ MAYFLY_ADD_TESTCASE("copy construction", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("move construction", []()
-{
+MAYFLY_ADD_TESTCASE("move construction", []() {
     {
         struct foo
         {
@@ -147,8 +143,7 @@ MAYFLY_ADD_TESTCASE("move construction", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("copy assignment", []()
-{
+MAYFLY_ADD_TESTCASE("copy assignment", []() {
     {
         std::string value(128, 'a');
 
@@ -185,8 +180,7 @@ MAYFLY_ADD_TESTCASE("copy assignment", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("move assignment", []()
-{
+MAYFLY_ADD_TESTCASE("move assignment", []() {
     {
         struct foo
         {
@@ -215,25 +209,30 @@ MAYFLY_ADD_TESTCASE("move assignment", []()
 
 namespace
 {
-    struct dtor_type1
+struct dtor_type1
+{
+    ~dtor_type1()
     {
-        ~dtor_type1() { --count; }
+        --count;
+    }
 
-        static std::size_t count;
-    };
-    std::size_t dtor_type1::count = 0;
+    static std::size_t count;
+};
+std::size_t dtor_type1::count = 0;
 
-    struct dtor_type2
+struct dtor_type2
+{
+    ~dtor_type2()
     {
-        ~dtor_type2() { --count; }
+        --count;
+    }
 
-        static std::size_t count;
-    };
-    std::size_t dtor_type2::count = 0;
+    static std::size_t count;
+};
+std::size_t dtor_type2::count = 0;
 }
 
-MAYFLY_ADD_TESTCASE("destruction", []()
-{
+MAYFLY_ADD_TESTCASE("destruction", []() {
     {
         test::reaver::variant<dtor_type1, dtor_type2> v1 = dtor_type1{};
         test::reaver::variant<dtor_type1, dtor_type2> v2 = dtor_type2{};
@@ -247,8 +246,7 @@ MAYFLY_ADD_TESTCASE("destruction", []()
     MAYFLY_CHECK(dtor_type2::count == 0);
 });
 
-MAYFLY_ADD_TESTCASE("fmap", []()
-{
+MAYFLY_ADD_TESTCASE("fmap", []() {
     using namespace std::string_literals;
 
     MAYFLY_CHECK(test::reaver::fmap(test::reaver::variant<bool, int>(1), [](int i) { return !!i; }) == test::reaver::variant<bool>(true));
@@ -279,8 +277,7 @@ MAYFLY_ADD_TESTCASE("fmap", []()
     MAYFLY_CHECK(test::reaver::get<0>(v2).moved_from = true);
 });
 
-MAYFLY_ADD_TESTCASE("reference type", []()
-{
+MAYFLY_ADD_TESTCASE("reference type", []() {
     int i = 0;
     test::reaver::variant<int &> v1 = i;
     MAYFLY_CHECK(test::reaver::get<0>(v1) == 0);
@@ -293,8 +290,7 @@ MAYFLY_ADD_TESTCASE("reference type", []()
     MAYFLY_CHECK(i == 2);
 });
 
-MAYFLY_ADD_TESTCASE("assignment with references", []()
-{
+MAYFLY_ADD_TESTCASE("assignment with references", []() {
     int i = 0;
     std::string j = "1";
 
@@ -312,8 +308,7 @@ MAYFLY_ADD_TESTCASE("assignment with references", []()
     MAYFLY_CHECK(test::reaver::get<0>(v2) == 123);
 });
 
-MAYFLY_ADD_TESTCASE("construct from implicitly convertible type", []()
-{
+MAYFLY_ADD_TESTCASE("construct from implicitly convertible type", []() {
     {
         test::reaver::variant<bool> v = 1;
         MAYFLY_CHECK(test::reaver::get<0>(v) == true);
@@ -330,8 +325,7 @@ MAYFLY_ADD_TESTCASE("construct from implicitly convertible type", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("assign with implicitly convertible type", []()
-{
+MAYFLY_ADD_TESTCASE("assign with implicitly convertible type", []() {
     test::reaver::variant<bool> v = true;
     v = 0;
     MAYFLY_CHECK(test::reaver::get<0>(v) == false);
@@ -343,13 +337,8 @@ MAYFLY_ADD_TESTCASE("assign with implicitly convertible type", []()
     MAYFLY_CHECK(test::reaver::get<0>(u) == 6);
 });
 
-MAYFLY_ADD_TESTCASE("recursive variant construction and inspection", []()
-{
-    using type = test::reaver::recursive_variant<
-        int,
-        std::vector<test::reaver::rvt>,
-        std::map<int, test::reaver::rvt>
-    >;
+MAYFLY_ADD_TESTCASE("recursive variant construction and inspection", []() {
+    using type = test::reaver::recursive_variant<int, std::vector<test::reaver::rvt>, std::map<int, test::reaver::rvt>>;
 
     {
         type v = 1;
@@ -385,11 +374,8 @@ MAYFLY_ADD_TESTCASE("recursive variant construction and inspection", []()
     }
 
     {
-        type v = std::map<int, type>{
-            { 1, 2 },
-            { 3, std::vector<type>{ 4, 5, 6 } },
-            { 7, std::map<int, type>{ { 8, 9 }, { 10, std::vector<type>{ 11, 12 } } } }
-        };
+        type v =
+            std::map<int, type>{ { 1, 2 }, { 3, std::vector<type>{ 4, 5, 6 } }, { 7, std::map<int, type>{ { 8, 9 }, { 10, std::vector<type>{ 11, 12 } } } } };
 
         using test::reaver::get;
 
@@ -419,8 +405,7 @@ MAYFLY_ADD_TESTCASE("recursive variant construction and inspection", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("recursive_wrapper fmap", []()
-{
+MAYFLY_ADD_TESTCASE("recursive_wrapper fmap", []() {
     struct foo
     {
         foo(int i) : i{ i }
@@ -434,8 +419,7 @@ MAYFLY_ADD_TESTCASE("recursive_wrapper fmap", []()
     MAYFLY_CHECK(test::reaver::get<0>(fmap(v, [](auto && f) { return f.i; })) == 1);
 });
 
-MAYFLY_ADD_TESTCASE("n-ary visitation", []()
-{
+MAYFLY_ADD_TESTCASE("n-ary visitation", []() {
     {
         test::reaver::variant<int, float> v1 = 1;
         test::reaver::variant<float, std::string> v2 = 2.f;
@@ -446,7 +430,8 @@ MAYFLY_ADD_TESTCASE("n-ary visitation", []()
         MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, v1, v2, v3)) == 2.f);
         MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, v1, v2, v3)) == "abc");
 
-        MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
+        MAYFLY_CHECK_THROWS_TYPE(
+            test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
     }
 
     {
@@ -459,7 +444,8 @@ MAYFLY_ADD_TESTCASE("n-ary visitation", []()
         MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, v1, v2, v3)) == 2.f);
         MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, v1, v2, v3)) == "abc");
 
-        MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
+        MAYFLY_CHECK_THROWS_TYPE(
+            test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
     }
 
     {
@@ -469,17 +455,23 @@ MAYFLY_ADD_TESTCASE("n-ary visitation", []()
 
         MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second) { return first; }, std::move(v1), std::move(v2))) == 1);
 
-        MAYFLY_CHECK(test::reaver::get<int>(test::reaver::visit([](auto first, auto second, auto third) { return first; }, std::move(v1), std::move(v2), std::move(v3))) == 1);
+        MAYFLY_CHECK(
+            test::reaver::get<int>(test::reaver::visit([](auto first, auto second, auto third) { return first; }, std::move(v1), std::move(v2), std::move(v3)))
+            == 1);
 
         v3 = "abc";
-        MAYFLY_CHECK(test::reaver::get<float>(test::reaver::visit([](auto first, auto second, auto third) { return second; }, std::move(v1), std::move(v2), std::move(v3))) == 2.f);
+        MAYFLY_CHECK(test::reaver::get<float>(
+                         test::reaver::visit([](auto first, auto second, auto third) { return second; }, std::move(v1), std::move(v2), std::move(v3)))
+            == 2.f);
 
         v3 = "abc";
-        MAYFLY_CHECK(test::reaver::get<std::string>(test::reaver::visit([](auto first, auto second, auto third) { return third; }, std::move(v1), std::move(v2), std::move(v3))) == "abc");
+        MAYFLY_CHECK(test::reaver::get<std::string>(
+                         test::reaver::visit([](auto first, auto second, auto third) { return third; }, std::move(v1), std::move(v2), std::move(v3)))
+            == "abc");
 
-        MAYFLY_CHECK_THROWS_TYPE(test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
+        MAYFLY_CHECK_THROWS_TYPE(
+            test::reaver::invalid_variant_get, test::reaver::get<float>(test::reaver::visit([](auto first, auto second) { return first; }, v1, v2)));
     }
 });
 
 MAYFLY_END_SUITE;
-

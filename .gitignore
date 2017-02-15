@@ -7,3 +7,6 @@ calc
 *.kate-swp
 *.d
 *.so
+.color_coded
+.ycm*
+tests/test

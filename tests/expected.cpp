@@ -24,14 +24,13 @@
 
 namespace test
 {
-#   include "expected.h"
-#   include "prelude/monad.h"
+#include "expected.h"
+#include "prelude/monad.h"
 }
 
 MAYFLY_BEGIN_SUITE("expected");
 
-MAYFLY_ADD_TESTCASE("construction", []()
-{
+MAYFLY_ADD_TESTCASE("construction", []() {
     {
         auto exp = test::reaver::make_expected(1);
         MAYFLY_CHECK(*exp == 1);
@@ -44,42 +43,46 @@ MAYFLY_ADD_TESTCASE("construction", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("fmap", []()
-{
+MAYFLY_ADD_TESTCASE("fmap", []() {
     {
         auto exp = test::reaver::make_expected(1);
-        MAYFLY_CHECK(*test::reaver::fmap(exp, [](auto i){ return i + 2; }) == 3);
+        MAYFLY_CHECK(*test::reaver::fmap(exp, [](auto i) { return i + 2; }) == 3);
     }
 
     {
         auto err = test::reaver::make_error<int>(std::string("oh well"));
-        MAYFLY_CHECK_THROWS_TYPE(std::string, *fmap(err, [](auto){ MAYFLY_REQUIRE(false); return test::reaver::unit{}; }));
+        MAYFLY_CHECK_THROWS_TYPE(std::string, *fmap(err, [](auto) {
+            MAYFLY_REQUIRE(false);
+            return test::reaver::unit{};
+        }));
     }
 
     {
         const auto exp = test::reaver::make_expected(1);
-        MAYFLY_CHECK(*test::reaver::fmap(exp, [](auto i){ return i + 2; }) == 3);
+        MAYFLY_CHECK(*test::reaver::fmap(exp, [](auto i) { return i + 2; }) == 3);
     }
 
     {
         const auto err = test::reaver::make_error<int>(std::string("oh well"));
-        MAYFLY_CHECK_THROWS_TYPE(std::string, *fmap(err, [](auto){ MAYFLY_REQUIRE(false); return test::reaver::unit{}; }));
+        MAYFLY_CHECK_THROWS_TYPE(std::string, *fmap(err, [](auto) {
+            MAYFLY_REQUIRE(false);
+            return test::reaver::unit{};
+        }));
     }
 
     {
-        MAYFLY_CHECK(*test::reaver::fmap(test::reaver::make_expected(1), [](auto i){ return i + 2; }) == 3);
+        MAYFLY_CHECK(*test::reaver::fmap(test::reaver::make_expected(1), [](auto i) { return i + 2; }) == 3);
     }
 
     {
-        MAYFLY_CHECK_THROWS_TYPE(std::string, *fmap(
-            test::reaver::make_error<int>(std::string("oh well")),
-            [](auto){ MAYFLY_REQUIRE(false); return test::reaver::unit{}; }
-        ));
+        MAYFLY_CHECK_THROWS_TYPE(std::string, *fmap(test::reaver::make_error<int>(std::string("oh well")), [](auto) {
+            MAYFLY_REQUIRE(false);
+            return test::reaver::unit{};
+        }));
     }
 });
 
-MAYFLY_ADD_TESTCASE("join", []()
-{
+MAYFLY_ADD_TESTCASE("join", []() {
     {
         auto exp = test::reaver::make_expected(test::reaver::make_expected(1));
         MAYFLY_CHECK(*test::reaver::join(exp) == 1);
@@ -105,19 +108,19 @@ MAYFLY_ADD_TESTCASE("join", []()
     }
 
     {
-        MAYFLY_CHECK(test::reaver::join(test::reaver::make_expected(test::reaver::make_error<int>(1))).get_error() == test::reaver::variant<int, std::exception_ptr>(1));
+        MAYFLY_CHECK(
+            test::reaver::join(test::reaver::make_expected(test::reaver::make_error<int>(1))).get_error() == test::reaver::variant<int, std::exception_ptr>(1));
     }
 
 });
 
-MAYFLY_ADD_TESTCASE("bind", []()
-{
+MAYFLY_ADD_TESTCASE("bind", []() {
     {
         auto exp = test::reaver::make_expected(1);
-        MAYFLY_CHECK(*test::reaver::mbind(exp, [](auto i){ return test::reaver::make_expected(i * 2); }) == 2);
-        MAYFLY_CHECK(test::reaver::mbind(exp, [](auto i){ return test::reaver::make_error<int>(i * 3); }).get_error() == test::reaver::variant<int, std::exception_ptr>(3));
+        MAYFLY_CHECK(*test::reaver::mbind(exp, [](auto i) { return test::reaver::make_expected(i * 2); }) == 2);
+        MAYFLY_CHECK(test::reaver::mbind(exp, [](auto i) { return test::reaver::make_error<int>(i * 3); }).get_error()
+            == test::reaver::variant<int, std::exception_ptr>(3));
     }
 });
 
 MAYFLY_END_SUITE;
-

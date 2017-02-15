@@ -25,14 +25,19 @@
 #include "invoke.h"
 #include "variant.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
 {
-    constexpr struct none_t {} none{};
+inline namespace _v1
+{
+    constexpr struct none_t
+    {
+    } none{};
 
     template<typename T>
     class optional : public variant<T, none_t>
     {
         using _base = variant<T, none_t>;
+
     public:
         optional() : _base{ none }
         {
@@ -94,12 +99,12 @@ namespace reaver { inline namespace _v1
             return get();
         }
 
-        auto * operator->()
+        auto * operator-> ()
         {
             return &get();
         }
 
-        const auto * operator->() const
+        const auto * operator-> () const
         {
             return &get();
         }
@@ -174,5 +179,5 @@ namespace reaver { inline namespace _v1
     {
         return t ? make_optional(invoke(std::forward<F>(f), std::move(t.get()))) : none;
     }
-}}
-
+}
+}

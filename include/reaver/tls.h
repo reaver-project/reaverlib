@@ -24,11 +24,14 @@
 
 #include <pthread.h>
 
-// on linuxes, this will pretty much always include pthread, so the above include is not harmful
+// on linuxes, this will pretty much always include pthread, so the above
+// include is not harmful
 // (it'd be if it was the only one that included the symbols)
 #include "exception.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class tls_creation_exception : public exception
     {
@@ -67,7 +70,9 @@ namespace reaver { inline namespace _v1
     class tls_variable
     {
     public:
-        static_assert(sizeof(T) <= sizeof(void *), "tls_variable is currently only available for types of sizes up to the size of `void *`.");
+        static_assert(sizeof(T) <= sizeof(void *),
+            "tls_variable is currently only available for "
+            "types of sizes up to the size of `void *`.");
         static_assert(std::is_trivially_destructible<T>::value && std::is_trivial<T>::value, "tls_variable is currently only available for trivial types.");
 
         tls_variable(T initial = T{})
@@ -92,5 +97,5 @@ namespace reaver { inline namespace _v1
     private:
         _detail::_handle _handle;
     };
-}}
-
+}
+}

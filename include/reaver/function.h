@@ -22,17 +22,21 @@
 
 #pragma once
 
-#include "variant.h"
 #include "traits.h"
+#include "variant.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class const_call_operator_not_available : public exception
     {
     public:
         const_call_operator_not_available() : exception{ logger::fatal }
         {
-            *this << "tried to invoke non-const call operator of the underlying function object via calling the const call operator of reaver::function";
+            *this << "tried to invoke non-const call operator of the "
+                     "underlying function object "
+                     "via calling the const call operator of reaver::function";
         }
     };
 
@@ -66,7 +70,7 @@ namespace reaver { inline namespace _v1
     }
 
     template<typename Result, typename... Args>
-    class function<Result (Args...)>
+    class function<Result(Args...)>
     {
         using _free_function = Result (*)(Args...);
 
@@ -85,28 +89,36 @@ namespace reaver { inline namespace _v1
         function & operator=(const function &) = delete;
         function & operator=(function &&) = default;
 
-        template<typename T, typename std::enable_if<
-            std::is_convertible<decltype(std::declval<T>()(std::declval<Args>()...)), Result>::value,
-//            && std::is_convertible<decltype(std::declval<T &>()(std::declval<Args>()...)), Result>::value
-//            && std::is_convertible<decltype(std::declval<const T &>()(std::declval<Args>()...)), Result>::value,
-            int>::type = 0>
-        function(T t) : _context{ reinterpret_cast<void *>(new _invoker<T>{ std::move(t) }) }, _fptr{ _erased_invoker{ _context, &_invoker<T>::call_lvalue_ref, &_invoker<T>::call_rvalue_ref, &_invoker<T>::call_const_ref, &_invoker<T>::dtor } }
+        template<typename T,
+            typename std::enable_if<std::is_convertible<decltype(std::declval<T>()(std::declval<Args>()...)), Result>::value,
+                //            && std::is_convertible<decltype(std::declval<T
+                //            &>()(std::declval<Args>()...)), Result>::value
+                //            &&
+                //            std::is_convertible<decltype(std::declval<const
+                //            T
+                //            &>()(std::declval<Args>()...)),
+                //            Result>::value,
+                int>::type = 0>
+        function(T t)
+            : _context{ reinterpret_cast<void *>(new _invoker<T>{ std::move(t) }) }, _fptr{
+                  _erased_invoker{ _context, &_invoker<T>::call_lvalue_ref, &_invoker<T>::call_rvalue_ref, &_invoker<T>::call_const_ref, &_invoker<T>::dtor }
+              }
         {
         }
 
         Result operator()(Args... args) &
         {
-            return _detail::_invoker<Result>()(_fptr, [&](auto & value){ return value(std::forward<Args>(args)...); });
+            return _detail::_invoker<Result>()(_fptr, [&](auto & value) { return value(std::forward<Args>(args)...); });
         }
 
         Result operator()(Args... args) &&
         {
-            return _detail::_invoker<Result>()(std::move(_fptr), [&](auto value){ return std::move(value)(std::forward<Args>(args)...); });
+            return _detail::_invoker<Result>()(std::move(_fptr), [&](auto value) { return std::move(value)(std::forward<Args>(args)...); });
         }
 
         Result operator()(Args... args) const &
         {
-            return _detail::_invoker<Result>()(_fptr, [&](auto & value){ return value(std::forward<Args>(args)...); });
+            return _detail::_invoker<Result>()(_fptr, [&](auto & value) { return value(std::forward<Args>(args)...); });
         }
 
     private:
@@ -158,13 +170,17 @@ namespace reaver { inline namespace _v1
             using dtor_type = void (*)(void *);
             using erased_function = Result (*)(void *, Args...);
 
-            _erased_invoker(void * context, erased_function lvalue_ref, erased_function rvalue_ref, erased_function const_ref, dtor_type dtor) : _lvalue_ref{ lvalue_ref }, _rvalue_ref{ rvalue_ref }, _const_ref{ const_ref }, _dtor{ dtor }, _context{ context }
+            _erased_invoker(void * context, erased_function lvalue_ref, erased_function rvalue_ref, erased_function const_ref, dtor_type dtor)
+                : _lvalue_ref{ lvalue_ref }, _rvalue_ref{ rvalue_ref }, _const_ref{ const_ref }, _dtor{ dtor }, _context{ context }
             {
             }
 
             _erased_invoker(const _erased_invoker &) = delete;
 
-            _erased_invoker(_erased_invoker && other) noexcept : _lvalue_ref{ other._lvalue_ref }, _rvalue_ref{other._rvalue_ref }, _const_ref{ other._const_ref }, _dtor{ other._dtor }, _context{ other._context }
+            _erased_invoker(_erased_invoker && other) noexcept
+                : _lvalue_ref{ other._lvalue_ref }, _rvalue_ref{ other._rvalue_ref }, _const_ref{ other._const_ref }, _dtor{ other._dtor }, _context{
+                      other._context
+                  }
             {
                 other._context = nullptr;
             }
@@ -204,10 +220,7 @@ namespace reaver { inline namespace _v1
 
         void * _context = nullptr;
 
-        variant<
-            _free_function,
-            _erased_invoker
-        > _fptr;
+        variant<_free_function, _erased_invoker> _fptr;
     };
-}}
-
+}
+}

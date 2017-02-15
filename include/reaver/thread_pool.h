@@ -22,24 +22,26 @@
 
 #pragma once
 
-#include <thread>
-#include <functional>
-#include <unordered_map>
-#include <map>
-#include <queue>
 #include <atomic>
-#include <mutex>
+#include <functional>
 #include <future>
+#include <map>
+#include <mutex>
+#include <queue>
+#include <thread>
 #include <type_traits>
+#include <unordered_map>
 
-#include "exception.h"
 #include "callbacks.h"
-#include "thread.h"
-#include "semaphore.h"
+#include "exception.h"
 #include "executor.h"
 #include "optional.h"
+#include "semaphore.h"
+#include "thread.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class thread_pool_closed : public exception
     {
@@ -109,10 +111,10 @@ namespace reaver { inline namespace _v1
         }
 
         template<typename F, typename... Args>
-        std::future<typename std::result_of<F (Args...)>::type> push(F && f, Args &&... args)
+        std::future<typename std::result_of<F(Args...)>::type> push(F && f, Args &&... args)
         {
-            auto task = std::make_shared<std::packaged_task<typename std::result_of<F (Args...)>::type ()>>(
-                std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+            auto task =
+                std::make_shared<std::packaged_task<typename std::result_of<F(Args...)>::type()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
             auto future = task->get_future();
 
             {
@@ -123,7 +125,7 @@ namespace reaver { inline namespace _v1
                     throw thread_pool_closed{};
                 }
 
-                _queue.emplace([task]{ (*task)(); });
+                _queue.emplace([task] { (*task)(); });
             }
 
             _cond.notify_one();
@@ -131,7 +133,7 @@ namespace reaver { inline namespace _v1
             return future;
         }
 
-        virtual void push(function<void ()> f) override
+        virtual void push(function<void()> f) override
         {
             std::unique_lock<std::mutex> lock{ _lock };
             _queue.emplace(std::move(f));
@@ -186,7 +188,7 @@ namespace reaver { inline namespace _v1
                     }
                 }
 
-                optional<function<void ()>> f;
+                optional<function<void()>> f;
 
                 {
                     std::unique_lock<std::mutex> lock{ _lock };
@@ -218,7 +220,10 @@ namespace reaver { inline namespace _v1
                     }
                 }
 
-                fmap(std::move(f), [](auto f){ f(); return unit{}; });
+                fmap(std::move(f), [](auto f) {
+                    f();
+                    return unit{};
+                });
 
                 if (_waiters)
                 {
@@ -252,7 +257,7 @@ namespace reaver { inline namespace _v1
         std::atomic<std::size_t> _size{ 0 };
 
         std::map<std::thread::id, detaching_thread> _threads;
-        std::queue<function<void ()>> _queue;
+        std::queue<function<void()>> _queue;
 
         std::condition_variable _cond;
         std::mutex _lock;
@@ -261,6 +266,7 @@ namespace reaver { inline namespace _v1
 
         std::atomic<bool> _end{ false };
 
-        callbacks<void (void)> _waiters;
+        callbacks<void(void)> _waiters;
     };
-}}
+}
+}

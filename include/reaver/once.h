@@ -26,12 +26,14 @@
 
 #include "unit.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     template<typename F>
     unit once(F && f)
     {
-        static auto init = [&](){
+        static auto init = [&]() {
             std::forward<F>(f)();
             return 0;
         }();
@@ -40,5 +42,5 @@ namespace reaver { inline namespace _v1
 
         return {};
     }
-}}
-
+}
+}

@@ -26,8 +26,7 @@
 
 MAYFLY_BEGIN_SUITE("wildcard");
 
-MAYFLY_ADD_TESTCASE("star", []
-{
+MAYFLY_ADD_TESTCASE("star", [] {
     MAYFLY_REQUIRE(reaver::wildcard::match("foo*", "foo"));
     MAYFLY_REQUIRE(reaver::wildcard::match("f*oo", "foo"));
     MAYFLY_REQUIRE(reaver::wildcard::match("*o", "foo"));
@@ -36,8 +35,7 @@ MAYFLY_ADD_TESTCASE("star", []
     MAYFLY_REQUIRE(!reaver::wildcard::match("*f", "foo"));
 });
 
-MAYFLY_ADD_TESTCASE("question mark", []
-{
+MAYFLY_ADD_TESTCASE("question mark", [] {
     MAYFLY_REQUIRE(reaver::wildcard::match("fo?", "foo"));
     MAYFLY_REQUIRE(reaver::wildcard::match("?oo", "foo"));
     MAYFLY_REQUIRE(reaver::wildcard::match("f?o", "foo"));
@@ -46,8 +44,7 @@ MAYFLY_ADD_TESTCASE("question mark", []
     MAYFLY_REQUIRE(!reaver::wildcard::match("?foo", "foo"));
 });
 
-MAYFLY_ADD_TESTCASE("star and question mark", []
-{
+MAYFLY_ADD_TESTCASE("star and question mark", [] {
     MAYFLY_REQUIRE(reaver::wildcard::match("foo?bar*", "foo bar"));
     MAYFLY_REQUIRE(reaver::wildcard::match("foo*?ar", "foo bar"));
     MAYFLY_REQUIRE(reaver::wildcard::match("fo???ar", "foo bar"));

@@ -22,7 +22,9 @@
 
 #pragma once
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     struct swallow
     {
@@ -31,4 +33,5 @@ namespace reaver { inline namespace _v1
         {
         }
     };
-}}
+}
+}

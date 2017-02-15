@@ -22,12 +22,17 @@
 
 #pragma once
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     template<typename...>
-    struct voider { using type = void; };
+    struct voider
+    {
+        using type = void;
+    };
 
     template<typename... Args>
     using void_t = typename voider<Args...>::type;
-}}
-
+}
+}

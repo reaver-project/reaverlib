@@ -27,7 +27,9 @@
 #include "logger.h"
 #include "prelude/functor.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class invalid_exception_level : public std::runtime_error
     {
@@ -44,13 +46,7 @@ namespace reaver { inline namespace _v1
         exception(Level l = {}) : _level{ l }
         {
             static std::unordered_set<logger::base_level, logger::hasher> allowed_levels = {
-                logger::always,
-                logger::note,
-                logger::info,
-                logger::warning,
-                logger::error,
-                logger::fatal,
-                logger::crash
+                logger::always, logger::note, logger::info, logger::warning, logger::error, logger::fatal, logger::crash
             };
 
             if (allowed_levels.find(l) == allowed_levels.end())
@@ -204,8 +200,7 @@ namespace reaver { inline namespace _v1
             using reaver::style::colors;
             using reaver::style::styles;
 
-            *this << "file " << style(colors::bgray, colors::def, styles::bold) << filename << style()
-                << " is a directory.";
+            *this << "file " << style(colors::bgray, colors::def, styles::bold) << filename << style() << " is a directory.";
         }
     };
 
@@ -218,8 +213,7 @@ namespace reaver { inline namespace _v1
             using reaver::style::colors;
             using reaver::style::styles;
 
-            *this << "couldn't find file " << style(colors::bgray, colors::def, styles::bold) << filename
-                << style() << ".";
+            *this << "couldn't find file " << style(colors::bgray, colors::def, styles::bold) << filename << style() << ".";
         }
     };
 
@@ -232,8 +226,8 @@ namespace reaver { inline namespace _v1
             using reaver::style::colors;
             using reaver::style::styles;
 
-            *this << "couldn't open file " << style(colors::bgray, colors::def, styles::bold) << filename
-                << style() << ".";
+            *this << "couldn't open file " << style(colors::bgray, colors::def, styles::bold) << filename << style() << ".";
         }
     };
-}}
+}
+}

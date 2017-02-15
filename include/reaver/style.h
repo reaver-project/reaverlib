@@ -26,7 +26,9 @@
 
 namespace reaver
 {
-    namespace style { inline namespace _v1
+namespace style
+{
+    inline namespace _v1
     {
         class style;
 
@@ -65,8 +67,7 @@ namespace reaver
         class style
         {
         public:
-            style(colors fore = colors::def, colors back = colors::def, styles style = styles::def) : _forecolor(fore),
-                _backcolor(back), _style(style)
+            style(colors fore = colors::def, colors back = colors::def, styles style = styles::def) : _forecolor(fore), _backcolor(back), _style(style)
             {
             }
 
@@ -91,19 +92,23 @@ namespace reaver
         inline std::ostream & operator<<(std::ostream & stream, const reaver::style::style & style)
         {
 #ifdef __unix__
-            if ((&stream == &std::cout && unix_details::isatty(unix_details::stdout_fileno)) || (&stream == &std::cerr && unix_details::isatty(unix_details::stderr_fileno)))
+            if ((&stream == &std::cout && unix_details::isatty(unix_details::stdout_fileno))
+                || (&stream == &std::cerr && unix_details::isatty(unix_details::stderr_fileno)))
             {
                 stream << "\033[" << static_cast<std::uint16_t>(style._style) << ';' << static_cast<std::uint16_t>(style._forecolor) << ';'
-                    << static_cast<std::uint16_t>(style._backcolor) + 10 << 'm';
+                       << static_cast<std::uint16_t>(style._backcolor) + 10 << 'm';
             }
 #endif
 
             return stream;
         }
-    }}
+    }
+}
 }
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     inline std::string spaces(const std::string & str, std::size_t count)
     {
@@ -162,4 +167,5 @@ namespace reaver { inline namespace _v1
 
         return ret;
     }
-}}
+}
+}

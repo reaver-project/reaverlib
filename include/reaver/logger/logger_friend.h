@@ -24,7 +24,9 @@
 
 namespace reaver
 {
-    namespace logger { inline namespace _v1
+namespace logger
+{
+    inline namespace _v1
     {
         class logger;
         logger & default_logger();
@@ -35,5 +37,6 @@ namespace reaver
             inline static void _write(logger &, std::vector<streamable>);
             inline static base_level _level(logger &);
         };
-    }}
+    }
+}
 }

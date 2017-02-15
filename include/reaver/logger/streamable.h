@@ -28,7 +28,9 @@
 
 namespace reaver
 {
-    namespace logger { inline namespace _v1
+namespace logger
+{
+    inline namespace _v1
     {
         class streamable
         {
@@ -73,7 +75,9 @@ namespace reaver
             class _streamable_base
             {
             public:
-                virtual ~_streamable_base() {}
+                virtual ~_streamable_base()
+                {
+                }
 
                 virtual void stream(stream_wrapper & os) const = 0;
                 virtual std::unique_ptr<_streamable_base> clone() const = 0;
@@ -103,5 +107,6 @@ namespace reaver
 
             std::unique_ptr<_streamable_base> _value;
         };
-    }}
+    }
+}
 }

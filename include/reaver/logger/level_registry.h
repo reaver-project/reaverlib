@@ -22,16 +22,18 @@
 
 #pragma once
 
-#include <vector>
 #include <map>
+#include <vector>
 
-#include "streamable.h"
 #include "../configuration.h"
 #include "../style.h"
+#include "streamable.h"
 
 namespace reaver
 {
-    namespace logger { inline namespace _v1
+namespace logger
+{
+    inline namespace _v1
     {
         enum class base_level
         {
@@ -60,11 +62,17 @@ namespace reaver
             using type = std::vector<streamable>;
         };
 
-#define REAVER_LEVEL_TYPE(x) static constexpr struct x##_type : level_type  \
-    {                                                                       \
-        constexpr static base_level level = base_level::x;                  \
-        constexpr operator base_level() const { return level; }             \
-    } x{}
+#define REAVER_LEVEL_TYPE(x)                                                                                                                                   \
+    static constexpr struct x##_type : level_type                                                                                                              \
+    {                                                                                                                                                          \
+        constexpr static base_level level = base_level::x;                                                                                                     \
+        constexpr operator base_level() const                                                                                                                  \
+        {                                                                                                                                                      \
+            return level;                                                                                                                                      \
+        }                                                                                                                                                      \
+    } x                                                                                                                                                        \
+    {                                                                                                                                                          \
+    }
 
         REAVER_LEVEL_TYPE(always);
         REAVER_LEVEL_TYPE(trace);
@@ -95,7 +103,9 @@ namespace reaver
         class duplicate_logger_level : public std::runtime_error
         {
         public:
-            duplicate_logger_level() : std::runtime_error{ "attempted to register a logger level that has already been registered" }
+            duplicate_logger_level()
+                : std::runtime_error{ "attempted to register a logger level "
+                                      "that has already been registered" }
             {
             }
         };
@@ -121,8 +131,7 @@ namespace reaver
 
         inline level_registry & default_level_registry()
         {
-            static level_registry default_registry = []
-            {
+            static level_registry default_registry = [] {
                 using style::styles;
                 using style::colors;
                 using style::style;
@@ -138,12 +147,14 @@ namespace reaver
                 reg.register_level(warning, style(colors::bbrown, colors::def, styles::bold), "Warning", style(colors::bgray, colors::def, styles::bold), ": ");
                 reg.register_level(error, style(colors::bred, colors::def, styles::bold), "Error", style(colors::bgray, colors::def, styles::bold), ": ");
                 reg.register_level(fatal, style(colors::bred, colors::def, styles::bold), "Fatal error", style(colors::bgray, colors::def, styles::bold), ": ");
-                reg.register_level(crash, style(colors::bred, colors::def, styles::bold), "Internal error", style(colors::bgray, colors::def, styles::bold), ": ");
+                reg.register_level(
+                    crash, style(colors::bred, colors::def, styles::bold), "Internal error", style(colors::bgray, colors::def, styles::bold), ": ");
 
                 return reg;
             }();
 
             return default_registry;
         }
-    }}
+    }
+}
 }

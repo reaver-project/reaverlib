@@ -21,30 +21,33 @@
  **/
 
 /*
- * The "GCC dumbness" I'm refering to throughout this file is https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47226.
+ * The "GCC dumbness" I'm refering to throughout this file is
+ *https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47226.
  *
  **/
 
 #pragma once
 
-#include <type_traits>
 #include <functional>
+#include <type_traits>
 
-#include "logic.h"
-#include "tpl/vector.h"
-#include "tpl/nth.h"
 #include "exception.h"
-#include "tpl/unique.h"
-#include "tpl/rebind.h"
-#include "tpl/index_of.h"
 #include "invoke.h"
-#include "traits.h"
-#include "tpl/replace.h"
+#include "logic.h"
 #include "overloads.h"
 #include "tpl/concat.h"
+#include "tpl/index_of.h"
 #include "tpl/map.h"
+#include "tpl/nth.h"
+#include "tpl/rebind.h"
+#include "tpl/replace.h"
+#include "tpl/unique.h"
+#include "tpl/vector.h"
+#include "traits.h"
 
-namespace reaver { inline namespace _v1
+namespace reaver
+{
+inline namespace _v1
 {
     class invalid_variant_get : public exception
     {
@@ -189,20 +192,13 @@ namespace reaver { inline namespace _v1
         public:
             static_assert(sizeof...(Args) != 0, "A nullary variant is invalid.");
 
-            static_assert(all_of<
-                    !std::is_rvalue_reference<Args>::value...
-                >::value,
-                "Rvalue-reference types in the variant are not supported.");
+            static_assert(all_of<!std::is_rvalue_reference<Args>::value...>::value, "Rvalue-reference types in the variant are not supported.");
 
-            static_assert(all_of<
-                    std::is_nothrow_move_constructible<Args>::value...
-                >::value,
-                "All types in variant must be noexcept movable (that is, not absurdly insane).");
+            static_assert(all_of<std::is_nothrow_move_constructible<Args>::value...>::value,
+                "All types in variant must be noexcept movable (that is, not "
+                "absurdly insane).");
 
-            static_assert(all_of<
-                    std::is_nothrow_destructible<Args>::value...
-                >::value,
-                "All types in variant must be noexcept destructible.");
+            static_assert(all_of<std::is_nothrow_destructible<Args>::value...>::value, "All types in variant must be noexcept destructible.");
 
             template<std::size_t N, typename CRTP_, typename... Ts>
             friend _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> & get(_variant<CRTP_, Ts...> &);
@@ -213,17 +209,15 @@ namespace reaver { inline namespace _v1
             template<std::size_t N, typename CRTP_, typename... Ts>
             friend _detail::_dereference_wrapper_t<tpl::nth<tpl::vector<Ts...>, N>> get(_variant<CRTP_, Ts...> &&);
 
-            template<typename T, typename std::enable_if<
-                any_of<std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, Args>::value...>::value,
-                int>::type = 0>
-            _variant(T && t) noexcept(noexcept(std::remove_reference_t<T>(std::forward<T>(t)))) : _tag(tpl::index_of<tpl::vector<Args...>, std::remove_cv_t<std::remove_reference_t<T>>>())
+            template<typename T,
+                typename std::enable_if<any_of<std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, Args>::value...>::value, int>::type = 0>
+            _variant(T && t) noexcept(noexcept(std::remove_reference_t<T>(std::forward<T>(t))))
+                : _tag(tpl::index_of<tpl::vector<Args...>, std::remove_cv_t<std::remove_reference_t<T>>>())
             {
                 new (&_storage) std::remove_reference_t<T>(std::forward<T>(t));
             }
 
-            template<typename T, typename std::enable_if<
-                any_of<std::is_same<std::reference_wrapper<T>, Args>::value...>::value,
-                int>::type = 0>
+            template<typename T, typename std::enable_if<any_of<std::is_same<std::reference_wrapper<T>, Args>::value...>::value, int>::type = 0>
             _variant(T & t) noexcept : _tag(tpl::index_of<tpl::vector<Args...>, std::reference_wrapper<T>>())
             {
                 new (&_storage) auto(std::ref(t));
@@ -241,17 +235,19 @@ namespace reaver { inline namespace _v1
                 template<typename Arg, typename T, typename = decltype(conversion_context<Arg>(Arg{ std::declval<T>() }))>
                 static auto generate(choice<0>)
                 {
-                    return [](_variant & v, T && t)
-                    {
+                    return [](_variant & v, T && t) {
                         v._tag = tpl::index_of<tpl::vector<Args...>, Arg>();
                         new (&v._storage) Arg{ std::forward<T>(t) };
                     };
                 }
 
                 // workaround for an ICE in GCC 6.1
-                // the last argument *must be* a template for overload resolution to work properly in this case
+                // the last argument *must be* a template for overload
+                // resolution to work properly
+                // in this case
                 // (favoring working braced-init over ())
-                // but if that happens with the lambda-style of the 0th choice... it segfaults
+                // but if that happens with the lambda-style of the 0th
+                // choice... it segfaults
                 template<typename Arg, typename T>
                 struct to_generate
                 {
@@ -272,23 +268,18 @@ namespace reaver { inline namespace _v1
                 template<typename...>
                 static auto generate(choice<2>)
                 {
-                    return [](auto &&... args)
-                    {
-                        static_assert(sizeof...(args) != 0, "no viable constructor for variant");
-                    };
+                    return [](auto &&... args) { static_assert(sizeof...(args) != 0, "no viable constructor for variant"); };
                 };
             };
 
         public:
-            template<typename T, typename std::enable_if<
-                !any_of<std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, Args>::value...>::value
-                    && any_of<std::is_constructible<Args, T &&>::value...>::value,
-                int>::type = 0>
+            template<typename T,
+                typename std::enable_if<!any_of<std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, Args>::value...>::value
+                        && any_of<std::is_constructible<Args, T &&>::value...>::value,
+                    int>::type = 0>
             _variant(T && t)
             {
-                auto constructor = reaver::make_overload_set(
-                    _generator::template generate<Args, T>(select_overload{})...
-                );
+                auto constructor = reaver::make_overload_set(_generator::template generate<Args, T>(select_overload{})...);
 
                 constructor(*this, std::forward<T>(t));
             }
@@ -332,39 +323,36 @@ namespace reaver { inline namespace _v1
                 });
             }
 
-            template<typename T, typename std::enable_if<
-                is_container<T>::value
-                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, Args>::value)...>::value
-                    && !std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, T>::value,
-                int>::type = 0>
+            template<typename T,
+                typename std::enable_if<is_container<T>::value
+                        && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, Args>::value)...>::value
+                        && !std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, T>::value,
+                    int>::type = 0>
             _variant(const T & t) : _variant{ tpl::replace<T, CRTP, recursive_wrapper<CRTP>>(std::begin(t), std::end(t)) }
             {
             }
 
-            template<typename T, typename std::enable_if<
-                is_container<T>::value
-                    && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, Args>::value)...>::value
-                    && !std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, T>::value,
-                int>::type = 0>
-            _variant(T && t) : _variant{ tpl::replace<T, CRTP, recursive_wrapper<CRTP>>(std::make_move_iterator(std::begin(t)), std::make_move_iterator(std::end(t))) }
+            template<typename T,
+                typename std::enable_if<is_container<T>::value
+                        && any_of<(is_container<Args>::value && std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, Args>::value)...>::value
+                        && !std::is_same<tpl::replace<T, CRTP, recursive_wrapper<CRTP>>, T>::value,
+                    int>::type = 0>
+            _variant(T && t)
+                : _variant{ tpl::replace<T, CRTP, recursive_wrapper<CRTP>>(std::make_move_iterator(std::begin(t)), std::make_move_iterator(std::end(t))) }
             {
             }
 
             _variant(const _variant & other) noexcept(all_of<std::is_nothrow_copy_constructible<Args>::value...>::value) : _tag(other._tag)
             {
-                using visitor_type = void(*)(_variant & self, const _variant & other);
+                using visitor_type = void (*)(_variant & self, const _variant & other);
 
                 // hack for GCC dumbness
                 auto generator = [](auto type) {
                     using Arg = typename decltype(type)::type;
-                    return [](_variant & self, const _variant & other) {
-                        new (&self._storage) Arg(*reinterpret_cast<const Arg *>(&other._storage));
-                    };
+                    return [](_variant & self, const _variant & other) { new (&self._storage) Arg(*reinterpret_cast<const Arg *>(&other._storage)); };
                 };
 
-                static visitor_type copy_ctors[] = {
-                    generator(id<Args>())...
-                };
+                static visitor_type copy_ctors[] = { generator(id<Args>())... };
 
                 copy_ctors[_tag](*this, other);
             }
@@ -376,14 +364,10 @@ namespace reaver { inline namespace _v1
                 // hack for GCC dumbness
                 auto generator = [](auto type) {
                     using Arg = typename decltype(type)::type;
-                    return [](_variant & self, _variant && other) {
-                        new (&self._storage) Arg(std::move(*reinterpret_cast<Arg *>(&other._storage)));
-                    };
+                    return [](_variant & self, _variant && other) { new (&self._storage) Arg(std::move(*reinterpret_cast<Arg *>(&other._storage))); };
                 };
 
-                static visitor_type move_ctors[] = {
-                    generator(id<Args>())...
-                };
+                static visitor_type move_ctors[] = { generator(id<Args>())... };
 
                 move_ctors[_tag](*this, std::move(other));
             }
@@ -427,17 +411,13 @@ namespace reaver { inline namespace _v1
                             };
                         };
 
-                        static visitor_type assignment_helpers[] = {
-                            generator(id<Args>())...
-                        };
+                        static visitor_type assignment_helpers[] = { generator(id<Args>())... };
 
                         assignment_helpers[other._tag](self, other);
                     };
                 };
 
-                static visitor_type copy_assignments[] = {
-                    generator(id<Args>())...
-                };
+                static visitor_type copy_assignments[] = { generator(id<Args>())... };
 
                 copy_assignments[_tag](*this, other);
                 return *this;
@@ -465,17 +445,13 @@ namespace reaver { inline namespace _v1
                             };
                         };
 
-                        static visitor_type assignment_helpers[] = {
-                            generator(id<Args>())...
-                        };
+                        static visitor_type assignment_helpers[] = { generator(id<Args>())... };
 
                         assignment_helpers[other._tag](self, std::move(other));
                     };
                 };
 
-                static visitor_type move_assignments[] = {
-                    generator(id<Args>())...
-                };
+                static visitor_type move_assignments[] = { generator(id<Args>())... };
 
                 move_assignments[_tag](*this, std::move(other));
                 return *this;
@@ -492,9 +468,7 @@ namespace reaver { inline namespace _v1
                     return [](_variant & v) { reinterpret_cast<Arg *>(&v._storage)->~Arg(); };
                 };
 
-                static dtor_type dtors[] = {
-                    generator(id<Args>())...
-                };
+                static dtor_type dtors[] = { generator(id<Args>())... };
 
                 assert(_tag < sizeof...(Args));
 
@@ -507,7 +481,7 @@ namespace reaver { inline namespace _v1
             }
 
         private:
-            std::aligned_union_t<0, Args...>  _storage;
+            std::aligned_union_t<0, Args...> _storage;
             std::size_t _tag = -1;
         };
 
@@ -598,12 +572,12 @@ namespace reaver { inline namespace _v1
         // hack for GCC dumbness
         auto generator = [](auto type) {
             using T = typename decltype(type)::type;
-            return [](_detail::_variant<CRTP, Ts...> && v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, T>::value>(std::move(v))); };
+            return [](_detail::_variant<CRTP, Ts...> && v, F && f) -> result_type {
+                return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, T>::value>(std::move(v)));
+            };
         };
 
-        static visitor_type visitors[] = {
-            generator(id<Ts>())...
-        };
+        static visitor_type visitors[] = { generator(id<Ts>())... };
 
         auto index = var.index();
         return visitors[index](std::move(var), std::forward<F>(f));
@@ -612,18 +586,19 @@ namespace reaver { inline namespace _v1
     template<typename CRTP, typename... Ts, typename F>
     auto fmap(const _detail::_variant<CRTP, Ts...> & var, F && f)
     {
-        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<const _detail::_dereference_wrapper_t<Ts> &>()))...>, variant>;
+        using result_type =
+            tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), std::declval<const _detail::_dereference_wrapper_t<Ts> &>()))...>, variant>;
         using visitor_type = result_type (*)(const _detail::_variant<CRTP, Ts...> &, F &&);
 
         // hack for GCC dumbness
         auto generator = [](auto type) {
             using T = typename decltype(type)::type;
-            return [](const _detail::_variant<CRTP, Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, T>::value>(v)); };
+            return [](const _detail::_variant<CRTP, Ts...> & v, F && f) -> result_type {
+                return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, T>::value>(v));
+            };
         };
 
-        static visitor_type visitors[] = {
-            generator(id<Ts>())...
-        };
+        static visitor_type visitors[] = { generator(id<Ts>())... };
 
         auto index = var.index();
         return visitors[index](var, std::forward<F>(f));
@@ -638,84 +613,46 @@ namespace reaver { inline namespace _v1
         // hack for GCC dumbness
         auto generator = [](auto type) {
             using T = typename decltype(type)::type;
-            return [](_detail::_variant<CRTP, Ts...> & v, F && f) -> result_type { return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, T>::value>(v)); };
+            return [](_detail::_variant<CRTP, Ts...> & v, F && f) -> result_type {
+                return invoke(std::forward<F>(f), get<tpl::index_of<tpl::vector<Ts...>, T>::value>(v));
+            };
         };
 
-        static visitor_type visitors[] = {
-            generator(id<Ts>())...
-        };
+        static visitor_type visitors[] = { generator(id<Ts>())... };
 
         auto index = var.index();
         return visitors[index](var, std::forward<F>(f));
     }
 
-    template<typename F, typename CRTP, typename... Ts,
+    template<typename F,
+        typename CRTP,
+        typename... Ts,
         typename = decltype(get<0>(fmap(std::declval<const _detail::_variant<CRTP, Ts...> &>(), std::declval<F>())))>
     auto mbind(const _detail::_variant<CRTP, Ts...> & v, F && f)
     {
-        using return_type = tpl::rebind<
-            tpl::rebind<
-                tpl::rebind<
-                    tpl::map<
-                        tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
-                        tpl::unbind
-                    >,
-                    tpl::concat
-                >,
-                tpl::unique
-            >,
-            variant
-        >;
+        using return_type =
+            tpl::rebind<tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>, variant>;
 
-        return get<0>(fmap(v, [&](auto && value) -> return_type {
-            return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
-        }));
+        return get<0>(fmap(v, [&](auto && value) -> return_type { return invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
     }
 
-    template<typename F, typename CRTP, typename... Ts,
-        typename = decltype(get<0>(fmap(std::declval<_detail::_variant<CRTP, Ts...> &>(), std::declval<F>())))>
+    template<typename F, typename CRTP, typename... Ts, typename = decltype(get<0>(fmap(std::declval<_detail::_variant<CRTP, Ts...> &>(), std::declval<F>())))>
     auto mbind(_detail::_variant<CRTP, Ts...> & v, F && f)
     {
-        using return_type = tpl::rebind<
-            tpl::rebind<
-                tpl::rebind<
-                    tpl::map<
-                        tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>,
-                        tpl::unbind
-                    >,
-                    tpl::concat
-                >,
-                tpl::unique
-            >,
-            variant
-        >;
+        using return_type =
+            tpl::rebind<tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>, variant>;
 
-        return get<0>(fmap(v, [&](auto && value) -> return_type {
-            return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
-        }));
+        return get<0>(fmap(v, [&](auto && value) -> return_type { return invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
     }
 
-    template<typename F, typename CRTP, typename... Ts,
-        typename = decltype(get<0>(fmap(std::declval<_detail::_variant<CRTP, Ts...>>(), std::declval<F>())))>
+    template<typename F, typename CRTP, typename... Ts, typename = decltype(get<0>(fmap(std::declval<_detail::_variant<CRTP, Ts...>>(), std::declval<F>())))>
     auto mbind(_detail::_variant<CRTP, Ts...> && v, F && f)
     {
-        using return_type = tpl::rebind<
-            tpl::rebind<
-                tpl::rebind<
-                    tpl::map<
-                        tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>,
-                        tpl::unbind
-                    >,
-                    tpl::concat
-                >,
-                tpl::unique
-            >,
-            variant
-        >;
+        using return_type = tpl::
+            rebind<tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>,
+                variant>;
 
-        return get<0>(fmap(std::move(v), [&](auto && value) -> return_type {
-            return invoke(std::forward<F>(f), std::forward<decltype(value)>(value));
-        }));
+        return get<0>(fmap(std::move(v), [&](auto && value) -> return_type { return invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
     }
 
     namespace _detail
@@ -742,15 +679,17 @@ namespace reaver { inline namespace _v1
         auto _visit(F && f, std::tuple<TupleTs...> tuple, const _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
         {
             return mbind(head, [&](auto && elem) {
-                return _visit(std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+                return _visit(
+                    std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
             });
         }
 
-        template<typename F, typename CRTP,  typename... TupleTs, typename... Ts, typename... Variants>
+        template<typename F, typename CRTP, typename... TupleTs, typename... Ts, typename... Variants>
         auto _visit(F && f, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> & head, Variants &&... tail)
         {
             return mbind(head, [&](auto && elem) {
-                return _visit(std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+                return _visit(
+                    std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
             });
         }
 
@@ -758,7 +697,8 @@ namespace reaver { inline namespace _v1
         auto _visit(F && f, std::tuple<TupleTs...> tuple, _detail::_variant<CRTP, Ts...> && head, Variants &&... tail)
         {
             return mbind(std::move(head), [&](auto && elem) {
-                return _visit(std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
+                return _visit(
+                    std::forward<F>(f), std::tuple_cat(std::move(tuple), std::make_tuple(std::forward<decltype(elem)>(elem))), std::forward<Variants>(tail)...);
             });
         }
     }
@@ -782,9 +722,7 @@ namespace reaver { inline namespace _v1
             };
         };
 
-        static comparator_type comparators[] = {
-            generator(id<Ts>())...
-        };
+        static comparator_type comparators[] = { generator(id<Ts>())... };
 
         return lhs.index() == rhs.index() && comparators[lhs.index()](lhs, rhs);
     }
@@ -808,9 +746,7 @@ namespace reaver { inline namespace _v1
             };
         };
 
-        static comparator_type comparators[] = {
-            generator(id<Ts>())...
-        };
+        static comparator_type comparators[] = { generator(id<Ts>())... };
 
         return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && comparators[lhs.index()](lhs, rhs));
     }
@@ -842,7 +778,9 @@ namespace reaver { inline namespace _v1
     template<typename... Ts>
     using make_variant = typename _detail::_make_variant_type<tpl::vector<>, Ts...>::type;
 
-    struct recursive_variant_tag{};
+    struct recursive_variant_tag
+    {
+    };
     using rvt = recursive_variant_tag;
 
     namespace _detail
@@ -937,5 +875,5 @@ namespace reaver { inline namespace _v1
     {
         return lhs < *rhs;
     }
-}}
-
+}
+}

@@ -22,81 +22,77 @@
 
 #include <reaver/mayfly.h>
 
-#include <queue>
 #include <future> // lol
+#include <queue>
 
 #include <reaver/optional.h>
 
 namespace test
 {
-#   include "future.h"
+#include "future.h"
 }
 
 namespace
 {
-    struct trivial_executor : public test::reaver::executor
+struct trivial_executor : public test::reaver::executor
+{
+    virtual void push(test::reaver::function<void()> f) override
     {
-        virtual void push(test::reaver::function<void ()> f) override
+        if (in_function)
         {
-            if (in_function)
-            {
-                queue.push_back(std::move(f));
-                return;
-            }
-
-            in_function = true;
-            f();
-
-            while (queue.size())
-            {
-                auto fs = move(queue);
-                queue.clear();
-
-                for (auto && f : fs)
-                {
-                    f();
-                }
-            }
-
-            in_function = false;
+            queue.push_back(std::move(f));
+            return;
         }
 
-        std::vector<test::reaver::function<void ()>> queue;
-        bool in_function = false;
-    };
+        in_function = true;
+        f();
+
+        while (queue.size())
+        {
+            auto fs = move(queue);
+            queue.clear();
+
+            for (auto && f : fs)
+            {
+                f();
+            }
+        }
+
+        in_function = false;
+    }
+
+    std::vector<test::reaver::function<void()>> queue;
+    bool in_function = false;
+};
 }
 
 MAYFLY_BEGIN_SUITE("future");
 
-MAYFLY_ADD_TESTCASE("try_get", []()
-{
+MAYFLY_ADD_TESTCASE("try_get", []() {
     auto f = test::reaver::make_ready_future(1);
 
     MAYFLY_REQUIRE(f.try_get() == 1);
     MAYFLY_REQUIRE(!f.try_get());
 });
 
-MAYFLY_ADD_TESTCASE("shared state", []()
-{
-    auto pair = test::reaver::package([](){ return 1; });
+MAYFLY_ADD_TESTCASE("shared state", []() {
+    auto pair = test::reaver::package([]() { return 1; });
     pair.packaged_task();
 
     MAYFLY_REQUIRE(pair.future.try_get() == 1);
 });
 
-MAYFLY_ADD_TESTCASE("void future", []()
-{
-    auto pair = test::reaver::package([](){});
+MAYFLY_ADD_TESTCASE("void future", []() {
+    auto pair = test::reaver::package([]() {});
     MAYFLY_REQUIRE(!pair.future.try_get());
 
     pair.packaged_task();
     MAYFLY_REQUIRE(pair.future.try_get());
 });
 
-MAYFLY_ADD_TESTCASE("exceptional future", []()
-{
+MAYFLY_ADD_TESTCASE("exceptional future", []() {
     {
-        auto pair = test::reaver::package([](){ throw 1; });
+        auto pair = test::reaver::package([]() { throw 1; });
 
         MAYFLY_REQUIRE_NOTHROW(pair.packaged_task());
         MAYFLY_REQUIRE_THROWS_TYPE(int, pair.future.try_get());
@@ -112,13 +108,12 @@ MAYFLY_ADD_TESTCASE("exceptional future", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("broken promise", []()
-{
+MAYFLY_ADD_TESTCASE("broken promise", []() {
     {
         reaver::optional<test::reaver::future<>> future;
 
         {
-            auto pair = test::reaver::package([](){});
+            auto pair = test::reaver::package([]() {});
             future = std::move(pair.future);
         }
 
@@ -139,14 +134,13 @@ MAYFLY_ADD_TESTCASE("broken promise", []()
 
 MAYFLY_BEGIN_SUITE("continuations");
 
-MAYFLY_ADD_TESTCASE("then", []()
-{
+MAYFLY_ADD_TESTCASE("then", []() {
     {
-        auto pair = test::reaver::package([](){ return; });
-        auto future = pair.future.then([](){ return 2; });
+        auto pair = test::reaver::package([]() { return; });
+        auto future = pair.future.then([]() { return 2; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE(future.try_get() == 2);
     }
@@ -155,17 +149,17 @@ MAYFLY_ADD_TESTCASE("then", []()
         test::reaver::default_executor(test::reaver::make_executor<trivial_executor>());
 
         auto ready = test::reaver::make_ready_future(1);
-        auto future = ready.then([](auto i){ return i * 2; });
+        auto future = ready.then([](auto i) { return i * 2; });
 
         MAYFLY_REQUIRE(future.try_get() == 2);
     }
 
     {
-        auto pair = test::reaver::package([](){ return 1; });
-        auto future = pair.future.then([](auto i){ return i * 2; });
+        auto pair = test::reaver::package([]() { return 1; });
+        auto future = pair.future.then([](auto i) { return i * 2; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE(future.try_get() == 2);
     }
@@ -174,21 +168,20 @@ MAYFLY_ADD_TESTCASE("then", []()
         test::reaver::default_executor(test::reaver::make_executor<trivial_executor>());
 
         auto ready = test::reaver::make_ready_future();
-        auto future = ready.then([](){ return 2; });
+        auto future = ready.then([]() { return 2; });
 
         MAYFLY_REQUIRE(future.try_get() == 2);
     }
 });
 
-MAYFLY_ADD_TESTCASE("exceptional continuation", []()
-{
+MAYFLY_ADD_TESTCASE("exceptional continuation", []() {
     {
-        auto pair = test::reaver::package([](){ throw 1; });
-        auto future = pair.future.then([](){ return false; });
-        auto exceptional = pair.future.on_error([](std::exception_ptr){ return true; });
+        auto pair = test::reaver::package([]() { throw 1; });
+        auto future = pair.future.then([]() { return false; });
+        auto exceptional = pair.future.on_error([](std::exception_ptr) { return true; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
         MAYFLY_REQUIRE(exceptional.try_get()->get_error() == true);
@@ -196,68 +189,63 @@ MAYFLY_ADD_TESTCASE("exceptional continuation", []()
 
     {
         auto pair = test::reaver::package([]() -> int { throw 1; });
-        auto future = pair.future.then([](int){ return false; });
-        auto exceptional = pair.future
-            .then([](auto && value){ return value * 7; })
-            .on_error([](std::exception_ptr){ return true; });
+        auto future = pair.future.then([](int) { return false; });
+        auto exceptional = pair.future.then([](auto && value) { return value * 7; }).on_error([](std::exception_ptr) { return true; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
         MAYFLY_REQUIRE(exceptional.try_get()->get_error() == true);
     }
 
     {
-        auto pair = test::reaver::package([](){ return 1; });
-        auto future = pair.future.then([](auto i){ return i + 2; })
-            .on_error([](auto ex){ MAYFLY_REQUIRE(false); })
-            .then([](auto && value){ return *value * 7; });
+        auto pair = test::reaver::package([]() { return 1; });
+        auto future =
+            pair.future.then([](auto i) { return i + 2; }).on_error([](auto ex) { MAYFLY_REQUIRE(false); }).then([](auto && value) { return *value * 7; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE(future.try_get() == 21);
     }
 });
 
-MAYFLY_ADD_TESTCASE("exception propagation", []()
-{
+MAYFLY_ADD_TESTCASE("exception propagation", []() {
     {
-        auto pair = test::reaver::package([](){ throw 1; });
-        auto future = pair.future.then([](){ return 2; });
+        auto pair = test::reaver::package([]() { throw 1; });
+        auto future = pair.future.then([]() { return 2; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
     }
 
     {
         auto pair = test::reaver::package([]() -> int { throw 1; });
-        auto future = pair.future.then([](auto i){ return 2; });
+        auto future = pair.future.then([](auto i) { return 2; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE_THROWS_TYPE(int, future.try_get());
     }
 });
 
-MAYFLY_ADD_TESTCASE("then keeps the state alive", []()
-{
+MAYFLY_ADD_TESTCASE("then keeps the state alive", []() {
     {
         bool invoked = false;
 
-        auto pair = test::reaver::package([&](){ invoked = true; });
-        auto future = pair.future.then([](){});
+        auto pair = test::reaver::package([&]() { invoked = true; });
+        auto future = pair.future.then([]() {});
 
         {
             auto moved = std::move(pair.future);
         }
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(invoked == true);
     }
@@ -265,34 +253,36 @@ MAYFLY_ADD_TESTCASE("then keeps the state alive", []()
     {
         bool invoked = false;
 
-        auto pair = test::reaver::package([&](){ invoked = true; return 1; });
-        auto future = pair.future.then([](auto){});
+        auto pair = test::reaver::package([&]() {
+            invoked = true;
+            return 1;
+        });
+        auto future = pair.future.then([](auto) {});
 
         {
             auto moved = std::move(pair.future);
         }
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(invoked == true);
     }
 });
 
-MAYFLY_ADD_TESTCASE("on_error keeps the state alive", []()
-{
+MAYFLY_ADD_TESTCASE("on_error keeps the state alive", []() {
     {
         bool invoked = false;
 
-        auto pair = test::reaver::package([&](){ invoked = true; });
-        auto future = pair.future.on_error([](auto){});
+        auto pair = test::reaver::package([&]() { invoked = true; });
+        auto future = pair.future.on_error([](auto) {});
 
         {
             auto moved = std::move(pair.future);
         }
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE(invoked == true);
     }
@@ -300,22 +290,24 @@ MAYFLY_ADD_TESTCASE("on_error keeps the state alive", []()
     {
         bool invoked = false;
 
-        auto pair = test::reaver::package([&](){ invoked = true; return 1; });
-        auto future = pair.future.on_error([](auto){});
+        auto pair = test::reaver::package([&]() {
+            invoked = true;
+            return 1;
+        });
+        auto future = pair.future.on_error([](auto) {});
 
         {
             auto moved = std::move(pair.future);
         }
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_REQUIRE(invoked == true);
     }
 });
 
-MAYFLY_ADD_TESTCASE("shared future", []()
-{
+MAYFLY_ADD_TESTCASE("shared future", []() {
     {
         auto future = test::reaver::make_ready_future(1);
         auto copy1 = future;
@@ -327,12 +319,12 @@ MAYFLY_ADD_TESTCASE("shared future", []()
     }
 
     {
-        auto pair = test::reaver::package([](){ return 1; });
-        auto future = pair.future.then([](auto i){ return i * 2; });
-        auto other = pair.future.then([](auto i){ return i * 3; });
+        auto pair = test::reaver::package([]() { return 1; });
+        auto future = pair.future.then([](auto i) { return i * 2; });
+        auto other = pair.future.then([](auto i) { return i * 3; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(pair.future.try_get() == 1);
         MAYFLY_CHECK(future.try_get() == 2);
@@ -365,8 +357,7 @@ MAYFLY_ADD_TESTCASE("shared future", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("shared void future", []()
-{
+MAYFLY_ADD_TESTCASE("shared void future", []() {
     {
         auto future = test::reaver::make_ready_future();
         auto copy1 = future;
@@ -378,12 +369,12 @@ MAYFLY_ADD_TESTCASE("shared void future", []()
     }
 
     {
-        auto pair = test::reaver::package([](){});
-        auto future = pair.future.then([](){ return 2; });
-        auto other = pair.future.then([](){ return 3; });
+        auto pair = test::reaver::package([]() {});
+        auto future = pair.future.then([]() { return 2; });
+        auto other = pair.future.then([]() { return 3; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(pair.future.try_get());
         MAYFLY_CHECK(future.try_get() == 2);
@@ -418,8 +409,7 @@ MAYFLY_ADD_TESTCASE("shared void future", []()
 
 MAYFLY_END_SUITE;
 
-MAYFLY_ADD_TESTCASE("noncopyable value", []()
-{
+MAYFLY_ADD_TESTCASE("noncopyable value", []() {
     struct noncopyable
     {
         int i = 0;
@@ -443,25 +433,25 @@ MAYFLY_ADD_TESTCASE("noncopyable value", []()
     }
 
     {
-        auto pair = test::reaver::package([](){ return noncopyable{ 3 }; });
-        auto future = pair.future.then([](noncopyable n){ return n.i; });
+        auto pair = test::reaver::package([]() { return noncopyable{ 3 }; });
+        auto future = pair.future.then([](noncopyable n) { return n.i; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(future.try_get() == 3);
         MAYFLY_CHECK(!pair.future.try_get());
     }
 
     {
-        auto pair = test::reaver::package([](){ return noncopyable{ 3 }; });
-        pair.future.then([](auto){});
-        MAYFLY_CHECK_THROWS_TYPE(test::reaver::multiple_noncopyable_continuations, pair.future.then([](auto){}));
+        auto pair = test::reaver::package([]() { return noncopyable{ 3 }; });
+        pair.future.then([](auto) {});
+        MAYFLY_CHECK_THROWS_TYPE(test::reaver::multiple_noncopyable_continuations, pair.future.then([](auto) {}));
     }
 
     {
         auto exec = test::reaver::make_executor<trivial_executor>();
-        auto future = test::reaver::async(exec, [](noncopyable n){ return n.i; }, noncopyable{ 6 });
+        auto future = test::reaver::async(exec, [](noncopyable n) { return n.i; }, noncopyable{ 6 });
 
         MAYFLY_CHECK(future.try_get() == 6);
     }
@@ -469,35 +459,34 @@ MAYFLY_ADD_TESTCASE("noncopyable value", []()
 
 MAYFLY_BEGIN_SUITE("when_all");
 
-MAYFLY_ADD_TESTCASE("when_all", []()
-{
+MAYFLY_ADD_TESTCASE("when_all", []() {
     {
         auto ready = test::reaver::make_ready_future();
         auto ready_int = test::reaver::make_ready_future(1);
 
-        auto pair = test::reaver::package([](){});
-        auto pair_int = test::reaver::package([](){ return 2; });
+        auto pair = test::reaver::package([]() {});
+        auto pair_int = test::reaver::package([]() { return 2; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto final = test::reaver::when_all(exec, ready, ready_int, pair.future, pair_int.future);
 
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
-        exec->push([exec, task = std::move(pair_int.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
+        exec->push([exec, task = std::move(pair_int.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(final.try_get() == std::make_tuple(1, 2));
     }
 
     {
-        auto pair1 = test::reaver::package([](){ return 1; });
-        auto pair2 = test::reaver::package([](){ return 2; });
+        auto pair1 = test::reaver::package([]() { return 1; });
+        auto pair2 = test::reaver::package([]() { return 2; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto final = test::reaver::when_all(exec, pair1.future, pair2.future);
 
-        exec->push([exec, task = std::move(pair1.packaged_task)](){ task(exec); });
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair1.packaged_task)]() { task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(final.try_get() == std::make_tuple(1, 2));
     }
@@ -508,86 +497,74 @@ MAYFLY_ADD_TESTCASE("when_all", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("exception propagation", []()
-{
+MAYFLY_ADD_TESTCASE("exception propagation", []() {
     {
-        auto pair = test::reaver::package([](){ throw 1; });
+        auto pair = test::reaver::package([]() { throw 1; });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto final = test::reaver::when_all(exec, std::move(pair.future));
 
-        exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK_THROWS_TYPE(test::reaver::exception_list, final.try_get());
     }
 });
 
-MAYFLY_ADD_TESTCASE("vector", []()
-{
+MAYFLY_ADD_TESTCASE("vector", []() {
     {
-        auto pair1 = test::reaver::package([](){ return 1; });
-        auto pair2 = test::reaver::package([](){ return 2; });
-        auto pair3 = test::reaver::package([](){ return 3; });
+        auto pair1 = test::reaver::package([]() { return 1; });
+        auto pair2 = test::reaver::package([]() { return 2; });
+        auto pair3 = test::reaver::package([]() { return 3; });
 
-        auto futures = std::vector<test::reaver::future<int>>{
-            std::move(pair1.future),
-            std::move(pair2.future),
-            std::move(pair3.future)
-        };
+        auto futures = std::vector<test::reaver::future<int>>{ std::move(pair1.future), std::move(pair2.future), std::move(pair3.future) };
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto final = test::reaver::when_all(exec, futures);
 
-        exec->push([exec, task = std::move(pair1.packaged_task)](){ task(exec); });
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
-        exec->push([exec, task = std::move(pair3.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair1.packaged_task)]() { task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
+        exec->push([exec, task = std::move(pair3.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(final.try_get() == std::vector<int>{ 1, 2, 3 });
     }
 
     {
-        auto pair1 = test::reaver::package([](){});
-        auto pair2 = test::reaver::package([](){});
-        auto pair3 = test::reaver::package([](){});
+        auto pair1 = test::reaver::package([]() {});
+        auto pair2 = test::reaver::package([]() {});
+        auto pair3 = test::reaver::package([]() {});
 
-        auto futures = std::vector<test::reaver::future<>>{
-            std::move(pair1.future),
-            std::move(pair2.future),
-            std::move(pair3.future)
-        };
+        auto futures = std::vector<test::reaver::future<>>{ std::move(pair1.future), std::move(pair2.future), std::move(pair3.future) };
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto final = test::reaver::when_all(exec, futures);
 
-        exec->push([exec, task = std::move(pair1.packaged_task)](){ task(exec); });
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
-        exec->push([exec, task = std::move(pair3.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair1.packaged_task)]() { task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
+        exec->push([exec, task = std::move(pair3.packaged_task)]() { task(exec); });
 
         MAYFLY_CHECK(final.try_get());
     }
 });
 
-MAYFLY_ADD_TESTCASE("vector exception propagation", []()
-{
-    auto pair = test::reaver::package([](){ throw 1; });
+MAYFLY_ADD_TESTCASE("vector exception propagation", []() {
+    auto pair = test::reaver::package([]() { throw 1; });
     auto futures = std::vector<test::reaver::future<>>{ std::move(pair.future) };
 
     auto exec = test::reaver::make_executor<trivial_executor>();
 
     auto final = test::reaver::when_all(exec, futures);
 
-    exec->push([exec, task = std::move(pair.packaged_task)](){ task(exec); });
+    exec->push([exec, task = std::move(pair.packaged_task)]() { task(exec); });
 
     MAYFLY_REQUIRE_THROWS_TYPE(test::reaver::exception_list, final.try_get());
 });
 
 MAYFLY_END_SUITE;
 
-MAYFLY_ADD_TESTCASE("manual promise", []()
-{
+MAYFLY_ADD_TESTCASE("manual promise", []() {
     {
         auto pair = test::reaver::make_promise<int>();
         MAYFLY_REQUIRE(!pair.future.try_get());
@@ -613,18 +590,17 @@ MAYFLY_ADD_TESTCASE("manual promise", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("join", []()
-{
+MAYFLY_ADD_TESTCASE("join", []() {
     {
         auto pair1 = test::reaver::make_promise<int>();
-        auto pair2 = test::reaver::package([&]{ return std::move(pair1.future); });
+        auto pair2 = test::reaver::package([&] { return std::move(pair1.future); });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto fut = test::reaver::join(exec, pair2.future);
 
         MAYFLY_REQUIRE(!fut.try_get());
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
         MAYFLY_REQUIRE(!fut.try_get());
         pair1.promise.set(123);
         MAYFLY_REQUIRE(fut.try_get() == 123);
@@ -632,7 +608,7 @@ MAYFLY_ADD_TESTCASE("join", []()
 
     {
         auto pair1 = test::reaver::make_promise<int>();
-        auto pair2 = test::reaver::package([&]{ return std::move(pair1.future); });
+        auto pair2 = test::reaver::package([&] { return std::move(pair1.future); });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
@@ -641,19 +617,19 @@ MAYFLY_ADD_TESTCASE("join", []()
         MAYFLY_REQUIRE(!fut.try_get());
         pair1.promise.set(123);
         MAYFLY_REQUIRE(!fut.try_get());
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
         MAYFLY_REQUIRE(fut.try_get() == 123);
     }
 
     {
         auto fut1 = test::reaver::make_ready_future(123);
-        auto pair2 = test::reaver::package([&]{ return std::move(fut1); });
+        auto pair2 = test::reaver::package([&] { return std::move(fut1); });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto fut = test::reaver::join(exec, pair2.future);
         MAYFLY_REQUIRE(!fut.try_get());
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
         MAYFLY_REQUIRE(fut.try_get() == 123);
     }
 
@@ -680,18 +656,17 @@ MAYFLY_ADD_TESTCASE("join", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("void join", []()
-{
+MAYFLY_ADD_TESTCASE("void join", []() {
     {
         auto pair1 = test::reaver::make_promise<void>();
-        auto pair2 = test::reaver::package([&]{ return std::move(pair1.future); });
+        auto pair2 = test::reaver::package([&] { return std::move(pair1.future); });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto fut = test::reaver::join(exec, pair2.future);
 
         MAYFLY_REQUIRE(!fut.try_get());
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
         MAYFLY_REQUIRE(!fut.try_get());
         pair1.promise.set();
         MAYFLY_REQUIRE(fut.try_get());
@@ -699,7 +674,7 @@ MAYFLY_ADD_TESTCASE("void join", []()
 
     {
         auto pair1 = test::reaver::make_promise<void>();
-        auto pair2 = test::reaver::package([&]{ return std::move(pair1.future); });
+        auto pair2 = test::reaver::package([&] { return std::move(pair1.future); });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
@@ -708,19 +683,19 @@ MAYFLY_ADD_TESTCASE("void join", []()
         MAYFLY_REQUIRE(!fut.try_get());
         pair1.promise.set();
         MAYFLY_REQUIRE(!fut.try_get());
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
         MAYFLY_REQUIRE(fut.try_get());
     }
 
     {
         auto fut1 = test::reaver::make_ready_future();
-        auto pair2 = test::reaver::package([&]{ return std::move(fut1); });
+        auto pair2 = test::reaver::package([&] { return std::move(fut1); });
 
         auto exec = test::reaver::make_executor<trivial_executor>();
 
         auto fut = test::reaver::join(exec, pair2.future);
         MAYFLY_REQUIRE(!fut.try_get());
-        exec->push([exec, task = std::move(pair2.packaged_task)](){ task(exec); });
+        exec->push([exec, task = std::move(pair2.packaged_task)]() { task(exec); });
         MAYFLY_REQUIRE(fut.try_get());
     }
 
@@ -747,71 +722,68 @@ MAYFLY_ADD_TESTCASE("void join", []()
     }
 });
 
-MAYFLY_ADD_TESTCASE("unwrap and not", []()
-{
+MAYFLY_ADD_TESTCASE("unwrap and not", []() {
     auto exec = test::reaver::make_executor<trivial_executor>();
 
     {
         auto fut1 = test::reaver::make_ready_future(123);
-        auto fut2 = fut1.then(exec, [](auto v){ return test::reaver::make_ready_future(v * 2); });
+        auto fut2 = fut1.then(exec, [](auto v) { return test::reaver::make_ready_future(v * 2); });
 
         MAYFLY_REQUIRE(fut2.try_get() == 246);
     }
 
     {
         auto fut1 = test::reaver::make_ready_future(123);
-        auto fut2 = fut1.then(test::reaver::do_not_unwrap, exec, [](auto v){ return test::reaver::make_ready_future(v * 2); });
+        auto fut2 = fut1.then(test::reaver::do_not_unwrap, exec, [](auto v) { return test::reaver::make_ready_future(v * 2); });
 
         MAYFLY_REQUIRE(fut2.try_get()->try_get() == 246);
     }
 
     {
         auto fut1 = test::reaver::make_ready_future();
-        auto fut2 = fut1.then(exec, [](){ return test::reaver::make_ready_future(); });
+        auto fut2 = fut1.then(exec, []() { return test::reaver::make_ready_future(); });
 
         MAYFLY_REQUIRE(fut2.try_get());
     }
 
     {
         auto fut1 = test::reaver::make_ready_future();
-        auto fut2 = fut1.then(test::reaver::do_not_unwrap, exec, [](){ return test::reaver::make_ready_future(); });
+        auto fut2 = fut1.then(test::reaver::do_not_unwrap, exec, []() { return test::reaver::make_ready_future(); });
 
         MAYFLY_REQUIRE(fut2.try_get()->try_get());
     }
 });
 
-MAYFLY_ADD_TESTCASE("unwrap with default executor", []()
-{
+MAYFLY_ADD_TESTCASE("unwrap with default executor", []() {
     test::reaver::default_executor(test::reaver::make_executor<trivial_executor>());
 
     {
         auto fut1 = test::reaver::make_ready_future(123);
-        auto fut2 = fut1.then([](auto v){ return test::reaver::make_ready_future(v * 2); });
+        auto fut2 = fut1.then([](auto v) { return test::reaver::make_ready_future(v * 2); });
 
         MAYFLY_REQUIRE(fut2.try_get() == 246);
     }
 
     {
         auto fut1 = test::reaver::make_ready_future(123);
-        auto fut2 = fut1.then(test::reaver::do_not_unwrap, [](auto v){ return test::reaver::make_ready_future(v * 2); });
+        auto fut2 = fut1.then(test::reaver::do_not_unwrap, [](auto v) { return test::reaver::make_ready_future(v * 2); });
 
         MAYFLY_REQUIRE(fut2.try_get()->try_get() == 246);
     }
 
     {
         auto fut1 = test::reaver::make_ready_future();
-        auto fut2 = fut1.then([](){ return test::reaver::make_ready_future(); });
+        auto fut2 = fut1.then([]() { return test::reaver::make_ready_future(); });
 
         MAYFLY_REQUIRE(fut2.try_get());
     }
 
     {
         auto fut1 = test::reaver::make_ready_future();
-        auto fut2 = fut1.then(test::reaver::do_not_unwrap, [](){ return test::reaver::make_ready_future(); });
+        auto fut2 = fut1.then(test::reaver::do_not_unwrap, []() { return test::reaver::make_ready_future(); });
 
         MAYFLY_REQUIRE(fut2.try_get()->try_get());
     }
 });
 
 MAYFLY_END_SUITE;
-
