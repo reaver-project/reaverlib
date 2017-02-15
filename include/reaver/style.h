@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2012-2013 Michał "Griwes" Dominiak
+ * Copyright © 2012-2013, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <iostream>
 
 namespace reaver
@@ -82,10 +83,17 @@ namespace style
 #ifdef __unix__
         namespace unix_details
         {
-            extern "C" int isatty(int);
+// isatty is marked this way in <unistd.h>; hopefully this doesn't miss any cases
+// (hence why <cstddef> is included)
+#ifndef __THROW
+#define __THROW
+#endif
+            extern "C" int isatty(int) __THROW;
             constexpr int stdout_fileno = 1;
             constexpr int stderr_fileno = 2;
         }
+#else
+#error unsupported platform
 #endif
 
         // stdout and stderr only supported at the moment
