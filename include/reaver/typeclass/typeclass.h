@@ -144,6 +144,10 @@ inline namespace _v1
         }                                                                                                                                                      \
     };                                                                                                                                                         \
                                                                                                                                                                \
+    /* workaround for Clang <4.0 */                                                                                                                            \
+    template<typename... Ts>                                                                                                                                   \
+    using CONCAT3(typeclass_name, _typeclass_provide_alias_, memfn_name) = CONCAT3(typeclass_name, _typeclass_provide_, memfn_name)<Ts...>;                    \
+                                                                                                                                                               \
     template<typename Typeclass, typename ReturnType, typename... Args>                                                                                        \
     struct CONCAT3(typeclass_name, _typeclass_erased_provide_, memfn_name)                                                                                     \
         : protected TYPECLASS_INTERNAL_REAVER_NAMESPACE::virtual_dtor<class typeclass_erased_provide_>,                                                        \
@@ -155,6 +159,10 @@ inline namespace _v1
                 std::forward<Args>(args)...);                                                                                                                  \
         }                                                                                                                                                      \
     };                                                                                                                                                         \
+                                                                                                                                                               \
+    /* also a workaround for Clang <4.0 */                                                                                                                     \
+    template<typename... Ts>                                                                                                                                   \
+    using CONCAT3(typeclass_name, _typeclass_erased_provide_alias_, memfn_name) = CONCAT3(typeclass_name, _typeclass_erased_provide_, memfn_name)<Ts...>;      \
                                                                                                                                                                \
     template<typename Typeclass, typename ReturnType, typename... Args>                                                                                        \
     struct CONCAT3(typeclass_name, _typeclass_erased_instance_provide_, memfn_name)                                                                            \
@@ -193,10 +201,8 @@ private                                                                         
 
 #define TYPECLASS_TYPE_BASE_USING(x, typeclass_info, memfn_name) TYPECLASS_TYPE_BASE_USING_IMPL(FIRST typeclass_info, SECOND typeclass_info, memfn_name)
 #define TYPECLASS_TYPE_BASE_USING_IMPL(typeclass_name, template_args, memfn_name)                                                                              \
-    using TYPECLASS_INTERNAL_REAVER_NAMESPACE::explode<                                                                                                        \
-        typename CONCAT(typeclass_name, _definition)                                                                                                           \
-            template_args::memfn_name, /*reaver::strip_arguments<CONCAT3(typeclass_name, _typeclass_provide_, memfn_name)>::template type,*/                   \
-        CONCAT3(typeclass_name, _typeclass_provide_, memfn_name),                                                                                              \
+    using TYPECLASS_INTERNAL_REAVER_NAMESPACE::explode<typename CONCAT(typeclass_name, _definition) template_args::memfn_name,                                 \
+        CONCAT3(typeclass_name, _typeclass_provide_alias_, memfn_name),                                                                                        \
         typeclass_name template_args>::memfn_name;
 
 #define TYPECLASS_BASE_BASE_CLASS(x, typeclass_info, memfn_name) TYPECLASS_BASE_BASE_CLASS_IMPL(FIRST typeclass_info, SECOND typeclass_info, memfn_name)
@@ -229,10 +235,9 @@ protected                                                                       
 
 #define TYPECLASS_ERASED_USING(x, typeclass_info, memfn_name) TYPECLASS_ERASED_USING_IMPL(FIRST typeclass_info, SECOND typeclass_info, memfn_name)
 #define TYPECLASS_ERASED_USING_IMPL(typeclass_name, template_args, memfn_name)                                                                                 \
-    using CONCAT(base_, memfn_name) = reaver::explode<typename CONCAT(typeclass_name, _definition) template_args::memfn_name,                                  \
-        CONCAT3(typeclass_name, _typeclass_erased_provide_, memfn_name),                                                                                       \
-        typeclass_name template_args>;                                                                                                                         \
-    using CONCAT(base_, memfn_name)::memfn_name;
+    using TYPECLASS_INTERNAL_REAVER_NAMESPACE::explode<typename CONCAT(typeclass_name, _definition) template_args::memfn_name,                                 \
+        CONCAT3(typeclass_name, _typeclass_erased_provide_alias_, memfn_name),                                                                                 \
+        typeclass_name template_args>::memfn_name;
 
 #define DEFINE_TYPECLASS_SEQ(template_decl, template_args, typeclass_name, member_list)                                                                        \
     BOOST_PP_SEQ_FOR_EACH(TYPECLASS_PREPARE_MIXINS, typeclass_name, member_list)                                                                               \
