@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -210,7 +210,7 @@ inline namespace _v1
             {
                 if (!value_accessed)
                 {
-                    std::terminate();
+                    std::rethrow_exception(get<1>(value));
                 }
             }
 
@@ -276,31 +276,33 @@ inline namespace _v1
             {
                 auto conts = then_t{};
 
-                static_if(std::is_copy_constructible<_replaced>{}, [&](auto) {
-                    // shenanigans
-                    while ([&] {
-                        std::lock_guard<std::mutex> lock{ continuations_lock };
-                        return !continuations.empty();
-                    }())
-                    {
-                        {
+                static_if(std::is_copy_constructible<_replaced>{},
+                    [&](auto) {
+                        // shenanigans
+                        while ([&] {
                             std::lock_guard<std::mutex> lock{ continuations_lock };
-                            using std::swap;
-                            swap(conts, continuations);
-                        }
+                            return !continuations.empty();
+                        }())
+                        {
+                            {
+                                std::lock_guard<std::mutex> lock{ continuations_lock };
+                                using std::swap;
+                                swap(conts, continuations);
+                            }
 
-                        fmap(conts, [&](auto && cont) {
+                            fmap(conts, [&](auto && cont) {
+                                cont();
+                                return unit{};
+                            });
+                        }
+                    })
+                    .static_else([&](auto) {
+                        std::lock_guard<std::mutex> lock{ continuations_lock };
+                        fmap(continuations, [&](auto && cont) {
                             cont();
                             return unit{};
                         });
-                    }
-                }).static_else([&](auto) {
-                    std::lock_guard<std::mutex> lock{ continuations_lock };
-                    fmap(continuations, [&](auto && cont) {
-                        cont();
-                        return unit{};
                     });
-                });
 
                 function = none;
                 continuations = then_t{};
