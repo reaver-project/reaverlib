@@ -1,7 +1,7 @@
 /**
  * Reaver Library License
  *
- * Copyright © 2013-2016 Michał "Griwes" Dominiak
+ * Copyright © 2013-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -68,6 +68,8 @@ inline namespace _v1
             {
                 std::unique_lock<std::mutex> lock{ _lock };
                 _end = true;
+                *_destroyed = true;
+                *_destroyer_id = std::this_thread::get_id();
                 _cond.notify_all();
             }
 
@@ -220,10 +222,21 @@ inline namespace _v1
                     }
                 }
 
+                auto destroyed = _destroyed;
+                auto destroyer = _destroyer_id;
                 fmap(std::move(f), [](auto f) {
                     f();
                     return unit{};
                 });
+
+                // this looks like a race
+                // but it's not a race since it guards specifically from doing the wrong thing
+                // when *this has already been destroyed *down the stack* in the current thread
+
+                if (*destroyed && *destroyer == std::this_thread::get_id())
+                {
+                    return;
+                }
 
                 if (_waiters)
                 {
@@ -265,6 +278,8 @@ inline namespace _v1
         semaphore _die_semaphore;
 
         std::atomic<bool> _end{ false };
+        std::shared_ptr<std::atomic<bool>> _destroyed = std::make_shared<std::atomic<bool>>(false);
+        std::shared_ptr<std::thread::id> _destroyer_id = std::make_shared<std::thread::id>();
 
         callbacks<void(void)> _waiters;
     };
