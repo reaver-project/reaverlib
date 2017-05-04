@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2014-2015 Michał "Griwes" Dominiak
+ * Copyright © 2014-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -29,6 +29,7 @@
 #include <thread>
 #include <vector>
 
+#include "../semaphore.h"
 #include "../style.h"
 #include "action.h"
 #include "level_registry.h"
@@ -85,13 +86,10 @@ namespace logger
 
             void sync()
             {
-                std::mutex mtx;
-                std::condition_variable cond;
+                semaphore sem;
+                _async([&]() { sem.notify(); });
 
-                _async([&]() { cond.notify_one(); });
-
-                std::unique_lock<std::mutex> lock(mtx);
-                cond.wait(lock);
+                sem.wait();
             }
 
             void add_stream(stream_wrapper stream)
