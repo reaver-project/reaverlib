@@ -38,18 +38,15 @@ namespace reaver
 inline namespace _v1
 {
     template<typename Typeclass, typename T, typename = void>
-    struct typeclass_trait;
-
-    template<typename Typeclass, typename T>
-    struct typeclass_trait<Typeclass, T, typename std::enable_if<std::is_class<T>::value>::type>
+    struct typeclass_trait
     {
-        using type = typename T::template instance<Typeclass, T>;
+        using type = typename Typeclass::template instance<Typeclass, T>;
     };
 
     template<typename Typeclass, typename T>
-    struct typeclass_trait<Typeclass, T, typename std::enable_if<!std::is_class<T>::value>::type>
+    struct typeclass_trait<Typeclass, T, std::void_t<typename T::template instance<Typeclass, T>>>
     {
-        using type = typename Typeclass::template instance<Typeclass, T>;
+        using type = typename T::template instance<Typeclass, T>;
     };
 
     template<typename Typeclass, typename T>
