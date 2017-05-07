@@ -239,7 +239,7 @@ inline namespace _v1
                             {
                                 value = none;
                             }
-                            return make_optional(std::move(t));
+                            return reaver::make_optional(std::move(t));
                         },
 
                         [&](std::exception_ptr ptr) {
