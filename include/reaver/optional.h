@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015-2016 Michał "Griwes" Dominiak
+ * Copyright © 2015-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -123,7 +123,7 @@ inline namespace _v1
     template<typename T>
     auto make_optional(T && t)
     {
-        return optional<T>{ std::forward<T>(t) };
+        return optional<std::decay_t<T>>{ std::forward<T>(t) };
     }
 
     template<typename T, typename U>
