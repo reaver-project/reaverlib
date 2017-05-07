@@ -165,19 +165,19 @@ inline namespace _v1
     template<typename T, typename F>
     decltype(auto) fmap(optional<T> & t, F && f)
     {
-        return t ? make_optional(invoke(std::forward<F>(f), t.get())) : none;
+        return t ? reaver::make_optional(invoke(std::forward<F>(f), t.get())) : none;
     }
 
     template<typename T, typename F>
     decltype(auto) fmap(const optional<T> & t, F && f)
     {
-        return t ? make_optional(invoke(std::forward<F>(f), t.get())) : none;
+        return t ? reaver::make_optional(invoke(std::forward<F>(f), t.get())) : none;
     }
 
     template<typename T, typename F>
     decltype(auto) fmap(optional<T> && t, F && f)
     {
-        return t ? make_optional(invoke(std::forward<F>(f), std::move(t.get()))) : none;
+        return t ? reaver::make_optional(invoke(std::forward<F>(f), std::move(t.get()))) : none;
     }
 }
 }
