@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015-2016 Michał "Griwes" Dominiak
+ * Copyright © 2015-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -232,7 +232,7 @@ inline namespace _v1
                 template<typename T>
                 static void conversion_context(T);
 
-                template<typename Arg, typename T, typename = decltype(conversion_context<Arg>(Arg{ std::declval<T>() }))>
+                template<typename Arg, typename T, typename = decltype(Arg{ std::declval<T>() })>
                 static auto generate(choice<0>)
                 {
                     return [](_variant & v, T && t) {
@@ -648,9 +648,9 @@ inline namespace _v1
     template<typename F, typename CRTP, typename... Ts, typename = decltype(get<0>(fmap(std::declval<_detail::_variant<CRTP, Ts...>>(), std::declval<F>())))>
     auto mbind(_detail::_variant<CRTP, Ts...> && v, F && f)
     {
-        using return_type = tpl::
-            rebind<tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>,
-                variant>;
+        using return_type = tpl::rebind<
+            tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>,
+            variant>;
 
         return get<0>(fmap(std::move(v), [&](auto && value) -> return_type { return invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
     }

@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015-2016 Michał "Griwes" Dominiak
+ * Copyright © 2015-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -47,7 +47,8 @@ inline namespace _v1
         {
         }
 
-        optional(replace_reference_t<T> t) : _base{ std::move(t) }
+        template<typename U, typename std::enable_if<std::is_same<U, replace_reference_t<T>>::value, int>::type = 0>
+        optional(U t) : _base{ std::move(t) }
         {
         }
 
@@ -56,7 +57,9 @@ inline namespace _v1
         {
         }
 
-        template<typename U, typename = decltype(T{ std::declval<U>() })>
+        template<typename U,
+            typename = decltype(T{ std::declval<U>() }),
+            typename std::enable_if<!std::is_same<std::remove_reference_t<U>, replace_reference_t<T>>::value, int>::type = 0>
         explicit optional(U && u) : _base{ T{ std::forward<U>(u) } }
         {
         }
@@ -123,7 +126,7 @@ inline namespace _v1
     template<typename T>
     auto make_optional(T && t)
     {
-        return optional<T>{ std::forward<T>(t) };
+        return optional<std::decay_t<T>>{ std::forward<T>(t) };
     }
 
     template<typename T, typename U>
@@ -165,19 +168,19 @@ inline namespace _v1
     template<typename T, typename F>
     decltype(auto) fmap(optional<T> & t, F && f)
     {
-        return t ? make_optional(invoke(std::forward<F>(f), t.get())) : none;
+        return t ? reaver::make_optional(invoke(std::forward<F>(f), t.get())) : none;
     }
 
     template<typename T, typename F>
     decltype(auto) fmap(const optional<T> & t, F && f)
     {
-        return t ? make_optional(invoke(std::forward<F>(f), t.get())) : none;
+        return t ? reaver::make_optional(invoke(std::forward<F>(f), t.get())) : none;
     }
 
     template<typename T, typename F>
     decltype(auto) fmap(optional<T> && t, F && f)
     {
-        return t ? make_optional(invoke(std::forward<F>(f), std::move(t.get()))) : none;
+        return t ? reaver::make_optional(invoke(std::forward<F>(f), std::move(t.get()))) : none;
     }
 }
 }
