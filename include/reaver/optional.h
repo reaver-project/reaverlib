@@ -47,7 +47,8 @@ inline namespace _v1
         {
         }
 
-        optional(replace_reference_t<T> t) : _base{ std::move(t) }
+        template<typename U, typename std::enable_if<std::is_same<U, replace_reference_t<T>>::value, int>::type = 0>
+        optional(U t) : _base{ std::move(t) }
         {
         }
 
@@ -56,7 +57,9 @@ inline namespace _v1
         {
         }
 
-        template<typename U, typename = decltype(T{ std::declval<U>() })>
+        template<typename U,
+            typename = decltype(T{ std::declval<U>() }),
+            typename std::enable_if<!std::is_same<std::remove_reference_t<U>, replace_reference_t<T>>::value, int>::type = 0>
         explicit optional(U && u) : _base{ T{ std::forward<U>(u) } }
         {
         }
