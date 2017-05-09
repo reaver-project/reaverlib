@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -316,11 +316,6 @@ namespace options
         template<typename CRTP, typename ValueType, bool Register = true>
         struct option
         {
-            option()
-            {
-                (void)_registrar;
-            }
-
             using type = ValueType;
             static const char * const name;
             static constexpr const char * description = "";
