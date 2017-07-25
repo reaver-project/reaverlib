@@ -29,7 +29,6 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
-#include <boost/range/algorithm.hpp>
 
 #include "../configuration.h"
 #include "../exception.h"

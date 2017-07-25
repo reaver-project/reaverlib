@@ -24,7 +24,6 @@
 
 #include <boost/functional/hash.hpp>
 #include <boost/program_options.hpp>
-#include <boost/range/algorithm.hpp>
 
 namespace test
 {
