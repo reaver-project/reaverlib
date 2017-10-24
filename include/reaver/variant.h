@@ -67,35 +67,35 @@ inline namespace _v1
     template<typename T>
     struct recursive_wrapper
     {
-        recursive_wrapper() : _storage{ std::make_unique<T>() }
+        recursive_wrapper() : _storage{ std::make_shared<T>() }
         {
         }
 
-        recursive_wrapper(const recursive_wrapper & other) : _storage{ std::make_unique<T>(*other._storage) }
+        recursive_wrapper(const recursive_wrapper & other) : _storage{ std::make_shared<T>(*other._storage) }
         {
         }
         recursive_wrapper(recursive_wrapper &&) noexcept = default;
 
         recursive_wrapper & operator=(const recursive_wrapper & rhs)
         {
-            _storage = std::make_unique<T>(*rhs._storage);
+            _storage = std::make_shared<T>(*rhs._storage);
             return *this;
         }
         recursive_wrapper & operator=(recursive_wrapper &&) noexcept = default;
 
         recursive_wrapper & operator=(const T & t)
         {
-            _storage = std::make_unique<T>(t);
+            _storage = std::make_shared<T>(t);
             return *this;
         }
 
         recursive_wrapper & operator=(T && t)
         {
-            _storage = std::make_unique<T>(std::move(t));
+            _storage = std::make_shared<T>(std::move(t));
             return *this;
         }
 
-        recursive_wrapper(T t) : _storage{ std::make_unique<T>(std::move(t)) }
+        recursive_wrapper(T t) : _storage{ std::make_shared<T>(std::move(t)) }
         {
         }
 
@@ -154,7 +154,7 @@ inline namespace _v1
         }
 
     private:
-        std::unique_ptr<T> _storage;
+        std::shared_ptr<T> _storage;
     };
 
     namespace _detail
