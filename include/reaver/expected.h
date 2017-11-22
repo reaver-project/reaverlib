@@ -124,33 +124,33 @@ inline namespace _v1
     }
 
     template<typename T, typename Error, typename F>
-    auto fmap(expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp)))
+    auto fmap(expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp)))
     {
         if (exp)
         {
-            return make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp));
+            return make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp));
         }
 
         return { error_tag, exp.get_error() };
     }
 
     template<typename T, typename Error, typename F>
-    auto fmap(const expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp)))
+    auto fmap(const expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp)))
     {
         if (exp)
         {
-            return make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp));
+            return make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp));
         }
 
         return { error_tag, exp.get_error() };
     }
 
     template<typename T, typename Error, typename F>
-    auto fmap(expected<T, Error> && exp, F && f) -> decltype(make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp)))
+    auto fmap(expected<T, Error> && exp, F && f) -> decltype(make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp)))
     {
         if (exp)
         {
-            return make_expected_err_type<Error>(invoke(std::forward<F>(f), std::move(*exp)));
+            return make_expected_err_type<Error>(std::invoke(std::forward<F>(f), std::move(*exp)));
         }
 
         return { error_tag, std::move(exp.get_error()) };

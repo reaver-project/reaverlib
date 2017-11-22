@@ -33,7 +33,6 @@
 #include <variant>
 
 #include "exception.h"
-#include "invoke.h"
 #include "logic.h"
 #include "overloads.h"
 #include "tpl/concat.h"
@@ -173,20 +172,23 @@ inline namespace _v1
     template<typename... Ts, typename F>
     auto fmap(const std::variant<Ts...> & var, F && f)
     {
-        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
+        using result_type =
+            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
         return std::visit([&](auto && val) -> result_type { return std::forward<F>(f)(_detail::_dereference_wrapper(std::forward<decltype(val)>(val))); }, var);
     }
 
     template<typename... Ts, typename F>
     auto fmap(std::variant<Ts...> & var, F && f)
     {
-        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
+        using result_type =
+            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
         return std::visit([&](auto && val) -> result_type { return std::forward<F>(f)(_detail::_dereference_wrapper(std::forward<decltype(val)>(val))); }, var);
     }
     template<typename... Ts, typename F>
     auto fmap(std::variant<Ts...> && var, F && f)
     {
-        using result_type = tpl::rebind<tpl::unique<decltype(invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
+        using result_type =
+            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
         return std::visit(
             [&](auto && val) -> result_type { return std::forward<F>(f)(_detail::_dereference_wrapper(std::forward<decltype(val)>(val))); }, std::move(var));
     }
@@ -198,7 +200,7 @@ inline namespace _v1
             tpl::rebind<tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>,
                 std::variant>;
 
-        return std::get<0>(fmap(v, [&](auto && value) -> return_type { return invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
+        return std::get<0>(fmap(v, [&](auto && value) -> return_type { return std::invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
     }
 
     template<typename F, typename... Ts, typename = decltype(std::get<0>(fmap(std::declval<std::variant<Ts...> &>(), std::declval<F>())))>
@@ -208,7 +210,7 @@ inline namespace _v1
             tpl::rebind<tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(v, std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>,
                 std::variant>;
 
-        return std::get<0>(fmap(v, [&](auto && value) -> return_type { return invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
+        return std::get<0>(fmap(v, [&](auto && value) -> return_type { return std::invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
     }
 
     template<typename F, typename... Ts, typename = decltype(std::get<0>(fmap(std::declval<std::variant<Ts...>>(), std::declval<F>())))>
@@ -218,7 +220,8 @@ inline namespace _v1
             tpl::rebind<tpl::rebind<tpl::map<tpl::unbind<decltype(fmap(std::move(v), std::forward<F>(f)))>, tpl::unbind>, tpl::concat>, tpl::unique>,
             std::variant>;
 
-        return std::get<0>(fmap(std::move(v), [&](auto && value) -> return_type { return invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
+        return std::get<0>(
+            fmap(std::move(v), [&](auto && value) -> return_type { return std::invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
     }
 
     template<typename T, typename U>
