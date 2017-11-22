@@ -30,11 +30,8 @@
 #include "exception.h"
 #include "executor.h"
 #include "expected.h"
-#include "function.h"
-#include "optional.h"
 #include "overloads.h"
 #include "prelude/functor.h"
-#include "static_if.h"
 #include "tpl/filter.h"
 #include "tpl/rebind.h"
 
