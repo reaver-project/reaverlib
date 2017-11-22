@@ -386,7 +386,7 @@ namespace options
             };
 
             template<typename T>
-            struct _po_type<T, void_t<typename T::parsed_type>>
+            struct _po_type<T, std::void_t<typename T::parsed_type>>
             {
                 using type = typename T::parsed_type;
             };
@@ -546,7 +546,7 @@ namespace options
             };
 
             template<typename T>
-            struct _has_default<T, void_t<decltype(T::default_value)>> : std::true_type
+            struct _has_default<T, std::void_t<decltype(T::default_value)>> : std::true_type
             {
             };
 
@@ -600,10 +600,8 @@ namespace options
                     .options(all)
                     .positional(positional)
                     .style(boost::program_options::command_line_style::allow_short | boost::program_options::command_line_style::allow_long
-                        | boost::program_options::command_line_style::allow_sticky
-                        | boost::program_options::command_line_style::allow_dash_for_short
-                        | boost::program_options::command_line_style::long_allow_next
-                        | boost::program_options::command_line_style::short_allow_next
+                        | boost::program_options::command_line_style::allow_sticky | boost::program_options::command_line_style::allow_dash_for_short
+                        | boost::program_options::command_line_style::long_allow_next | boost::program_options::command_line_style::short_allow_next
                         | boost::program_options::command_line_style::allow_long_disguise)
                     .run(),
                 variables);

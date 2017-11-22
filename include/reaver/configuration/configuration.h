@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2014-2016 Michał "Griwes" Dominiak
+ * Copyright © 2014-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -34,7 +34,6 @@
 #include "../subset.h"
 #include "../swallow.h"
 #include "../unit.h"
-#include "../void_t.h"
 
 namespace reaver
 {
@@ -48,7 +47,7 @@ inline namespace _v1
         };
 
         template<typename T>
-        struct _has_identity_construct<T, void_t<decltype(T::construct(std::declval<typename T::type>()))>> : public std::true_type
+        struct _has_identity_construct<T, std::void_t<decltype(T::construct(std::declval<typename T::type>()))>> : public std::true_type
         {
         };
 
@@ -58,7 +57,7 @@ inline namespace _v1
         };
 
         template<typename T, typename U>
-        struct _has_construct<T, U, void_t<decltype(T::construct(std::declval<U>()))>> : public std::true_type
+        struct _has_construct<T, U, std::void_t<decltype(T::construct(std::declval<U>()))>> : public std::true_type
         {
         };
 
@@ -68,7 +67,7 @@ inline namespace _v1
         };
 
         template<typename T, typename U>
-        struct _has_static_cast_impl<void_t<decltype(static_cast<typename T::type>(std::declval<U>()))>, T, U> : public std::true_type
+        struct _has_static_cast_impl<std::void_t<decltype(static_cast<typename T::type>(std::declval<U>()))>, T, U> : public std::true_type
         {
         };
 
@@ -83,8 +82,9 @@ inline namespace _v1
         };
 
         template<typename T, typename... Args>
-        struct _has_exact_match_impl<void_t<decltype(static_cast<decltype(T::construct(std::declval<Args>()...)) (*)(Args...)>(&T::construct))>, T, Args...>
-            : public std::true_type
+        struct _has_exact_match_impl<std::void_t<decltype(static_cast<decltype(T::construct(std::declval<Args>()...)) (*)(Args...)>(&T::construct))>,
+            T,
+            Args...> : public std::true_type
         {
         };
 
@@ -99,7 +99,7 @@ inline namespace _v1
         };
 
         template<typename T, typename... Args>
-        struct _is_construct_callable_impl<void_t<decltype(T::construct(std::declval<Args>()...))>, T, Args...> : public std::true_type
+        struct _is_construct_callable_impl<std::void_t<decltype(T::construct(std::declval<Args>()...))>, T, Args...> : public std::true_type
         {
         };
 
@@ -114,7 +114,7 @@ inline namespace _v1
         };
 
         template<typename T, typename... Args>
-        struct _is_constructible_impl<void_t<decltype(typename T::type{ std::declval<Args>()... })>, T, Args...> : public std::true_type
+        struct _is_constructible_impl<std::void_t<decltype(typename T::type{ std::declval<Args>()... })>, T, Args...> : public std::true_type
         {
         };
 
@@ -233,8 +233,9 @@ inline namespace _v1
             typename std::enable_if<_detail::_apply_on_type_list<_detail::_has_exact_match, T, TypeList>::value, int>::type = 0>
         auto _set(choice<2>)
         {
-            return [&](
-                auto &&... arg) { _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg)...)); };
+            return [&](auto &&... arg) {
+                _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(arg)>(arg)...));
+            };
         }
 
         template<typename T,
@@ -250,8 +251,9 @@ inline namespace _v1
             typename std::enable_if<_detail::_apply_on_type_list<_detail::_is_construct_callable, T, TypeList>::value, int>::type = 0>
         auto _set(choice<4>)
         {
-            return [&](
-                auto &&... args) { _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(args)>(args)...)); };
+            return [&](auto &&... args) {
+                _map[boost::typeindex::type_id<T>()] = static_cast<typename T::type>(T::construct(std::forward<decltype(args)>(args)...));
+            };
         }
 
         template<typename T,
