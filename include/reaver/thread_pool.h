@@ -32,7 +32,6 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "callbacks.h"
 #include "exception.h"
 #include "executor.h"
 #include "optional.h"
@@ -173,12 +172,6 @@ inline namespace _v1
     private:
         void _loop()
         {
-            if (_waiters)
-            {
-                std::unique_lock<std::mutex> lock{ _lock };
-                _waiters();
-            }
-
             while (!_end || _threads.size())
             {
                 {
@@ -237,12 +230,6 @@ inline namespace _v1
                 {
                     return;
                 }
-
-                if (_waiters)
-                {
-                    std::unique_lock<std::mutex> lock{ _lock };
-                    _waiters();
-                }
             }
         }
 
@@ -280,8 +267,6 @@ inline namespace _v1
         std::atomic<bool> _end{ false };
         std::shared_ptr<std::atomic<bool>> _destroyed = std::make_shared<std::atomic<bool>>(false);
         std::shared_ptr<std::thread::id> _destroyer_id = std::make_shared<std::thread::id>();
-
-        callbacks<void(void)> _waiters;
     };
 }
 }
