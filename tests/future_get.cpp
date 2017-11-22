@@ -23,7 +23,9 @@
 #include <reaver/mayfly.h>
 
 #include <future>
+#include <optional>
 #include <queue>
+#include <variant>
 
 namespace test
 {

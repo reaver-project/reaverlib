@@ -43,7 +43,7 @@ inline namespace _v1
 
         sem.wait();
 
-        return fut.try_get().get();
+        return std::move(fut.try_get().value());
     }
 }
 }

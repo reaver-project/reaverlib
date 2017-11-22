@@ -22,6 +22,8 @@
 
 #include <reaver/mayfly.h>
 
+#include <variant>
+
 namespace test
 {
 #include "expected.h"
@@ -90,7 +92,7 @@ MAYFLY_ADD_TESTCASE("join", []() {
 
     {
         auto err = test::reaver::make_expected(test::reaver::make_error<int>(1));
-        MAYFLY_CHECK(test::reaver::join(err).get_error() == test::reaver::variant<int, std::exception_ptr>(1));
+        MAYFLY_CHECK(test::reaver::join(err).get_error() == std::variant<int, std::exception_ptr>(1));
     }
 
     {
@@ -100,7 +102,7 @@ MAYFLY_ADD_TESTCASE("join", []() {
 
     {
         const auto err = test::reaver::make_expected(test::reaver::make_error<int>(1));
-        MAYFLY_CHECK(test::reaver::join(err).get_error() == test::reaver::variant<int, std::exception_ptr>(1));
+        MAYFLY_CHECK(test::reaver::join(err).get_error() == std::variant<int, std::exception_ptr>(1));
     }
 
     {
@@ -109,7 +111,7 @@ MAYFLY_ADD_TESTCASE("join", []() {
 
     {
         MAYFLY_CHECK(
-            test::reaver::join(test::reaver::make_expected(test::reaver::make_error<int>(1))).get_error() == test::reaver::variant<int, std::exception_ptr>(1));
+            test::reaver::join(test::reaver::make_expected(test::reaver::make_error<int>(1))).get_error() == std::variant<int, std::exception_ptr>(1));
     }
 
 });
@@ -119,7 +121,7 @@ MAYFLY_ADD_TESTCASE("bind", []() {
         auto exp = test::reaver::make_expected(1);
         MAYFLY_CHECK(*test::reaver::mbind(exp, [](auto i) { return test::reaver::make_expected(i * 2); }) == 2);
         MAYFLY_CHECK(test::reaver::mbind(exp, [](auto i) { return test::reaver::make_error<int>(i * 3); }).get_error()
-            == test::reaver::variant<int, std::exception_ptr>(3));
+            == std::variant<int, std::exception_ptr>(3));
     }
 });
 
