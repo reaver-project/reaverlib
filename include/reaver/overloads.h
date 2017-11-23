@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -42,26 +42,14 @@ inline namespace _v1
     {
     };
 
-    template<typename T, typename... Ts>
-    struct overload_set : T, overload_set<Ts...>
+    template<typename... Ts>
+    struct overload_set : Ts...
     {
-        overload_set(T t, Ts... ts) : T{ std::forward<T>(t) }, overload_set<Ts...>{ std::forward<Ts>(ts)... }
-        {
-        }
-
-        using T::operator();
-        using overload_set<Ts...>::operator();
+        using Ts::operator()...;
     };
 
-    template<typename T>
-    struct overload_set<T> : T
-    {
-        overload_set(T t) : T{ std::forward<T>(t) }
-        {
-        }
-
-        using T::operator();
-    };
+    template<typename... Ts>
+    overload_set(Ts...) -> overload_set<Ts...>;
 
     template<typename... Ts>
     auto make_overload_set(Ts &&... ts)
