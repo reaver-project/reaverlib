@@ -26,7 +26,6 @@
 #include <memory>
 #include <vector>
 
-#include "../logic.h"
 #include "../tpl/rebind.h"
 #include "../tpl/unique.h"
 #include "../tpl/vector.h"

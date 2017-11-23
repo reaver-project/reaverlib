@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -24,7 +24,6 @@
 
 #include <type_traits>
 
-#include "../logic.h"
 #include "vector.h"
 
 namespace reaver
@@ -41,7 +40,7 @@ namespace tpl
             template<typename... Inserted, typename Head, typename... Tail>
             struct _unique<tpl::vector<Inserted...>, Head, Tail...>
             {
-                using type = typename std::conditional<all_of<true, !std::is_same<Head, Inserted>::value...>::value,
+                using type = typename std::conditional<(true && ... && !std::is_same<Head, Inserted>::value),
                     typename _unique<tpl::vector<Inserted..., Head>, Tail...>::type,
                     typename _unique<tpl::vector<Inserted...>, Tail...>::type>::type;
             };

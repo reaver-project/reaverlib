@@ -123,7 +123,7 @@ inline namespace _v1
             return state.value.index() == 2 && state.function;
         }
 
-        template<typename... Args, typename std::enable_if<all_of<std::is_copy_constructible<Args>::value...>::value, int>::type = 0>
+        template<typename... Args, typename std::enable_if<(std::is_copy_constructible<Args>::value && ...), int>::type = 0>
         auto _move_or_copy(std::variant<Args...> & v, bool move)
         {
             if (move)
@@ -136,7 +136,7 @@ inline namespace _v1
             return v;
         }
 
-        template<typename... Args, typename std::enable_if<!all_of<std::is_copy_constructible<Args>::value...>::value, int>::type = 0>
+        template<typename... Args, typename std::enable_if<!(std::is_copy_constructible<Args>::value && ...), int>::type = 0>
         auto _move_or_copy(std::variant<Args...> & v, bool)
         {
             auto ret = std::move(v);

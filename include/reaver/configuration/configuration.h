@@ -29,7 +29,6 @@
 #include <boost/functional/hash.hpp>
 #include <boost/type_index.hpp>
 
-#include "../logic.h"
 #include "../overloads.h"
 #include "../subset.h"
 #include "../swallow.h"
@@ -316,31 +315,31 @@ inline namespace _v1
             swallow{ set<Allowed>(std::move(config.get<Allowed>()))... };
         }
 
-        template<typename T, typename... Args, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<(std::is_same<T, Allowed>::value || ...), int>::type = 0>
         unit set(Args &&... args)
         {
             return configuration::set<T>(std::forward<Args>(args)...);
         }
 
-        template<typename T, typename... Args, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<(std::is_same<T, Allowed>::value || ...), int>::type = 0>
         unit set(T, Args &&... args)
         {
             return configuration::set(T{}, std::forward<Args>(args)...);
         }
 
-        template<typename T, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename std::enable_if<(std::is_same<T, Allowed>::value || ...), int>::type = 0>
         auto & get(T = {})
         {
             return configuration::get<T>();
         }
 
-        template<typename T, typename std::enable_if<any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename std::enable_if<(std::is_same<T, Allowed>::value || ...), int>::type = 0>
         auto & get(T = {}) const
         {
             return configuration::get<T>();
         }
 
-        template<typename T, typename... Args, typename std::enable_if<!any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<!(std::is_same<T, Allowed>::value || ...), int>::type = 0>
         auto add(Args &&... args) const &
         {
             bound_configuration<Allowed..., T> ret = *this;
@@ -348,7 +347,7 @@ inline namespace _v1
             return ret;
         }
 
-        template<typename T, typename... Args, typename std::enable_if<!any_of<std::is_same<T, Allowed>::value...>::value, int>::type = 0>
+        template<typename T, typename... Args, typename std::enable_if<!(std::is_same<T, Allowed>::value || ...), int>::type = 0>
         auto add(Args &&... args) &&
         {
             bound_configuration<Allowed..., T> ret = std::move(*this);

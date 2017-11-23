@@ -33,7 +33,6 @@
 #include <variant>
 
 #include "exception.h"
-#include "logic.h"
 #include "overloads.h"
 #include "tpl/concat.h"
 #include "tpl/index_of.h"
