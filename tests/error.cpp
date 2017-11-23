@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -56,13 +56,13 @@ MAYFLY_ADD_TESTCASE("without reaching limit", []() {
 
 MAYFLY_ADD_TESTCASE("moved-from should not throw", []() {
     MAYFLY_CHECK_THROWS_TYPE(test::reaver::error_engine_exception, []() {
-        reaver::optional<test::reaver::error_engine> engine;
-        MAYFLY_CHECK_NOTHROW(engine = []() {
+        std::optional<test::reaver::error_engine> engine;
+        MAYFLY_CHECK_NOTHROW(engine.emplace([]() {
             test::reaver::error_engine engine{ 2 };
             engine.push(test::reaver::exception{ test::reaver::logger::error });
 
             return std::move(engine);
-        }());
+        }()));
 
         engine->validate();
     }());
