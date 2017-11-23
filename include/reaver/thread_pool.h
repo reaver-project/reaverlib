@@ -134,7 +134,7 @@ inline namespace _v1
             return future;
         }
 
-        virtual void push(std::function<void()> f) override
+        virtual void push(unique_function<void()> f) override
         {
             std::unique_lock<std::mutex> lock{ _lock };
             _queue.emplace(std::move(f));
@@ -183,7 +183,7 @@ inline namespace _v1
                     }
                 }
 
-                std::optional<std::function<void()>> f;
+                std::optional<unique_function<void()>> f;
 
                 {
                     std::unique_lock<std::mutex> lock{ _lock };
@@ -257,7 +257,7 @@ inline namespace _v1
         std::atomic<std::size_t> _size{ 0 };
 
         std::map<std::thread::id, detaching_thread> _threads;
-        std::queue<std::function<void()>> _queue;
+        std::queue<unique_function<void()>> _queue;
 
         std::condition_variable _cond;
         std::mutex _lock;

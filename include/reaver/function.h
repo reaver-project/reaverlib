@@ -21,3 +21,43 @@
  **/
 
 #pragma once
+
+#include <functional>
+#include <memory>
+
+namespace reaver
+{
+inline namespace _v1
+{
+    template<typename Signature>
+    class unique_function;
+
+    template<typename Return, typename... Args>
+    class unique_function<Return(Args...)>
+    {
+    public:
+        template<typename T>
+        unique_function(T t)
+        {
+            _data = { new T(std::move(t)), +[](void * ptr) { delete reinterpret_cast<T *>(ptr); } };
+            _invoker = +[](void * ptr, Args &&... args) { return std::invoke(*reinterpret_cast<T *>(ptr), std::forward<Args>(args)...); };
+        }
+
+        unique_function(const unique_function &) = delete;
+        unique_function(unique_function &&) = default;
+        unique_function & operator=(const unique_function &) = delete;
+        unique_function & operator=(unique_function &&) = default;
+
+        Return operator()(Args &&... args)
+        {
+            return _invoker(_data.get(), std::forward<Args>(args)...);
+        }
+
+    private:
+        using deleter = void (*)(void *);
+        using invoker = Return (*)(void *, Args &&...);
+        std::unique_ptr<void, deleter> _data = { nullptr, nullptr };
+        invoker _invoker = { nullptr };
+    };
+}
+}

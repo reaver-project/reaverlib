@@ -24,6 +24,8 @@
 
 #include <functional>
 
+#include "function.h"
+
 namespace reaver
 {
 inline namespace _v1
@@ -35,7 +37,7 @@ inline namespace _v1
         {
         }
 
-        virtual void push(std::function<void()> f) = 0;
+        virtual void push(unique_function<void()> f) = 0;
     };
 }
 }

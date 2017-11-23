@@ -30,6 +30,7 @@
 #include "exception.h"
 #include "executor.h"
 #include "expected.h"
+#include "function.h"
 #include "overloads.h"
 #include "prelude/functor.h"
 #include "tpl/filter.h"
@@ -89,7 +90,7 @@ inline namespace _v1
         template<typename T>
         struct _shared_state;
 
-        using _continuation_type = std::function<void()>;
+        using _continuation_type = unique_function<void()>;
 
         template<typename T, typename F, typename std::enable_if<std::is_void<T>::value || std::is_copy_constructible<T>::value, int>::type = 0>
         void _add_continuation(_shared_state<T> & state, F && f)
@@ -222,7 +223,7 @@ inline namespace _v1
             std::mutex continuations_lock;
             then_t continuations;
 
-            std::optional<std::function<T()>> function;
+            std::optional<unique_function<T()>> function;
 
             std::optional<_replaced> try_get()
             {
@@ -628,6 +629,7 @@ inline namespace _v1
                 _remove_promise();
                 _ptr = other._ptr;
                 _add_promise();
+                return *this;
             }
 
             _promise_ptr & operator=(_promise_ptr && other) noexcept
@@ -635,6 +637,7 @@ inline namespace _v1
                 _remove_promise();
                 _ptr = other._ptr;
                 other._ptr = {};
+                return *this;
             }
 
             ~_promise_ptr()

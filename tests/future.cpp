@@ -36,7 +36,7 @@ namespace
 {
 struct trivial_executor : public test::reaver::executor
 {
-    virtual void push(std::function<void()> f) override
+    virtual void push(test::reaver::unique_function<void()> f) override
     {
         if (in_function)
         {
@@ -61,7 +61,7 @@ struct trivial_executor : public test::reaver::executor
         in_function = false;
     }
 
-    std::vector<std::function<void()>> queue;
+    std::vector<test::reaver::unique_function<void()>> queue;
     bool in_function = false;
 };
 }
