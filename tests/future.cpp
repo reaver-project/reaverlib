@@ -24,8 +24,8 @@
 
 #include <future> // lol
 #include <queue>
-
-#include <reaver/optional.h>
+#include <variant>
+#include <optional>
 
 namespace test
 {
@@ -36,7 +36,7 @@ namespace
 {
 struct trivial_executor : public test::reaver::executor
 {
-    virtual void push(test::reaver::function<void()> f) override
+    virtual void push(test::reaver::unique_function<void()> f) override
     {
         if (in_function)
         {
@@ -61,7 +61,7 @@ struct trivial_executor : public test::reaver::executor
         in_function = false;
     }
 
-    std::vector<test::reaver::function<void()>> queue;
+    std::vector<test::reaver::unique_function<void()>> queue;
     bool in_function = false;
 };
 }
@@ -110,7 +110,7 @@ MAYFLY_ADD_TESTCASE("exceptional future", []() {
 
 MAYFLY_ADD_TESTCASE("broken promise", []() {
     {
-        reaver::optional<test::reaver::future<>> future;
+        std::optional<test::reaver::future<>> future;
 
         {
             auto pair = test::reaver::package([]() {});
@@ -121,7 +121,7 @@ MAYFLY_ADD_TESTCASE("broken promise", []() {
     }
 
     {
-        reaver::optional<test::reaver::future<int>> future;
+        std::optional<test::reaver::future<int>> future;
 
         {
             auto pair = test::reaver::package([]() -> int { return 1; });

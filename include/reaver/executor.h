@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include "function.h"
 
 namespace reaver
@@ -35,7 +37,7 @@ inline namespace _v1
         {
         }
 
-        virtual void push(reaver::function<void()> f) = 0;
+        virtual void push(unique_function<void()> f) = 0;
     };
 }
 }

@@ -31,10 +31,8 @@
 #include "executor.h"
 #include "expected.h"
 #include "function.h"
-#include "optional.h"
 #include "overloads.h"
 #include "prelude/functor.h"
-#include "static_if.h"
 #include "tpl/filter.h"
 #include "tpl/rebind.h"
 
@@ -92,7 +90,7 @@ inline namespace _v1
         template<typename T>
         struct _shared_state;
 
-        using _continuation_type = reaver::function<void()>;
+        using _continuation_type = unique_function<void()>;
 
         template<typename T, typename F, typename std::enable_if<std::is_void<T>::value || std::is_copy_constructible<T>::value, int>::type = 0>
         void _add_continuation(_shared_state<T> & state, F && f)
@@ -126,24 +124,24 @@ inline namespace _v1
             return state.value.index() == 2 && state.function;
         }
 
-        template<typename... Args, typename std::enable_if<all_of<std::is_copy_constructible<Args>::value...>::value, int>::type = 0>
-        auto _move_or_copy(variant<Args...> & v, bool move)
+        template<typename... Args, typename std::enable_if<(std::is_copy_constructible<Args>::value && ...), int>::type = 0>
+        auto _move_or_copy(std::variant<Args...> & v, bool move)
         {
             if (move)
             {
                 auto ret = std::move(v);
-                v = none;
+                v = std::nullopt;
                 return ret;
             }
 
             return v;
         }
 
-        template<typename... Args, typename std::enable_if<!all_of<std::is_copy_constructible<Args>::value...>::value, int>::type = 0>
-        auto _move_or_copy(variant<Args...> & v, bool)
+        template<typename... Args, typename std::enable_if<!(std::is_copy_constructible<Args>::value && ...), int>::type = 0>
+        auto _move_or_copy(std::variant<Args...> & v, bool)
         {
             auto ret = std::move(v);
-            v = none;
+            v = std::nullopt;
             return ret;
         }
 
@@ -192,7 +190,7 @@ inline namespace _v1
         struct _shared_state : public std::enable_shared_from_this<_shared_state<T>>
         {
             using _replaced = typename _replace_void<T>::type;
-            using then_t = std::conditional_t<std::is_copy_constructible<_replaced>::value, std::vector<_continuation_type>, optional<_continuation_type>>;
+            using then_t = std::conditional_t<std::is_copy_constructible<_replaced>::value, std::vector<_continuation_type>, std::optional<_continuation_type>>;
 
             _shared_state(_replaced t) : value{ std::move(t) }
             {
@@ -202,20 +200,20 @@ inline namespace _v1
             {
             }
 
-            _shared_state() : value{ none }
+            _shared_state() : value{ std::nullopt }
             {
             }
 
             ~_shared_state()
             {
-                if (!value_accessed)
+                if (!value_accessed && value.index() == 1)
                 {
-                    std::rethrow_exception(get<1>(value));
+                    std::rethrow_exception(std::get<1>(value));
                 }
             }
 
             std::mutex lock;
-            variant<_replaced, std::exception_ptr, none_t> value;
+            std::variant<_replaced, std::exception_ptr, std::nullopt_t> value;
             std::atomic<std::size_t> promise_count{ 0 };
             std::atomic<std::size_t> shared_count{ 0 };
             std::atomic<bool> value_accessed{ true };
@@ -225,29 +223,24 @@ inline namespace _v1
             std::mutex continuations_lock;
             then_t continuations;
 
-            // TODO: reaver::function
-            optional<class function<T()>> function;
+            std::optional<unique_function<T()>> function;
 
-            optional<_replaced> try_get()
+            std::optional<_replaced> try_get()
             {
                 std::lock_guard<std::mutex> l(lock);
                 value_accessed = true;
-                return get<0>(fmap(_move_or_copy(value, shared_count == 1 && value.index() != 1),
+                return std::get<0>(fmap(_move_or_copy(value, shared_count == 1 && value.index() != 1),
                     make_overload_set(
                         [&](_replaced t) {
                             if (shared_count == 1)
                             {
-                                value = none;
+                                value = std::nullopt;
                             }
-                            return reaver::make_optional(std::move(t));
+                            return std::make_optional(std::move(t));
                         },
 
-                        [&](std::exception_ptr ptr) {
-                            std::rethrow_exception(ptr);
-                            return unit{};
-                        },
-
-                        [&](none_t) { return optional<_replaced>(); })));
+                        [&](std::exception_ptr ptr) -> std::optional<_replaced> { std::rethrow_exception(ptr); },
+                        [&](std::nullopt_t) { return std::optional<_replaced>(); })));
             }
 
             void set(_replaced v)
@@ -276,35 +269,36 @@ inline namespace _v1
             {
                 auto conts = then_t{};
 
-                static_if(std::is_copy_constructible<_replaced>{},
-                    [&](auto) {
-                        // shenanigans
-                        while ([&] {
-                            std::lock_guard<std::mutex> lock{ continuations_lock };
-                            return !continuations.empty();
-                        }())
-                        {
-                            {
-                                std::lock_guard<std::mutex> lock{ continuations_lock };
-                                using std::swap;
-                                swap(conts, continuations);
-                            }
-
-                            fmap(conts, [&](auto && cont) {
-                                cont();
-                                return unit{};
-                            });
-                        }
-                    })
-                    .static_else([&](auto) {
+                if constexpr (std::is_copy_constructible<_replaced>{})
+                {
+                    // shenanigans
+                    while ([&] {
                         std::lock_guard<std::mutex> lock{ continuations_lock };
-                        fmap(continuations, [&](auto && cont) {
+                        return !continuations.empty();
+                    }())
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock{ continuations_lock };
+                            using std::swap;
+                            swap(conts, continuations);
+                        }
+
+                        fmap(conts, [&](auto && cont) {
                             cont();
                             return unit{};
                         });
+                    }
+                }
+                else
+                {
+                    std::lock_guard<std::mutex> lock{ continuations_lock };
+                    fmap(continuations, [&](auto && cont) {
+                        cont();
+                        return unit{};
                     });
+                }
 
-                function = none;
+                function = std::nullopt;
                 continuations = then_t{};
             }
 
@@ -316,13 +310,13 @@ inline namespace _v1
 
                 if (value.index() == 1)
                 {
-                    std::rethrow_exception(get<1>(value));
+                    std::rethrow_exception(std::get<1>(value));
                 }
 
-                auto ret = get<0>(_move_or_copy(value, shared_count == 1 && value.index() != 1));
+                auto ret = std::get<0>(_move_or_copy(value, shared_count == 1 && value.index() != 1));
                 if (shared_count == 1)
                 {
-                    value = none;
+                    value = std::nullopt;
                 }
                 return ret;
             }
@@ -355,20 +349,22 @@ inline namespace _v1
                     return default_executor();
                 };
 
-                return get<0>(fmap(value,
+                return std::get<0>(fmap(_move_or_copy(value, shared_count == 1 && value.index() != 1),
                     make_overload_set(
-                        [&](variant<const _replaced &, std::exception_ptr>) {
-                            auto pair = package([this, f = std::forward<F>(f)]() mutable { return _wrap<T>(std::forward<F>(f))(_get()); });
+                        [&](std::variant<_replaced, std::exception_ptr> val) {
+                            auto pair = package([f = std::forward<F>(f), val = std::move(val)]() mutable {
+                                if (val.index() == 1)
+                                {
+                                    std::rethrow_exception(std::get<1>(val));
+                                }
+                                return _wrap<T>(std::forward<F>(f))(std::move(std::get<0>(val)));
+                            });
 
-                            // GCC is deeply confused when this is directly in
-                            // the capture list
-                            auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
-
-                            sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)]() { task(sched()); });
+                            sched()->push([sched, task = std::move(pair.packaged_task)]() { task(sched()); });
                             return std::move(pair.future);
                         },
 
-                        [&](none_t) {
+                        [&](std::nullopt_t) {
                             auto pair = package([this, f = std::forward<F>(f)]() mutable { return _wrap<T>(std::forward<F>(f))(_get()); });
 
                             // GCC is deeply confused when this is directly in
@@ -420,20 +416,20 @@ inline namespace _v1
                         return callback(lazy_nonvoid());
                     });
 
-                return get<0>(fmap(value,
+                return std::get<0>(fmap(_move_or_copy(value, shared_count == 1 && value.index() != 1),
                     make_overload_set(
-                        [&](variant<const _replaced &, std::exception_ptr>) {
-                            auto pair = package([this, f = std::forward<F>(f), call_with_void_argument]() mutable {
-                                try
+                        [&](std::variant<_replaced, std::exception_ptr> val) {
+                            auto pair = package([f = std::forward<F>(f), call_with_void_argument, val = std::move(val)]() mutable {
+                                if (val.index() == 0)
                                 {
-                                    return make_expected_err_type<decltype(std::forward<F>(f)(std::current_exception()))>(_get());
+                                    return make_expected_err_type<decltype(std::forward<F>(f)(std::current_exception()))>(std::move(std::get<0>(val)));
                                 }
 
-                                catch (...)
+                                else
                                 {
                                     return call_with_void_argument(
                                         [&](auto &&... args) { return make_error<_replaced>(std::forward<decltype(args)>(args)...); },
-                                        [&]() { return std::forward<F>(f)(std::current_exception()); });
+                                        [&]() { return std::forward<F>(f)(std::get<1>(val)); });
                                 }
                             });
 
@@ -445,7 +441,7 @@ inline namespace _v1
                             return std::move(pair.future);
                         },
 
-                        [&](none_t) {
+                        [&](std::nullopt_t) {
                             auto pair = package([this, f = std::forward<F>(f), call_with_void_argument]() mutable {
                                 try
                                 {
@@ -498,7 +494,7 @@ inline namespace _v1
                 std::lock_guard<std::mutex> lock{ state.lock };
                 if (_is_pending(state))
                 {
-                    state.function = none;
+                    state.function = std::nullopt;
                     state.value = std::make_exception_ptr(broken_promise{});
                 }
             }
@@ -633,6 +629,7 @@ inline namespace _v1
                 _remove_promise();
                 _ptr = other._ptr;
                 _add_promise();
+                return *this;
             }
 
             _promise_ptr & operator=(_promise_ptr && other) noexcept
@@ -640,6 +637,7 @@ inline namespace _v1
                 _remove_promise();
                 _ptr = other._ptr;
                 other._ptr = {};
+                return *this;
             }
 
             ~_promise_ptr()
@@ -985,12 +983,12 @@ inline namespace _v1
         };
 
         template<typename... Args>
-        using _optional_tuple = std::tuple<optional<Args>...>;
+        using _optional_tuple = std::tuple<std::optional<Args>...>;
 
         template<typename... Args, std::size_t... I>
-        auto _remove_optional(std::tuple<optional<Args>...> & opt, std::index_sequence<I...>)
+        auto _remove_optional(std::tuple<std::optional<Args>...> & opt, std::index_sequence<I...>)
         {
-            return std::tuple<Args...>{ std::move(*get<I>(opt))... };
+            return std::tuple<Args...>{ std::move(*std::get<I>(opt))... };
         }
 
         template<std::size_t N>
@@ -1016,7 +1014,7 @@ inline namespace _v1
         {
             buffer_type buffer;
             std::atomic<std::size_t> remaining{ sizeof...(Ts) };
-            optional<packaged_task<return_type>> task;
+            std::optional<packaged_task<return_type>> task;
             std::vector<future<>> futures;
             exception_list exceptions;
         };
@@ -1044,7 +1042,7 @@ inline namespace _v1
 
         auto nonvoid_handler = [&](auto index) {
             return [state, sched](auto value) {
-                get<decltype(index)::value>(state->buffer) = std::move(value);
+                std::get<decltype(index)::value>(state->buffer) = std::move(value);
 
                 if (--state->remaining == 0)
                 {
@@ -1140,7 +1138,7 @@ inline namespace _v1
         struct internal_state
         {
             std::atomic<std::size_t> remaining;
-            optional<packaged_task<task_type>> task;
+            std::optional<packaged_task<task_type>> task;
             std::vector<future<T>> futures;
             std::vector<future<>> keep_alive;
             exception_list exceptions;

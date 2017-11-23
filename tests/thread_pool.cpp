@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2014 Michał "Griwes" Dominiak
+ * Copyright © 2014, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,15 +22,9 @@
 
 #include <reaver/mayfly.h>
 
-//#include <thread>
-//#include <functional>
-//#include <unordered_map>
-//#include <map>
-#include <queue>
-//#include <atomic>
-//#include <mutex>
 #include <future>
-//#include <type_traits>
+#include <optional>
+#include <queue>
 
 #include <boost/functional/hash.hpp>
 

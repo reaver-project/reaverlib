@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -23,7 +23,6 @@
 #include <type_traits>
 
 #include "../id.h"
-#include "../static_assert.h"
 #include "../swallow.h"
 #include "../unit.h"
 #include "concat.h"
@@ -59,7 +58,7 @@ namespace tpl
             template<typename... Elements, std::size_t Position, typename Type>
             struct _insert_nth_helper<vector<Elements...>, Position, Type, false>
             {
-                static_assert_(Position == sizeof...(Elements));
+                static_assert(Position == sizeof...(Elements));
                 using type = vector<Elements..., Type>;
             };
 

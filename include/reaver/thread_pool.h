@@ -32,7 +32,6 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "callbacks.h"
 #include "exception.h"
 #include "executor.h"
 #include "optional.h"
@@ -135,7 +134,7 @@ inline namespace _v1
             return future;
         }
 
-        virtual void push(function<void()> f) override
+        virtual void push(unique_function<void()> f) override
         {
             std::unique_lock<std::mutex> lock{ _lock };
             _queue.emplace(std::move(f));
@@ -173,12 +172,6 @@ inline namespace _v1
     private:
         void _loop()
         {
-            if (_waiters)
-            {
-                std::unique_lock<std::mutex> lock{ _lock };
-                _waiters();
-            }
-
             while (!_end || _threads.size())
             {
                 {
@@ -190,7 +183,7 @@ inline namespace _v1
                     }
                 }
 
-                optional<function<void()>> f;
+                std::optional<unique_function<void()>> f;
 
                 {
                     std::unique_lock<std::mutex> lock{ _lock };
@@ -237,12 +230,6 @@ inline namespace _v1
                 {
                     return;
                 }
-
-                if (_waiters)
-                {
-                    std::unique_lock<std::mutex> lock{ _lock };
-                    _waiters();
-                }
             }
         }
 
@@ -270,7 +257,7 @@ inline namespace _v1
         std::atomic<std::size_t> _size{ 0 };
 
         std::map<std::thread::id, detaching_thread> _threads;
-        std::queue<function<void()>> _queue;
+        std::queue<unique_function<void()>> _queue;
 
         std::condition_variable _cond;
         std::mutex _lock;
@@ -280,8 +267,6 @@ inline namespace _v1
         std::atomic<bool> _end{ false };
         std::shared_ptr<std::atomic<bool>> _destroyed = std::make_shared<std::atomic<bool>>(false);
         std::shared_ptr<std::thread::id> _destroyer_id = std::make_shared<std::thread::id>();
-
-        callbacks<void(void)> _waiters;
     };
 }
 }

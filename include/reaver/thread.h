@@ -1,7 +1,7 @@
 /**
  * Reaver Library License
  *
- * Copyright © 2014 Michał "Griwes" Dominiak
+ * Copyright © 2014, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -60,11 +60,11 @@ inline namespace _v1
         }
         thread & operator=(thread &&) = default;
 
-        ~thread();
+        ~thread() noexcept(Policy != joinable_thread_policies::throw_on_destruction);
     };
 
     template<>
-    inline thread<joinable_thread_policies::join_on_destruction>::~thread()
+    inline thread<joinable_thread_policies::join_on_destruction>::~thread() noexcept(true)
     {
         if (joinable())
         {
@@ -73,7 +73,7 @@ inline namespace _v1
     }
 
     template<>
-    inline thread<joinable_thread_policies::detach_on_destruction>::~thread()
+    inline thread<joinable_thread_policies::detach_on_destruction>::~thread() noexcept(true)
     {
         if (joinable())
         {
@@ -82,7 +82,7 @@ inline namespace _v1
     }
 
     template<>
-    inline thread<joinable_thread_policies::throw_on_destruction>::~thread()
+    inline thread<joinable_thread_policies::throw_on_destruction>::~thread() noexcept(false)
     {
         if (joinable())
         {

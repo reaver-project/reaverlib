@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015-2016 Michał "Griwes" Dominiak
+ * Copyright © 2015-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -25,8 +25,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "void_t.h"
-
 namespace reaver
 {
 inline namespace _v1
@@ -38,7 +36,7 @@ inline namespace _v1
 
     template<typename T>
     struct is_container<T,
-        void_t<typename T::value_type,
+        std::void_t<typename T::value_type,
             typename T::size_type,
             typename T::allocator_type,
             typename T::iterator,
@@ -59,7 +57,7 @@ inline namespace _v1
         };
 
         template<typename T, typename... Args>
-        struct _is_callable_impl<void_t<decltype(std::declval<T>()(std::declval<Args>()...))>, T, Args...> : std::true_type
+        struct _is_callable_impl<std::void_t<decltype(std::declval<T>()(std::declval<Args>()...))>, T, Args...> : std::true_type
         {
         };
     };

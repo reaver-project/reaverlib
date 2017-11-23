@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -21,95 +21,3 @@
  **/
 
 #include <reaver/mayfly.h>
-
-namespace test
-{
-#include "function.h"
-}
-
-MAYFLY_BEGIN_SUITE("function");
-
-MAYFLY_ADD_TESTCASE("free function", []() {
-    test::reaver::function<bool(int)> is_even = +[](int i) { return !(i % 2); };
-
-    MAYFLY_CHECK(is_even(1) == false);
-    MAYFLY_CHECK(is_even(120) == true);
-});
-
-MAYFLY_ADD_TESTCASE("function object with const call operator", []() {
-    {
-        struct foo
-        {
-            int i;
-
-            int operator()() const
-            {
-                return i * 2;
-            }
-        };
-
-        test::reaver::function<int()> twice = foo{ 123 };
-
-        MAYFLY_CHECK(twice() == 246);
-    }
-});
-
-MAYFLY_ADD_TESTCASE("function object without const call operator", []() {
-    {
-        struct foo
-        {
-            int i;
-
-            int operator()()
-            {
-                return i *= 2;
-            }
-        };
-
-        test::reaver::function<int()> twice = foo{ 111 };
-
-        MAYFLY_CHECK(twice() == 222);
-        MAYFLY_CHECK(twice() == 444);
-
-        const auto & ctwice = twice;
-
-        MAYFLY_CHECK_THROWS_TYPE(test::reaver::const_call_operator_not_available, ctwice());
-    }
-});
-
-MAYFLY_ADD_TESTCASE("function object with overloaded call operator", []() {
-    {
-        struct foo
-        {
-            int i;
-
-            int operator()() &
-            {
-                return i;
-            }
-
-            int operator()() &&
-            {
-                return i + 1;
-            }
-
-            int operator()() const &
-            {
-                return i + 2;
-            }
-        };
-
-        test::reaver::function<int()> f = foo{ 1 };
-        const auto & cf = f;
-
-        MAYFLY_CHECK(f() == 1);
-        MAYFLY_CHECK(cf() == 3);
-        MAYFLY_CHECK(std::move(f)() == 2);
-    }
-});
-
-MAYFLY_ADD_TESTCASE("copy constructor", []() {});
-
-MAYFLY_ADD_TESTCASE("move constructor", []() {});
-
-MAYFLY_END_SUITE;

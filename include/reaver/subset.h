@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -59,7 +59,7 @@ inline namespace _v1
     };
 
     template<typename... Checked, typename... Set>
-    struct is_subset<tpl::vector<Checked...>, tpl::vector<Set...>> : public all_of<is_subset<tpl::vector<Checked>, tpl::vector<Set...>>::value...>
+    struct is_subset<tpl::vector<Checked...>, tpl::vector<Set...>> : public std::conjunction<is_subset<tpl::vector<Checked>, tpl::vector<Set...>>...>
     {
     };
 }

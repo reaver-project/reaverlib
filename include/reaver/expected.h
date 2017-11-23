@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -53,24 +53,24 @@ inline namespace _v1
 
         T & operator*()
         {
-            return get<0>(fmap(_value, make_overload_set([](T & value) -> T & { return value; }, [](_wrap_error & err) -> T & { throw err.value; })));
+            return std::visit(make_overload_set([](T & value) -> T & { return value; }, [](_wrap_error & err) -> T & { throw err.value; }), _value);
         }
 
         const T & operator*() const
         {
-            return get<0>(fmap(
-                _value, make_overload_set([](const T & value) -> const T & { return value; }, [](const _wrap_error & err) -> const T & { throw err.value; })));
+            return std::visit(
+                make_overload_set([](const T & value) -> const T & { return value; }, [](const _wrap_error & err) -> const T & { throw err.value; }), _value);
         }
 
         T * operator->()
         {
-            return &get<0>(fmap(_value, make_overload_set([](T & value) -> T & { return value; }, [](_wrap_error & err) -> T & { throw err.value; })));
+            return &std::visit(make_overload_set([](T & value) -> T & { return value; }, [](_wrap_error & err) -> T & { throw err.value; }), _value);
         }
 
         const T * operator->() const
         {
-            return &get<0>(fmap(
-                _value, make_overload_set([](const T & value) -> const T & { return value; }, [](const _wrap_error & err) -> const T & { throw err.value; })));
+            return &std::visit(
+                make_overload_set([](const T & value) -> const T & { return value; }, [](const _wrap_error & err) -> const T & { throw err.value; }), _value);
         }
 
         explicit operator bool() const
@@ -80,16 +80,16 @@ inline namespace _v1
 
         Error & get_error()
         {
-            return get<1>(_value).value;
+            return std::get<1>(_value).value;
         }
 
         const Error & get_error() const
         {
-            return get<1>(_value).value;
+            return std::get<1>(_value).value;
         }
 
     private:
-        variant<T, _wrap_error> _value;
+        std::variant<T, _wrap_error> _value;
     };
 
     template<typename T>
@@ -124,33 +124,33 @@ inline namespace _v1
     }
 
     template<typename T, typename Error, typename F>
-    auto fmap(expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp)))
+    auto fmap(expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp)))
     {
         if (exp)
         {
-            return make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp));
+            return make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp));
         }
 
         return { error_tag, exp.get_error() };
     }
 
     template<typename T, typename Error, typename F>
-    auto fmap(const expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp)))
+    auto fmap(const expected<T, Error> & exp, F && f) -> decltype(make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp)))
     {
         if (exp)
         {
-            return make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp));
+            return make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp));
         }
 
         return { error_tag, exp.get_error() };
     }
 
     template<typename T, typename Error, typename F>
-    auto fmap(expected<T, Error> && exp, F && f) -> decltype(make_expected_err_type<Error>(invoke(std::forward<F>(f), *exp)))
+    auto fmap(expected<T, Error> && exp, F && f) -> decltype(make_expected_err_type<Error>(std::invoke(std::forward<F>(f), *exp)))
     {
         if (exp)
         {
-            return make_expected_err_type<Error>(invoke(std::forward<F>(f), std::move(*exp)));
+            return make_expected_err_type<Error>(std::invoke(std::forward<F>(f), std::move(*exp)));
         }
 
         return { error_tag, std::move(exp.get_error()) };
@@ -158,28 +158,28 @@ inline namespace _v1
 
     namespace _detail
     {
+        template<typename T, typename U>
+        struct _join_error_type
+        {
+            using type = std::variant<T, U>;
+        };
+
         template<typename T>
-        struct _unvariant_impl
+        struct _join_error_type<T, T>
         {
             using type = T;
         };
 
-        template<typename T>
-        struct _unvariant_impl<variant<T>>
-        {
-            using type = T;
-        };
-
-        template<typename T>
-        using _unvariant = typename _unvariant_impl<T>::type;
+        template<typename T, typename U>
+        using _jet = typename _join_error_type<T, U>::type;
     }
 
     template<typename T, typename ErrorInner, typename ErrorOuter>
-    auto join(expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, _detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>
+    auto join(expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, _detail::_jet<ErrorInner, ErrorOuter>>
     {
         if (exp && *exp)
         {
-            return make_expected_err_type<_detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>(**exp);
+            return make_expected_err_type<_detail::_jet<ErrorInner, ErrorOuter>>(**exp);
         }
 
         if (exp)
@@ -191,11 +191,11 @@ inline namespace _v1
     }
 
     template<typename T, typename ErrorInner, typename ErrorOuter>
-    auto join(const expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, _detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>
+    auto join(const expected<expected<T, ErrorInner>, ErrorOuter> & exp) -> expected<T, _detail::_jet<ErrorInner, ErrorOuter>>
     {
         if (exp && *exp)
         {
-            return make_expected_err_type<_detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>(**exp);
+            return make_expected_err_type<_detail::_jet<ErrorInner, ErrorOuter>>(**exp);
         }
 
         if (exp)
@@ -207,11 +207,11 @@ inline namespace _v1
     }
 
     template<typename T, typename ErrorInner, typename ErrorOuter>
-    auto join(expected<expected<T, ErrorInner>, ErrorOuter> && exp) -> expected<T, _detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>
+    auto join(expected<expected<T, ErrorInner>, ErrorOuter> && exp) -> expected<T, _detail::_jet<ErrorInner, ErrorOuter>>
     {
         if (exp && *exp)
         {
-            return make_expected_err_type<_detail::_unvariant<make_variant<ErrorInner, ErrorOuter>>>(std::move(**exp));
+            return make_expected_err_type<_detail::_jet<ErrorInner, ErrorOuter>>(std::move(**exp));
         }
 
         if (exp)
