@@ -20,12 +20,6 @@
  *
  **/
 
-/*
- * The "GCC dumbness" I'm refering to throughout this file is
- *https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47226.
- *
- **/
-
 #pragma once
 
 #include <functional>
@@ -144,7 +138,7 @@ inline namespace _v1
     namespace _detail
     {
         template<typename T>
-        auto _dereference_wrapper(T && t)
+        decltype(auto) _dereference_wrapper(T && t)
         {
             return std::forward<T>(t);
         }
@@ -172,7 +166,7 @@ inline namespace _v1
     auto fmap(const std::variant<Ts...> & var, F && f)
     {
         using result_type =
-            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
+            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<const Ts &>())))...>, std::variant>;
         return std::visit([&](auto && val) -> result_type { return std::forward<F>(f)(_detail::_dereference_wrapper(std::forward<decltype(val)>(val))); }, var);
     }
 
@@ -180,14 +174,14 @@ inline namespace _v1
     auto fmap(std::variant<Ts...> & var, F && f)
     {
         using result_type =
-            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
+            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts &>())))...>, std::variant>;
         return std::visit([&](auto && val) -> result_type { return std::forward<F>(f)(_detail::_dereference_wrapper(std::forward<decltype(val)>(val))); }, var);
     }
     template<typename... Ts, typename F>
     auto fmap(std::variant<Ts...> && var, F && f)
     {
         using result_type =
-            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts>())))...>, std::variant>;
+            tpl::rebind<tpl::unique<decltype(std::invoke(std::forward<F>(f), _detail::_dereference_wrapper(std::declval<Ts &&>())))...>, std::variant>;
         return std::visit(
             [&](auto && val) -> result_type { return std::forward<F>(f)(_detail::_dereference_wrapper(std::forward<decltype(val)>(val))); }, std::move(var));
     }
