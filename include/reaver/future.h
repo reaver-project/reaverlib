@@ -360,15 +360,17 @@ inline namespace _v1
                                 return _wrap<T>(std::forward<F>(f))(std::move(std::get<0>(val)));
                             });
 
-                            sched()->push([sched, task = std::move(pair.packaged_task)]() { task(sched()); });
+                            // GCC is deeply confused when this is directly in the capture list
+                            auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
+
+                            sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)]() { task(sched()); });
                             return std::move(pair.future);
                         },
 
                         [&](std::nullopt_t) {
                             auto pair = package([this, f = std::forward<F>(f)]() mutable { return _wrap<T>(std::forward<F>(f))(_get()); });
 
-                            // GCC is deeply confused when this is directly in
-                            // the capture list
+                            // GCC is deeply confused when this is directly in the capture list
                             auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
 
                             _add_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
@@ -433,8 +435,7 @@ inline namespace _v1
                                 }
                             });
 
-                            // GCC is deeply confused when this is directly in
-                            // the capture list
+                            // GCC is deeply confused when this is directly in the capture list
                             auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
 
                             sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)]() { task(sched()); });
@@ -456,8 +457,7 @@ inline namespace _v1
                                 }
                             });
 
-                            // GCC is deeply confused when this is directly in
-                            // the capture list
+                            // GCC is deeply confused when this is directly in the capture list
                             auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
 
                             _add_continuation(*this, [sched, task = std::move(pair.packaged_task), state = std::move(state)]() mutable {
