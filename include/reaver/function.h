@@ -48,7 +48,7 @@ inline namespace _v1
         unique_function & operator=(const unique_function &) = delete;
         unique_function & operator=(unique_function &&) = default;
 
-        Return operator()(Args &&... args)
+        Return operator()(Args... args)
         {
             return _invoker(_data.get(), std::forward<Args>(args)...);
         }
@@ -57,6 +57,34 @@ inline namespace _v1
         using deleter = void (*)(void *);
         using invoker = Return (*)(void *, Args &&...);
         std::unique_ptr<void, deleter> _data = { nullptr, nullptr };
+        invoker _invoker = { nullptr };
+    };
+
+    template<typename Return, typename... Args>
+    class unique_function<Return(Args...) const>
+    {
+    public:
+        template<typename T>
+        unique_function(T t)
+        {
+            _data = { new T(std::move(t)), +[](const void * ptr) { delete reinterpret_cast<const T *>(ptr); } };
+            _invoker = +[](const void * ptr, Args &&... args) { return std::invoke(*reinterpret_cast<const T *>(ptr), std::forward<Args>(args)...); };
+        }
+
+        unique_function(const unique_function &) = delete;
+        unique_function(unique_function &&) = default;
+        unique_function & operator=(const unique_function &) = delete;
+        unique_function & operator=(unique_function &&) = default;
+
+        Return operator()(Args... args) const
+        {
+            return _invoker(_data.get(), std::forward<Args>(args)...);
+        }
+
+    private:
+        using deleter = void (*)(const void *);
+        using invoker = Return (*)(const void *, Args &&...);
+        std::unique_ptr<const void, deleter> _data = { nullptr, nullptr };
         invoker _invoker = { nullptr };
     };
 }
