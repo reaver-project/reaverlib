@@ -144,19 +144,19 @@ inline namespace _v1
         }
 
         template<typename T>
-        auto _dereference_wrapper(recursive_wrapper<T> & t)
+        decltype(auto) _dereference_wrapper(recursive_wrapper<T> & t)
         {
             return *t;
         }
 
         template<typename T>
-        auto _dereference_wrapper(const recursive_wrapper<T> & t)
+        decltype(auto) _dereference_wrapper(const recursive_wrapper<T> & t)
         {
             return *t;
         }
 
         template<typename T>
-        auto _dereference_wrapper(recursive_wrapper<T> && t)
+        decltype(auto) _dereference_wrapper(recursive_wrapper<T> && t)
         {
             return std::move(*t);
         }
