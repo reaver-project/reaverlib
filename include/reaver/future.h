@@ -362,6 +362,7 @@ inline namespace _v1
 
                             // GCC is deeply confused when this is directly in the capture list
                             auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
+                            value_accessed = true;
 
                             sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)]() { task(sched()); });
                             return std::move(pair.future);
@@ -437,6 +438,7 @@ inline namespace _v1
 
                             // GCC is deeply confused when this is directly in the capture list
                             auto state = std::enable_shared_from_this<_shared_state>::shared_from_this();
+                            value_accessed = true;
 
                             sched()->push([sched, task = std::move(pair.packaged_task), state = std::move(state)]() { task(sched()); });
                             return std::move(pair.future);
