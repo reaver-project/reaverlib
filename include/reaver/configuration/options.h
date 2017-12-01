@@ -24,10 +24,10 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <unordered_map>
 
-#include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 
 #include "../configuration.h"
@@ -38,6 +38,7 @@
 #include "../swallow.h"
 #include "../tpl/filter.h"
 #include "../tpl/sort.h"
+#include "../traits.h"
 #include "../unit.h"
 
 namespace reaver
@@ -398,7 +399,7 @@ namespace options
             };
 
             template<typename T>
-            struct _remove_optional<boost::optional<T>>
+            struct _remove_optional<std::optional<T>>
             {
                 using type = T;
             };
@@ -417,19 +418,9 @@ namespace options
                 return {};
             }
 
-            template<typename T>
-            struct _is_vector : std::false_type
-            {
-            };
-
-            template<typename T>
-            struct _is_vector<std::vector<T>> : std::true_type
-            {
-            };
-
             template<typename T,
                 typename Value,
-                typename std::enable_if<_is_vector<typename _po_type<T>::type>::value && T::options.allows_composing, int>::type = 0>
+                typename std::enable_if<is_vector<typename _po_type<T>::type>::value && T::options.allows_composing, int>::type = 0>
             auto _handle_vector_impl(choice<0>)
             {
                 return [](Value value) { return value->composing(); };
@@ -488,7 +479,7 @@ namespace options
             struct _compare_positionals
             {
                 static_assert(!(T::options.position.required_position < U::options.position.required_position
-                                   && T::options.position.required_position + T::options.position.count > U::options.position.required_position)
+                                  && T::options.position.required_position + T::options.position.count > U::options.position.required_position)
                     && !(U::options.position.required_position < T::options.position.required_position
                            && U::options.position.required_position + U::options.position.count > T::options.position.required_position));
                 static constexpr bool value = T::options.position.required_position < U::options.position.required_position;
@@ -518,20 +509,10 @@ namespace options
                 return _get<Tail...>(map, std::forward<Config>(config).template add<Head>(map.count(_name(Head::name))));
             }
 
-            template<typename>
-            struct _is_optional : std::false_type
-            {
-            };
-
-            template<typename T>
-            struct _is_optional<boost::optional<T>> : std::true_type
-            {
-            };
-
             template<typename Head,
                 typename... Tail,
                 typename Config,
-                typename std::enable_if<_is_optional<typename Head::type>::value || _is_vector<typename Head::type>::value, int>::type = 0>
+                typename std::enable_if<is_optional<typename Head::type>::value || is_vector<typename Head::type>::value, int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {
                 return _get<Tail...>(map,
@@ -568,8 +549,8 @@ namespace options
             template<typename Head,
                 typename... Tail,
                 typename Config,
-                typename std::enable_if<!Head::is_void && !_is_optional<typename Head::type>::value && !_has_default<Head>::value
-                        && !_is_vector<typename Head::type>::value,
+                typename std::enable_if<!Head::is_void && !is_optional<typename Head::type>::value && !_has_default<Head>::value
+                        && !is_vector<typename Head::type>::value,
                     int>::type = 0>
             auto _get_impl(boost::program_options::variables_map & map, Config && config)
             {

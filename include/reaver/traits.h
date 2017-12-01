@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <optional>
 #include <type_traits>
 #include <vector>
 
@@ -74,6 +75,16 @@ inline namespace _v1
 
     template<typename T, typename A>
     struct is_vector<std::vector<T, A>> : public std::true_type
+    {
+    };
+
+    template<typename>
+    struct is_optional : public std::false_type
+    {
+    };
+
+    template<typename T>
+    struct is_optional<std::optional<T>> : std::true_type
     {
     };
 }
