@@ -23,6 +23,7 @@
 #include <reaver/mayfly.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 

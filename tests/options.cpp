@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -21,6 +21,8 @@
  **/
 
 #include <reaver/mayfly.h>
+
+#include <optional>
 
 #include <boost/functional/hash.hpp>
 #include <boost/program_options.hpp>
@@ -68,7 +70,7 @@ struct value : test::reaver::options::opt<value, std::size_t>
     static constexpr test::reaver::options::option_set options = { test::reaver::options::positional(1) };
 };
 
-struct optional : test::reaver::options::opt<optional, boost::optional<int>>
+struct optional : test::reaver::options::opt<optional, std::optional<int>>
 {
     static constexpr const char * name = "optional,o";
 };

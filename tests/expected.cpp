@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,6 +22,7 @@
 
 #include <reaver/mayfly.h>
 
+#include <optional>
 #include <variant>
 
 namespace test
@@ -110,8 +111,7 @@ MAYFLY_ADD_TESTCASE("join", []() {
     }
 
     {
-        MAYFLY_CHECK(
-            test::reaver::join(test::reaver::make_expected(test::reaver::make_error<int>(1))).get_error() == std::variant<int, std::exception_ptr>(1));
+        MAYFLY_CHECK(test::reaver::join(test::reaver::make_expected(test::reaver::make_error<int>(1))).get_error() == std::variant<int, std::exception_ptr>(1));
     }
 
 });
@@ -120,8 +120,8 @@ MAYFLY_ADD_TESTCASE("bind", []() {
     {
         auto exp = test::reaver::make_expected(1);
         MAYFLY_CHECK(*test::reaver::mbind(exp, [](auto i) { return test::reaver::make_expected(i * 2); }) == 2);
-        MAYFLY_CHECK(test::reaver::mbind(exp, [](auto i) { return test::reaver::make_error<int>(i * 3); }).get_error()
-            == std::variant<int, std::exception_ptr>(3));
+        MAYFLY_CHECK(
+            test::reaver::mbind(exp, [](auto i) { return test::reaver::make_error<int>(i * 3); }).get_error() == std::variant<int, std::exception_ptr>(3));
     }
 });
 

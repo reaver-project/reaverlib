@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -22,8 +22,7 @@
 
 #include <reaver/mayfly.h>
 
-#include <boost/optional.hpp>
-#include <boost/variant.hpp>
+#include <optional>
 
 namespace test
 {
