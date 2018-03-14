@@ -29,6 +29,7 @@
 #include <thread>
 #include <vector>
 
+#include "../function.h"
 #include "../semaphore.h"
 #include "../style.h"
 #include "action.h"
@@ -47,7 +48,7 @@ namespace logger
                 : _level{ level }, _worker{ [=]() {
                       while (!_quit)
                       {
-                          std::vector<std::function<void()>> functions;
+                          std::vector<unique_function<void()>> functions;
 
                           {
                               std::unique_lock<std::mutex> lock{ _lock };
@@ -80,7 +81,7 @@ namespace logger
 
             ~logger()
             {
-                _async([=]() { _quit = true; });
+                _async([&]() { _quit = true; });
                 _worker.join();
             }
 
@@ -111,7 +112,7 @@ namespace logger
             friend class logger_friend;
 
         private:
-            void _async(std::function<void()> f)
+            void _async(unique_function<void()> f)
             {
                 std::lock_guard<std::mutex> lock{ _lock };
                 _queue.push_back(std::move(f));
@@ -126,7 +127,7 @@ namespace logger
             std::condition_variable _cv;
             std::mutex _lock;
             std::thread _worker;
-            std::vector<std::function<void()>> _queue;
+            std::vector<unique_function<void()>> _queue;
 
             std::vector<stream_wrapper> _streams;
         };

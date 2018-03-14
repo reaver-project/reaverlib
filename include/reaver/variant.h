@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015-2017 Michał "Griwes" Dominiak
+ * Copyright © 2015-2018 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -215,6 +215,24 @@ inline namespace _v1
 
         return std::get<0>(
             fmap(std::move(v), [&](auto && value) -> return_type { return std::invoke(std::forward<F>(f), std::forward<decltype(value)>(value)); }));
+    }
+
+    template<typename T>
+    auto extract(const std::variant<T> & v)
+    {
+        return std::get<0>(v);
+    }
+
+    template<typename T>
+    auto extract(std::variant<T> & v)
+    {
+        return std::get<0>(v);
+    }
+
+    template<typename T>
+    auto extract(std::variant<T> && v)
+    {
+        return std::get<0>(std::move(v));
     }
 
     template<typename T, typename U>
