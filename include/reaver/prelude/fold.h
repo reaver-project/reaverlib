@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2018 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -28,9 +28,9 @@
 
 namespace reaver
 {
-inline namespace prelude
+inline namespace _v1
 {
-    inline namespace _v1
+    inline namespace prelude
     {
         template<typename F, typename T>
         inline constexpr auto foldr(F &&, T && t)

@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015-2017 Michał "Griwes" Dominiak
+ * Copyright © 2015-2018 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -33,11 +33,11 @@
 
 namespace reaver
 {
-inline namespace prelude
+inline namespace _v1
 {
-    inline namespace functor
+    inline namespace prelude
     {
-        inline namespace _v1
+        inline namespace functor
         {
             template<typename T,
                 typename F,
