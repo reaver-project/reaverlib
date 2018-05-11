@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2015, 2017 Michał "Griwes" Dominiak
+ * Copyright © 2015, 2017-2018 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -85,7 +85,8 @@ MAYFLY_BEGIN_SUITE("configuration");
 MAYFLY_BEGIN_SUITE("options");
 
 MAYFLY_ADD_TESTCASE("empty", [] {
-    auto parsed = test::reaver::options::parse_argv<>(0, nullptr);
+    const char * argv[] = { "" };
+    auto parsed = test::reaver::options::parse_argv<>(1, argv);
     MAYFLY_REQUIRE(std::is_same<decltype(parsed), test::reaver::bound_configuration<>>::value);
 });
 
