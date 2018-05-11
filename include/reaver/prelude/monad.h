@@ -1,7 +1,7 @@
 /**
  * Reaver Library Licence
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016, 2018 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -26,11 +26,11 @@
 
 namespace reaver
 {
-inline namespace prelude
+inline namespace _v1
 {
-    inline namespace monad
+    inline namespace prelude
     {
-        inline namespace _v1
+        inline namespace monad
         {
             template<typename Vector,
                 typename std::enable_if<is_vector<std::remove_cv_t<std::remove_reference_t<Vector>>>::value
