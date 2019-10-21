@@ -19,3 +19,42 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  **/
+
+#pragma once
+
+#include "sfinae_function.h"
+#include "typeclass.h"
+
+namespace reaver
+{
+inline namespace prelude
+{
+    inline namespace _v1
+    {
+        // TODO: use this
+        struct hashable_definition
+        {
+            using hash = std::size_t() const;
+        };
+
+        struct hashable
+        {
+            TYPECLASS_INSTANCE(typename T);
+        };
+
+        template<typename T>
+        auto hash(const T & t) SFINAE_FUNCTION(tc_instance<hashable, T>::hash(t));
+
+        // clang-format off
+        DEFAULT_INSTANCE(hashable, T)
+        {
+            // prefer std::hash specialization over T::hash_value
+            template<typename U = T, typename... Ts>
+            static auto hash(const U & t, Ts...) SFINAE_FUNCTION(t.hash_value());
+
+            template<typename U = T>
+            static auto hash(const U & t) SFINAE_FUNCTION(std::hash<U>()(t));
+        };
+    }
+}
+}

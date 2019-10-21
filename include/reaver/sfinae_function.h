@@ -19,3 +19,11 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  **/
+
+#pragma once
+
+#define SFINAE_FUNCTION(...)                                                                                                                                   \
+    noexcept(noexcept(__VA_ARGS__))->decltype(__VA_ARGS__)                                                                                                     \
+    {                                                                                                                                                          \
+        return __VA_ARGS__;                                                                                                                                    \
+    }
